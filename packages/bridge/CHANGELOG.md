@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.69.4] - 2026-07-24
+
+### Fixed
+- Resolve external session links against live Bridge and provider IDs or the exact recent-session index entry, with correlated resume completion and scoped unavailable-history errors.
+
 ## [1.69.3] - 2026-07-24
 
 ### Fixed
