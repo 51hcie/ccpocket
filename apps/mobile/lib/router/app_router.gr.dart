@@ -785,6 +785,70 @@ class QrScanRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [SessionLinkScreen]
+class SessionLinkRoute extends PageRouteInfo<SessionLinkRouteArgs> {
+  SessionLinkRoute({
+    Key? key,
+    required String sessionId,
+    String provider = 'claude',
+    List<PageRouteInfo>? children,
+  }) : super(
+         SessionLinkRoute.name,
+         args: SessionLinkRouteArgs(
+           key: key,
+           sessionId: sessionId,
+           provider: provider,
+         ),
+         initialChildren: children,
+       );
+
+  static const String name = 'SessionLinkRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<SessionLinkRouteArgs>();
+      return SessionLinkScreen(
+        key: args.key,
+        sessionId: args.sessionId,
+        provider: args.provider,
+      );
+    },
+  );
+}
+
+class SessionLinkRouteArgs {
+  const SessionLinkRouteArgs({
+    this.key,
+    required this.sessionId,
+    this.provider = 'claude',
+  });
+
+  final Key? key;
+
+  final String sessionId;
+
+  final String provider;
+
+  @override
+  String toString() {
+    return 'SessionLinkRouteArgs{key: $key, sessionId: $sessionId, provider: $provider}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! SessionLinkRouteArgs) return false;
+    return key == other.key &&
+        sessionId == other.sessionId &&
+        provider == other.provider;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ sessionId.hashCode ^ provider.hashCode;
+}
+
+/// generated route for
 /// [SettingsScreen]
 class SettingsRoute extends PageRouteInfo<SettingsRouteArgs> {
   SettingsRoute({

@@ -1441,6 +1441,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creatingSession => '正在创建会话...';
 
   @override
+  String get resolvingLinkedSession => '正在查找会话...';
+
+  @override
+  String get resumingLinkedSession => '正在恢复会话...';
+
+  @override
+  String get sessionUnavailableTitle => '会话不可用';
+
+  @override
+  String get sessionUnavailableDescription =>
+      '当前 Bridge 上没有此会话。请从最近的会话中选择其他会话。';
+
+  @override
+  String get openRecentSessions => '打开最近的会话';
+
+  @override
   String get copyForAgent => '复制给 Agent';
 
   @override

@@ -614,6 +614,11 @@
   "guideReadyHint": "このガイドは設定画面からいつでも確認できます",
 
   "creatingSession": "セッション作成中...",
+  "resolvingLinkedSession": "リンク先のセッションを検索しています...",
+  "resumingLinkedSession": "セッションを再開しています...",
+  "sessionUnavailableTitle": "セッションを利用できません",
+  "sessionUnavailableDescription": "このセッションは現在の Bridge では利用できません。最近のセッションから開いてください。",
+  "openRecentSessions": "最近のセッションを開く",
   "copyForAgent": "エージェント用にコピー",
   "messageHistory": "メッセージ履歴",
   "viewChanges": "変更を確認",

@@ -2784,6 +2784,36 @@ abstract class AppLocalizations {
   /// **'セッション作成中...'**
   String get creatingSession;
 
+  /// No description provided for @resolvingLinkedSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンク先のセッションを検索しています...'**
+  String get resolvingLinkedSession;
+
+  /// No description provided for @resumingLinkedSession.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションを再開しています...'**
+  String get resumingLinkedSession;
+
+  /// No description provided for @sessionUnavailableTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションを利用できません'**
+  String get sessionUnavailableTitle;
+
+  /// No description provided for @sessionUnavailableDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'このセッションは現在の Bridge では利用できません。最近のセッションから開いてください。'**
+  String get sessionUnavailableDescription;
+
+  /// No description provided for @openRecentSessions.
+  ///
+  /// In ja, this message translates to:
+  /// **'最近のセッションを開く'**
+  String get openRecentSessions;
+
   /// No description provided for @copyForAgent.
   ///
   /// In ja, this message translates to:

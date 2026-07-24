@@ -594,6 +594,11 @@
   "guideReadyHint": "You can revisit this guide anytime from Settings",
 
   "creatingSession": "Creating session...",
+  "resolvingLinkedSession": "Finding session...",
+  "resumingLinkedSession": "Resuming session...",
+  "sessionUnavailableTitle": "Session unavailable",
+  "sessionUnavailableDescription": "This session isn't available on this Bridge. Open Recent Sessions to find another session.",
+  "openRecentSessions": "Open Recent Sessions",
   "copyForAgent": "Copy for Agent",
   "messageHistory": "Message History",
   "viewChanges": "View Changes",

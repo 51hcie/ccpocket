@@ -500,6 +500,155 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     bridge.close();
   });
 
+  it("resolves a live Claude provider session id to its bridge session", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+    const bridgeSessionId = (bridge as any).sessionManager.create(
+      "/tmp/project",
+      { sessionId: "claude-live-uuid" },
+    );
+
+    await (bridge as any).handleClientMessage(
+      {
+        type: "resolve_session_link",
+        requestId: "req-live",
+        sessionId: "claude-live-uuid",
+        provider: "claude",
+      },
+      ws,
+    );
+
+    expect(
+      ws.send.mock.calls
+        .map((call: unknown[]) => JSON.parse(call[0] as string))
+        .find((message: any) => message.type === "session_link_resolution"),
+    ).toMatchObject({
+      requestId: "req-live",
+      sourceSessionId: "claude-live-uuid",
+      status: "live",
+      bridgeSessionId,
+      provider: "claude",
+    });
+    expect(getAllRecentSessionsMock).not.toHaveBeenCalled();
+
+    bridge.close();
+  });
+
+  it("resolves a non-live session from the recent sessions index", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+    getAllRecentSessionsMock.mockResolvedValue({
+      sessions: [
+        {
+          sessionId: "claude-recent-uuid",
+          provider: "claude",
+          projectPath: "/tmp/project",
+          resumeCwd: "/tmp/project-worktree",
+          firstPrompt: "continue this work",
+        },
+      ],
+      hasMore: false,
+    });
+
+    await (bridge as any).handleClientMessage(
+      {
+        type: "resolve_session_link",
+        requestId: "req-recent",
+        sessionId: "claude-recent-uuid",
+        provider: "claude",
+      },
+      ws,
+    );
+
+    expect(getAllRecentSessionsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 1,
+        provider: "claude",
+        sessionId: "claude-recent-uuid",
+      }),
+    );
+    expect(
+      ws.send.mock.calls
+        .map((call: unknown[]) => JSON.parse(call[0] as string))
+        .find((message: any) => message.type === "session_link_resolution"),
+    ).toMatchObject({
+      requestId: "req-recent",
+      sourceSessionId: "claude-recent-uuid",
+      status: "recent",
+      provider: "claude",
+      recentSession: {
+        sessionId: "claude-recent-uuid",
+        projectPath: "/tmp/project",
+        resumeCwd: "/tmp/project-worktree",
+      },
+    });
+
+    bridge.close();
+  });
+
+  it("returns unavailable for an unknown session link", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    await (bridge as any).handleClientMessage(
+      {
+        type: "resolve_session_link",
+        requestId: "req-missing",
+        sessionId: "missing-uuid",
+        provider: "claude",
+      },
+      ws,
+    );
+
+    expect(
+      ws.send.mock.calls
+        .map((call: unknown[]) => JSON.parse(call[0] as string))
+        .find((message: any) => message.type === "session_link_resolution"),
+    ).toMatchObject({
+      requestId: "req-missing",
+      sourceSessionId: "missing-uuid",
+      status: "unavailable",
+      provider: "claude",
+    });
+
+    bridge.close();
+  });
+
+  it("scopes get_history not-found errors to the requested session", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    await (bridge as any).handleClientMessage(
+      { type: "get_history", sessionId: "missing-session" },
+      ws,
+    );
+
+    expect(
+      ws.send.mock.calls
+        .map((call: unknown[]) => JSON.parse(call[0] as string))
+        .find((message: any) => message.type === "error"),
+    ).toEqual({
+      type: "error",
+      message: "Session missing-session not found",
+      errorCode: "session_not_found",
+      sessionId: "missing-session",
+    });
+
+    bridge.close();
+  });
+
   it("archives a Codex thread before recording the local archive marker", async () => {
     const bridge = new BridgeWebSocketServer({ server: httpServer });
     const archiveProjectPath = resolvePlatformPath("/tmp/project-archive");
@@ -1449,6 +1598,7 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
         sessionId: "claude-session-1",
         projectPath: "/tmp/project-a",
         provider: "claude",
+        resumeRequestId: "link-request-claude",
       },
       ws,
     );
@@ -1462,6 +1612,7 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     expect(created).toBeDefined();
     expect(created.provider).toBe("claude");
     expect(created.sourceSessionId).toBeUndefined();
+    expect(created.resumeRequestId).toBe("link-request-claude");
     const newSessionId = created.sessionId as string;
 
     ws.send.mockClear();
@@ -4304,6 +4455,7 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
         sessionId: "codex-thread-1",
         projectPath: "/tmp/project-codex",
         provider: "codex",
+        resumeRequestId: "link-request-codex",
       },
       ws,
     );
@@ -4316,6 +4468,7 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     expect(created).toBeDefined();
     expect(created.provider).toBe("codex");
     expect(created.sourceSessionId).toBeUndefined();
+    expect(created.resumeRequestId).toBe("link-request-codex");
     const resumeStartedIndex = sends.findIndex(
       (message: any) =>
         message.type === "system" &&
@@ -4332,6 +4485,7 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
       sourceSessionId: "codex-thread-1",
       provider: "codex",
       projectPath: "/tmp/project-codex",
+      resumeRequestId: "link-request-codex",
     });
 
     bridge.close();

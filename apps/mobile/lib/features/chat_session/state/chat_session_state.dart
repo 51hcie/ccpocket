@@ -30,6 +30,7 @@ abstract class ChatSessionState with _$ChatSessionState {
     @Default(false) bool bulkLoading,
     @Default(false) bool inPlanMode,
     @Default(false) bool collapseToolResults,
+    @Default(false) bool sessionUnavailable,
 
     // Legacy permission mode kept for compatibility with older bridge/app flows.
     @Default(PermissionMode.defaultMode) PermissionMode permissionMode,

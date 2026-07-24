@@ -1461,6 +1461,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get creatingSession => 'セッション作成中...';
 
   @override
+  String get resolvingLinkedSession => 'リンク先のセッションを検索しています...';
+
+  @override
+  String get resumingLinkedSession => 'セッションを再開しています...';
+
+  @override
+  String get sessionUnavailableTitle => 'セッションを利用できません';
+
+  @override
+  String get sessionUnavailableDescription =>
+      'このセッションは現在の Bridge では利用できません。最近のセッションから開いてください。';
+
+  @override
+  String get openRecentSessions => '最近のセッションを開く';
+
+  @override
   String get copyForAgent => 'エージェント用にコピー';
 
   @override

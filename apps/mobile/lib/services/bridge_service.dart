@@ -15,6 +15,25 @@ import '../utils/network_endpoint.dart';
 import 'bridge_service_base.dart';
 import 'session_runtime_store.dart';
 
+enum SessionLinkResolveSupport { resolved, unsupported, unavailable }
+
+class SessionLinkResolveResult {
+  final SessionLinkResolveSupport support;
+  final SessionLinkResolutionMessage? resolution;
+
+  const SessionLinkResolveResult._(this.support, this.resolution);
+
+  const SessionLinkResolveResult.resolved(
+    SessionLinkResolutionMessage resolution,
+  ) : this._(SessionLinkResolveSupport.resolved, resolution);
+
+  const SessionLinkResolveResult.unsupported()
+    : this._(SessionLinkResolveSupport.unsupported, null);
+
+  const SessionLinkResolveResult.unavailable()
+    : this._(SessionLinkResolveSupport.unavailable, null);
+}
+
 class BridgeService implements BridgeServiceBase {
   void Function(ClientMessage message)? onOutgoingMessage;
   FutureOr<void> Function()? onDisconnect;
@@ -124,6 +143,9 @@ class BridgeService implements BridgeServiceBase {
   final Set<String> _visibleInFlightPendingKeys = {};
   final Map<String, _DeliveryPendingInputState> _deliveryPendingInputs = {};
   final Map<String, Timer> _deliveryPendingVisibilityTimers = {};
+  final Map<String, Completer<SessionLinkResolveResult>>
+  _pendingSessionLinkResolutions = {};
+  int _nextSessionLinkRequestId = 0;
   final Map<String, Set<String>> _respondedToolUseIds = {};
   List<OfflinePendingAction> _offlinePendingActions = const [];
 
@@ -610,9 +632,21 @@ class BridgeService implements BridgeServiceBase {
                     message == 'get_history_delta') {
                   _fallbackPendingHistoryDeltaRequests();
                 }
-                logger.error('Bridge error: $message');
-                _taggedMessageController.add((msg, sessionId));
-                _messageController.add(msg);
+                if (msg.errorCode == 'unsupported_message' &&
+                    message == 'resolve_session_link') {
+                  _completePendingSessionLinkResolutionsAsUnsupported();
+                } else {
+                  logger.error('Bridge error: $message');
+                  _taggedMessageController.add((msg, sessionId));
+                  _messageController.add(msg);
+                }
+              case SessionLinkResolutionMessage(:final requestId):
+                final completer = _pendingSessionLinkResolutions.remove(
+                  requestId,
+                );
+                if (completer != null && !completer.isCompleted) {
+                  completer.complete(SessionLinkResolveResult.resolved(msg));
+                }
               default:
                 _taggedMessageController.add((msg, sessionId));
                 _messageController.add(msg);
@@ -690,6 +724,7 @@ class BridgeService implements BridgeServiceBase {
   }
 
   void _clearBridgeScopedState({required bool clearOfflineQueue}) {
+    _completePendingSessionLinkResolutionsAsUnsupported();
     _sessions = const [];
     _recentSessions = const [];
     _lastRecentSessionsMessage = null;
@@ -1494,6 +1529,64 @@ class BridgeService implements BridgeServiceBase {
     send(ClientMessage.listSessions());
   }
 
+  Future<SessionLinkResolveResult> resolveSessionLink(
+    String sessionId, {
+    String provider = 'claude',
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    if (!isConnected) {
+      try {
+        await connectionStatus
+            .firstWhere((state) => state == BridgeConnectionState.connected)
+            .timeout(timeout);
+      } on TimeoutException {
+        return const SessionLinkResolveResult.unavailable();
+      }
+      if (!isConnected) {
+        return const SessionLinkResolveResult.unavailable();
+      }
+    }
+
+    final remaining = deadline.difference(DateTime.now());
+    if (remaining <= Duration.zero) {
+      return const SessionLinkResolveResult.unavailable();
+    }
+    final requestId = 'session-link-${++_nextSessionLinkRequestId}';
+    final completer = Completer<SessionLinkResolveResult>();
+    _pendingSessionLinkResolutions[requestId] = completer;
+    send(
+      ClientMessage.resolveSessionLink(
+        requestId: requestId,
+        sessionId: sessionId,
+        provider: provider,
+      ),
+    );
+    try {
+      return await completer.future.timeout(
+        remaining,
+        onTimeout: () => const SessionLinkResolveResult.unavailable(),
+      );
+    } finally {
+      _pendingSessionLinkResolutions.remove(requestId);
+      _messageQueue.removeWhere((message) {
+        final json = jsonDecode(message.toJson()) as Map<String, dynamic>;
+        return json['type'] == 'resolve_session_link' &&
+            json['requestId'] == requestId;
+      });
+    }
+  }
+
+  void _completePendingSessionLinkResolutionsAsUnsupported() {
+    final pending = _pendingSessionLinkResolutions.values.toList();
+    _pendingSessionLinkResolutions.clear();
+    for (final completer in pending) {
+      if (!completer.isCompleted) {
+        completer.complete(const SessionLinkResolveResult.unsupported());
+      }
+    }
+  }
+
   void requestRecentSessions({int? limit, int? offset, String? projectPath}) {
     if (offset == null || offset == 0) {
       _appendMode = false;
@@ -1630,6 +1723,7 @@ class BridgeService implements BridgeServiceBase {
     bool? networkAccessEnabled,
     String? webSearchMode,
     List<String>? additionalWritableRoots,
+    String? resumeRequestId,
   }) {
     send(
       ClientMessage.resumeSession(
@@ -1656,6 +1750,7 @@ class BridgeService implements BridgeServiceBase {
         networkAccessEnabled: networkAccessEnabled,
         webSearchMode: webSearchMode,
         additionalWritableRoots: additionalWritableRoots,
+        resumeRequestId: resumeRequestId,
       ),
     );
   }
@@ -2406,6 +2501,7 @@ class BridgeService implements BridgeServiceBase {
 
   void dispose() {
     _intentionalDisconnect = true;
+    _completePendingSessionLinkResolutionsAsUnsupported();
     _reconnectTimer?.cancel();
     for (final timer in _inFlightPendingVisibilityTimers.values) {
       timer.cancel();

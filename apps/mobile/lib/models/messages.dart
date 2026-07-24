@@ -782,6 +782,7 @@ sealed class ServerMessage {
         worktreeBranch: json['worktreeBranch'] as String?,
         clearContext: json['clearContext'] as bool? ?? false,
         sourceSessionId: json['sourceSessionId'] as String?,
+        resumeRequestId: json['resumeRequestId'] as String?,
         tipCode: json['tipCode'] as String?,
         codexCliJoin: json['codexCliJoin'] is Map<String, dynamic>
             ? CodexCliJoinTarget.fromJson(
@@ -828,6 +829,20 @@ sealed class ServerMessage {
       'error' => ErrorMessage(
         message: json['message'] as String,
         errorCode: json['errorCode'] as String?,
+        sessionId: json['sessionId'] as String?,
+      ),
+      'session_link_resolution' => SessionLinkResolutionMessage(
+        requestId: json['requestId'] as String,
+        sourceSessionId: json['sourceSessionId'] as String,
+        status: SessionLinkResolutionStatus.fromString(
+          json['status'] as String?,
+        ),
+        bridgeSessionId: json['bridgeSessionId'] as String?,
+        provider: json['provider'] as String?,
+        recentSession: switch (json['recentSession']) {
+          final Map<String, dynamic> value => RecentSession.fromJson(value),
+          _ => null,
+        },
       ),
       'status' => StatusMessage(
         status: ProcessStatus.fromString(json['status'] as String),
@@ -1463,6 +1478,7 @@ class SystemMessage implements ServerMessage {
   final String? worktreeBranch;
   final bool clearContext;
   final String? sourceSessionId;
+  final String? resumeRequestId;
   final String? tipCode;
   final CodexCliJoinTarget? codexCliJoin;
   const SystemMessage({
@@ -1494,6 +1510,7 @@ class SystemMessage implements ServerMessage {
     this.worktreeBranch,
     this.clearContext = false,
     this.sourceSessionId,
+    this.resumeRequestId,
     this.tipCode,
     this.codexCliJoin,
   });
@@ -1568,7 +1585,40 @@ class ResultMessage implements ServerMessage {
 class ErrorMessage implements ServerMessage {
   final String message;
   final String? errorCode;
-  const ErrorMessage({required this.message, this.errorCode});
+  final String? sessionId;
+  const ErrorMessage({required this.message, this.errorCode, this.sessionId});
+}
+
+enum SessionLinkResolutionStatus {
+  live,
+  recent,
+  unavailable;
+
+  static SessionLinkResolutionStatus fromString(String? value) {
+    return switch (value) {
+      'live' => live,
+      'recent' => recent,
+      _ => unavailable,
+    };
+  }
+}
+
+class SessionLinkResolutionMessage implements ServerMessage {
+  final String requestId;
+  final String sourceSessionId;
+  final SessionLinkResolutionStatus status;
+  final String? bridgeSessionId;
+  final String? provider;
+  final RecentSession? recentSession;
+
+  const SessionLinkResolutionMessage({
+    required this.requestId,
+    required this.sourceSessionId,
+    required this.status,
+    this.bridgeSessionId,
+    this.provider,
+    this.recentSession,
+  });
 }
 
 enum GuardianApprovalRisk {
@@ -4116,6 +4166,17 @@ class ClientMessage {
     'sinceSeq': sinceSeq,
   });
 
+  factory ClientMessage.resolveSessionLink({
+    required String requestId,
+    required String sessionId,
+    String? provider,
+  }) => ClientMessage._(<String, dynamic>{
+    'type': 'resolve_session_link',
+    'requestId': requestId,
+    'sessionId': sessionId,
+    'provider': ?provider,
+  });
+
   factory ClientMessage.refreshBranch(String sessionId) =>
       ClientMessage._({'type': 'refresh_branch', 'sessionId': sessionId});
 
@@ -4200,6 +4261,7 @@ class ClientMessage {
     bool? networkAccessEnabled,
     String? webSearchMode,
     List<String>? additionalWritableRoots,
+    String? resumeRequestId,
   }) {
     return ClientMessage._(<String, dynamic>{
       'type': 'resume_session',
@@ -4225,6 +4287,7 @@ class ClientMessage {
       'serviceTier': ?serviceTier,
       'networkAccessEnabled': ?networkAccessEnabled,
       'webSearchMode': ?webSearchMode,
+      'resumeRequestId': ?resumeRequestId,
       if (additionalWritableRoots != null && additionalWritableRoots.isNotEmpty)
         'additionalWritableRoots': additionalWritableRoots,
     });

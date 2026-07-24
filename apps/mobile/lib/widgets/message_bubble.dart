@@ -196,6 +196,7 @@ class ServerMessageWidget extends StatelessWidget {
       final ResultMessage msg => ResultChip(message: msg, onFileTap: onFileTap),
       final GuardianApprovalMessage msg => GuardianApprovalNotice(message: msg),
       final ErrorMessage msg => ErrorBubble(message: msg),
+      SessionLinkResolutionMessage() => const SizedBox.shrink(),
       final StatusMessage msg => StatusChip(message: msg),
       HistoryMessage() => const SizedBox.shrink(),
       HistoryDeltaMessage() => const SizedBox.shrink(),

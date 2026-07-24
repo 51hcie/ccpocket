@@ -593,6 +593,11 @@
   "guideReadyHint": "你也可以随时在设置中重新打开本指南",
 
   "creatingSession": "正在创建会话...",
+  "resolvingLinkedSession": "正在查找会话...",
+  "resumingLinkedSession": "正在恢复会话...",
+  "sessionUnavailableTitle": "会话不可用",
+  "sessionUnavailableDescription": "当前 Bridge 上没有此会话。请从最近的会话中选择其他会话。",
+  "openRecentSessions": "打开最近的会话",
   "startWithProvider": "用 {provider} 开始",
   "@startWithProvider": {
     "placeholders": {

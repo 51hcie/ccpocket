@@ -120,6 +120,7 @@ type ResumeOperation = {
   provider: Provider;
   sourceSessionId: string;
   projectPath: string;
+  resumeRequestId?: string;
   fingerprint: string;
   waiters: Set<WebSocket>;
   timeout?: ReturnType<typeof setTimeout>;
@@ -935,6 +936,7 @@ export class BridgeWebSocketServer {
     plugins?: string[];
     pluginMetadata?: Array<Record<string, unknown>>;
     sourceSessionId?: string;
+    resumeRequestId?: string;
   }): SystemServerMessage {
     const {
       sessionId,
@@ -955,6 +957,7 @@ export class BridgeWebSocketServer {
       plugins,
       pluginMetadata,
       sourceSessionId,
+      resumeRequestId,
     } = params;
     const derivedCodexSettings = provider === "codex"
       ? withDerivedCodexPermissionsMode(session?.codexSettings)
@@ -1065,6 +1068,7 @@ export class BridgeWebSocketServer {
           }
         : {}),
       ...(sourceSessionId ? { sourceSessionId } : {}),
+      ...(resumeRequestId ? { resumeRequestId } : {}),
     };
 
     if (provider === "codex" && derivedCodexSettings) {
@@ -4174,6 +4178,59 @@ export class BridgeWebSocketServer {
           this.send(ws, {
             type: "error",
             message: `Session ${msg.sessionId} not found`,
+            errorCode: "session_not_found",
+            sessionId: msg.sessionId,
+          });
+        }
+        break;
+      }
+
+      case "resolve_session_link": {
+        const provider = msg.provider ?? "claude";
+        const activeSession = this.sessionManager
+          .list()
+          .find(
+            (session) =>
+              session.provider === provider &&
+              (session.id === msg.sessionId ||
+                session.claudeSessionId === msg.sessionId),
+          );
+        if (activeSession) {
+          this.send(ws, {
+            type: "session_link_resolution",
+            requestId: msg.requestId,
+            sourceSessionId: msg.sessionId,
+            status: "live",
+            bridgeSessionId: activeSession.id,
+            provider,
+          });
+          break;
+        }
+
+        try {
+          const { sessions } = await getAllRecentSessions({
+            limit: 1,
+            provider,
+            sessionId: msg.sessionId,
+            archivedSessionIds: this.archiveStore.archivedIds(),
+          });
+          const recentSession = sessions[0];
+          this.send(ws, {
+            type: "session_link_resolution",
+            requestId: msg.requestId,
+            sourceSessionId: msg.sessionId,
+            status: recentSession ? "recent" : "unavailable",
+            provider,
+            ...(recentSession ? { recentSession } : {}),
+          } as Record<string, unknown>);
+        } catch (err) {
+          console.error("[ws] Failed to resolve session link:", err);
+          this.send(ws, {
+            type: "session_link_resolution",
+            requestId: msg.requestId,
+            sourceSessionId: msg.sessionId,
+            status: "unavailable",
+            provider,
           });
         }
         break;
@@ -4492,6 +4549,7 @@ export class BridgeWebSocketServer {
             provider,
             sourceSessionId: msg.sessionId,
             projectPath: resumeProjectPath,
+            resumeRequestId: msg.resumeRequestId,
           });
           this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
@@ -4573,6 +4631,7 @@ export class BridgeWebSocketServer {
               provider,
               sourceSessionId: sessionRefId,
               projectPath: effectiveProjectPath,
+              resumeRequestId: msg.resumeRequestId,
             });
             this.send(
               ws,
@@ -4698,6 +4757,7 @@ export class BridgeWebSocketServer {
               permissionMode: legacyPermissionMode,
               executionMode,
               planMode,
+              resumeRequestId: msg.resumeRequestId,
               ...(cached
                 ? {
                     slashCommands: cached.slashCommands,
@@ -4862,6 +4922,7 @@ export class BridgeWebSocketServer {
                   executionMode: effectiveExecutionMode,
                   planMode: effectivePlanMode,
                   sandboxMode: msg.sandboxMode,
+                  resumeRequestId: msg.resumeRequestId,
                   ...(cached
                     ? {
                         slashCommands: cached.slashCommands,
@@ -6373,6 +6434,7 @@ export class BridgeWebSocketServer {
       networkAccessEnabled: msg.networkAccessEnabled,
       webSearchMode: msg.webSearchMode,
       additionalWritableRoots: [...(msg.additionalWritableRoots ?? [])].sort(),
+      resumeRequestId: msg.resumeRequestId,
     });
   }
 
@@ -6429,6 +6491,7 @@ export class BridgeWebSocketServer {
         provider,
         sourceSessionId,
         projectPath,
+        resumeRequestId: request.resumeRequestId,
       });
       this.send(ws, {
         type: "error",
@@ -6444,6 +6507,9 @@ export class BridgeWebSocketServer {
       sourceSessionId,
       provider,
       projectPath,
+      ...(request.resumeRequestId
+        ? { resumeRequestId: request.resumeRequestId }
+        : {}),
     });
 
     if (provider === "claude") {
@@ -6470,6 +6536,7 @@ export class BridgeWebSocketServer {
       provider,
       sourceSessionId,
       projectPath,
+      resumeRequestId: request.resumeRequestId,
       fingerprint,
       waiters: new Set([ws]),
     };
@@ -6542,6 +6609,7 @@ export class BridgeWebSocketServer {
       provider: Provider;
       sourceSessionId: string;
       projectPath: string;
+      resumeRequestId?: string;
     },
   ): void {
     this.send(ws, {
@@ -6550,6 +6618,9 @@ export class BridgeWebSocketServer {
       provider: resume.provider,
       sourceSessionId: resume.sourceSessionId,
       projectPath: resume.projectPath,
+      ...(resume.resumeRequestId
+        ? { resumeRequestId: resume.resumeRequestId }
+        : {}),
     });
   }
 

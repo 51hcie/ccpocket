@@ -1524,6 +1524,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creatingSession => 'Creating session...';
 
   @override
+  String get resolvingLinkedSession => 'Finding session...';
+
+  @override
+  String get resumingLinkedSession => 'Resuming session...';
+
+  @override
+  String get sessionUnavailableTitle => 'Session unavailable';
+
+  @override
+  String get sessionUnavailableDescription =>
+      'This session isn\'t available on this Bridge. Open Recent Sessions to find another session.';
+
+  @override
+  String get openRecentSessions => 'Open Recent Sessions';
+
+  @override
   String get copyForAgent => 'Copy for Agent';
 
   @override

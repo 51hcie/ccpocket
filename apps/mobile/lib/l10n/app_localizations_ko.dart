@@ -1476,6 +1476,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get creatingSession => '세션 생성 중...';
 
   @override
+  String get resolvingLinkedSession => '세션을 찾는 중...';
+
+  @override
+  String get resumingLinkedSession => '세션을 재개하는 중...';
+
+  @override
+  String get sessionUnavailableTitle => '세션을 사용할 수 없음';
+
+  @override
+  String get sessionUnavailableDescription =>
+      '현재 Bridge에서 이 세션을 사용할 수 없습니다. 최근 세션에서 다른 세션을 선택해 주세요.';
+
+  @override
+  String get openRecentSessions => '최근 세션 열기';
+
+  @override
   String get copyForAgent => '에이전트용 복사';
 
   @override

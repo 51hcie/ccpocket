@@ -31,6 +31,7 @@ import '../settings/state/settings_cubit.dart';
 import '../../widgets/new_session_sheet.dart'
     show permissionModeFromRaw, sandboxModeFromRaw;
 import '../session_list/workspace_shell_screen.dart';
+import '../session_link/widgets/session_unavailable_view.dart';
 import '../../widgets/approval_bar.dart';
 import '../../widgets/bubbles/ask_user_question_widget.dart';
 import '../../widgets/screenshot_sheet.dart';
@@ -1231,7 +1232,15 @@ class _CodexChatBody extends HookWidget {
                     ],
                   ),
                 ),
-                body: child,
+                body: sessionState.sessionUnavailable
+                    ? SessionUnavailableView(
+                        onOpenRecentSessions:
+                            onBackToSessions ??
+                            () {
+                              context.router.replaceAll([AdaptiveHomeRoute()]);
+                            },
+                      )
+                    : child,
               );
             },
             child: Column(

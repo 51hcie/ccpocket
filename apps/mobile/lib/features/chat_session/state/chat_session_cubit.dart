@@ -237,6 +237,12 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     if (msg is ErrorMessage) {
       logger.error('[session:$sessionId] Error from bridge: ${msg.message}');
       _rollbackFailedModeChange(msg);
+      if (_isSessionNotFound(msg)) {
+        _statusRefreshTimer?.cancel();
+        _statusRefreshTimer = null;
+        emit(state.copyWith(sessionUnavailable: true));
+        return;
+      }
     }
     if (isCodex && msg is SystemMessage && msg.subtype == 'init') {
       requestGoal();
@@ -1918,6 +1924,14 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         }
       }
     }
+  }
+
+  bool _isSessionNotFound(ErrorMessage msg) {
+    if (msg.errorCode == 'session_not_found') {
+      return msg.sessionId == sessionId;
+    }
+    // Compatibility with Bridges released before structured error codes.
+    return msg.message == 'Session $sessionId not found';
   }
 
   bool _isPermissionModeFailure(ErrorMessage msg) {
