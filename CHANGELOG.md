@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.109.2] - 2026-07-24
+
+### Changed
+- Require Bridge 1.69.4 for external session-link resolution and recent-session resume.
+
+### Fixed
+- Open session deep links and notification taps by attaching matching live Claude or Codex sessions, or by resuming the exact recent session.
+- Show a friendly unavailable state for unknown session links without repeated history errors or duplicate navigation.
+
 ## [1.109.1] - 2026-07-24
 
 ### Changed
