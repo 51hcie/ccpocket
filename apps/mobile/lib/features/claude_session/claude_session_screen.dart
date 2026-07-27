@@ -15,6 +15,7 @@ import '../../models/messages.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../router/app_router.dart';
+import '../../router/session_stack_navigation.dart';
 import '../../services/bridge_service.dart';
 import '../../services/chat_message_handler.dart';
 import '../../services/draft_service.dart';
@@ -170,6 +171,8 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
   StreamSubscription<ServerMessage>? _pendingSub;
   StreamSubscription<ServerMessage>? _sessionSwitchSub;
   StreamSubscription<String>? _sessionStoppedSub;
+  final Object _sessionRouteOwner = Object();
+  Object? _sessionRouteIdentity;
 
   @override
   void initState() {
@@ -191,6 +194,40 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     }
     _listenForSessionSwitch();
     _listenForSessionStopped();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final routeIdentity = ModalRoute.of(context)?.settings;
+    if (!identical(_sessionRouteIdentity, routeIdentity)) {
+      final previousIdentity = _sessionRouteIdentity;
+      if (previousIdentity != null) {
+        SessionRouteRegistry.instance.remove(
+          routeIdentity: previousIdentity,
+          owner: _sessionRouteOwner,
+        );
+      }
+      _sessionRouteIdentity = routeIdentity;
+    }
+    _syncSessionRouteIdentity();
+  }
+
+  void _syncSessionRouteIdentity() {
+    final routeIdentity = _sessionRouteIdentity;
+    if (routeIdentity == null) return;
+    SessionRouteRegistry.instance.update(
+      routeIdentity: routeIdentity,
+      owner: _sessionRouteOwner,
+      sessionId: _sessionId,
+      provider: 'claude',
+    );
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      NotificationService.instance.setActiveSession(
+        sessionId: _sessionId,
+        provider: 'claude',
+      );
+    }
   }
 
   void _listenForSessionCreated() {
@@ -271,6 +308,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       _sandboxMode = sandboxModeFromRaw(msg.sandboxMode) ?? _sandboxMode;
       _isPending = false;
     });
+    _syncSessionRouteIdentity();
     _pendingSub?.cancel();
     _pendingSub = null;
   }
@@ -322,6 +360,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       _explorerCurrentPath = explorerHistory.currentPath;
       _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
+    _syncSessionRouteIdentity();
   }
 
   @override
@@ -351,10 +390,18 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       _explorerCurrentPath = explorerHistory.currentPath;
       _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
+    _syncSessionRouteIdentity();
   }
 
   @override
   void dispose() {
+    final routeIdentity = _sessionRouteIdentity;
+    if (routeIdentity != null) {
+      SessionRouteRegistry.instance.remove(
+        routeIdentity: routeIdentity,
+        owner: _sessionRouteOwner,
+      );
+    }
     widget.pendingSessionCreated?.removeListener(_onPendingSessionCreated);
     _pendingSub?.cancel();
     _sessionSwitchSub?.cancel();

@@ -15,6 +15,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../providers/machine_manager_cubit.dart';
+import '../../router/session_stack_navigation.dart';
 import '../../services/bridge_service.dart';
 import '../../widgets/rename_session_dialog.dart';
 import '../../services/chat_message_handler.dart';
@@ -186,6 +187,8 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
   StreamSubscription<ServerMessage>? _pendingSub;
   StreamSubscription<ServerMessage>? _sandboxRestartSub;
   StreamSubscription<String>? _sessionStoppedSub;
+  final Object _sessionRouteOwner = Object();
+  Object? _sessionRouteIdentity;
 
   @override
   void initState() {
@@ -211,6 +214,40 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     }
     _listenForSandboxRestart();
     _listenForSessionStopped();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final routeIdentity = ModalRoute.of(context)?.settings;
+    if (!identical(_sessionRouteIdentity, routeIdentity)) {
+      final previousIdentity = _sessionRouteIdentity;
+      if (previousIdentity != null) {
+        SessionRouteRegistry.instance.remove(
+          routeIdentity: previousIdentity,
+          owner: _sessionRouteOwner,
+        );
+      }
+      _sessionRouteIdentity = routeIdentity;
+    }
+    _syncSessionRouteIdentity();
+  }
+
+  void _syncSessionRouteIdentity() {
+    final routeIdentity = _sessionRouteIdentity;
+    if (routeIdentity == null) return;
+    SessionRouteRegistry.instance.update(
+      routeIdentity: routeIdentity,
+      owner: _sessionRouteOwner,
+      sessionId: _sessionId,
+      provider: 'codex',
+    );
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      NotificationService.instance.setActiveSession(
+        sessionId: _sessionId,
+        provider: 'codex',
+      );
+    }
   }
 
   void _listenForSessionCreated() {
@@ -292,6 +329,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       _explorerCurrentPath = explorerHistory.currentPath;
       _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
+    _syncSessionRouteIdentity();
   }
 
   void _resolveSession(SystemMessage msg) {
@@ -320,6 +358,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
           _codexPermissionsMode;
       _isPending = false;
     });
+    _syncSessionRouteIdentity();
     _pendingSub?.cancel();
     _pendingSub = null;
   }
@@ -383,10 +422,18 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       _explorerCurrentPath = explorerHistory.currentPath;
       _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
+    _syncSessionRouteIdentity();
   }
 
   @override
   void dispose() {
+    final routeIdentity = _sessionRouteIdentity;
+    if (routeIdentity != null) {
+      SessionRouteRegistry.instance.remove(
+        routeIdentity: routeIdentity,
+        owner: _sessionRouteOwner,
+      );
+    }
     widget.pendingSessionCreated?.removeListener(_onPendingSessionCreated);
     _pendingSub?.cancel();
     _sandboxRestartSub?.cancel();
