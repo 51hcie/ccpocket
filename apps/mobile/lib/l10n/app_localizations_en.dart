@@ -105,6 +105,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markdownFileUnavailable => 'This file cannot be previewed here.';
 
   @override
+  String get filePreviewShowSource => 'View source';
+
+  @override
+  String get filePreviewShowPreview => 'Show preview';
+
+  @override
+  String get filePreviewRenderedHtml => 'Rendered HTML preview';
+
+  @override
   String get copied => 'Copied';
 
   @override

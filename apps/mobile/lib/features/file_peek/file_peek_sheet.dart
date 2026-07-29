@@ -20,6 +20,8 @@ import '../../theme/markdown_style.dart'
         markdownBuilders;
 import '../../widgets/bubbles/image_preview.dart';
 import '../../widgets/workspace_pane_chrome.dart';
+import 'html_preview_document.dart';
+import 'widgets/html_file_preview.dart';
 
 /// Resolves a potentially partial file path against the project's file list,
 /// then shows the file peek sheet.
@@ -271,7 +273,9 @@ class _FilePeekContentState extends State<_FilePeekContent> {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final fileName = widget.filePath.split('/').lastOrNull ?? widget.filePath;
     final isMarkdown = widget.filePath.endsWith('.md');
+    final isHtml = isHtmlPreviewPath(widget.filePath);
     final isImage = _result?.kind == 'image';
+    final canPreviewHtml = isHtml && supportsEmbeddedHtmlPreview;
 
     return Column(
       children: [
@@ -329,10 +333,14 @@ class _FilePeekContentState extends State<_FilePeekContent> {
                   onPressed: _openImageFullScreen,
                   visualDensity: VisualDensity.compact,
                 ),
-              if (isMarkdown && !isImage && !_loading && _result?.error == null)
+              if ((isMarkdown || canPreviewHtml) &&
+                  !isImage &&
+                  !_loading &&
+                  _result?.error == null)
                 IconButton(
+                  key: const ValueKey('file_peek_source_toggle_button'),
                   icon: Icon(
-                    Icons.text_fields,
+                    _showRaw ? Icons.preview_outlined : Icons.code,
                     size: 18,
                     color: _showRaw
                         ? Theme.of(context).colorScheme.primary
@@ -340,6 +348,9 @@ class _FilePeekContentState extends State<_FilePeekContent> {
                   ),
                   onPressed: () => setState(() => _showRaw = !_showRaw),
                   visualDensity: VisualDensity.compact,
+                  tooltip: _showRaw
+                      ? AppLocalizations.of(context).filePreviewShowPreview
+                      : AppLocalizations.of(context).filePreviewShowSource,
                 ),
               IconButton(
                 icon: const Icon(Icons.close, size: 20),
@@ -400,6 +411,8 @@ class _FilePeekContentState extends State<_FilePeekContent> {
               ? _buildError(appColors)
               : _result?.kind == 'image'
               ? _buildImageContent(appColors)
+              : (canPreviewHtml && !_showRaw)
+              ? HtmlFilePreview(html: _result!.content)
               : (isMarkdown && !_showRaw)
               ? _buildMarkdownPreview()
               : _buildCodeContent(appColors),
