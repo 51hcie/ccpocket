@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -14,6 +15,13 @@ bool get supportsEmbeddedHtmlPreview =>
       TargetPlatform.iOS ||
       TargetPlatform.macOS => true,
       _ => false,
+    };
+
+@visibleForTesting
+Set<Factory<OneSequenceGestureRecognizer>>
+createHtmlPreviewGestureRecognizers() =>
+    <Factory<OneSequenceGestureRecognizer>>{
+      Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
     };
 
 class HtmlFilePreview extends StatefulWidget {
@@ -138,6 +146,7 @@ class _HtmlFilePreviewState extends State<HtmlFilePreview> {
           WebViewWidget(
             key: const ValueKey('file_peek_html_preview'),
             controller: _controller,
+            gestureRecognizers: createHtmlPreviewGestureRecognizers(),
           ),
           if (_loading)
             const Align(
