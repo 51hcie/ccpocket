@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:ccpocket/features/generated_image_preview/generated_image_preview_item.dart';
 import 'package:ccpocket/features/generated_image_preview/generated_image_preview_screen.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
