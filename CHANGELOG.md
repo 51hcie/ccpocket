@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.111.0] - 2026-07-30
+
+### Added
+- Share the currently displayed generated image directly from the full-screen preview.
+
 ## [1.110.1] - 2026-07-29
 
 ### Fixed
