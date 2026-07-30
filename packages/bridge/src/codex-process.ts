@@ -346,7 +346,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     }
   >();
 
-  private stdoutBuffer = "";
+  /**
+   * App-server responses can contain tens of MiB of inline image data.
+   * Keep incomplete JSONL records as chunks so every transport chunk is
+   * copied at most once instead of repeatedly rebuilding one growing string.
+   */
+  private stdoutLineChunks: string[] = [];
 
   // Collaboration mode & plan completion state
   private _approvalPolicy: string | undefined = undefined;
@@ -820,6 +825,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     this.pendingPlanCompletion = null;
     this._pendingPlanInput = null;
     this._projectPath = projectPath;
+    this.stdoutLineChunks = [];
   }
 
   private launchAppServer(
@@ -2065,12 +2071,21 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   }
 
   private handleStdoutChunk(chunk: string): void {
-    this.stdoutBuffer += chunk;
-    while (true) {
-      const newlineIndex = this.stdoutBuffer.indexOf("\n");
-      if (newlineIndex < 0) break;
-      const line = this.stdoutBuffer.slice(0, newlineIndex).trim();
-      this.stdoutBuffer = this.stdoutBuffer.slice(newlineIndex + 1);
+    let lineStart = 0;
+
+    while (lineStart < chunk.length) {
+      const newlineIndex = chunk.indexOf("\n", lineStart);
+      if (newlineIndex < 0) {
+        this.stdoutLineChunks.push(chunk.slice(lineStart));
+        return;
+      }
+
+      const lineFragment = chunk.slice(lineStart, newlineIndex);
+      const line =
+        this.stdoutLineChunks.length === 0
+          ? lineFragment.trim()
+          : this.completeStdoutLine(lineFragment);
+      lineStart = newlineIndex + 1;
       if (!line) continue;
 
       try {
@@ -2088,6 +2103,13 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         }
       }
     }
+  }
+
+  private completeStdoutLine(finalChunk: string): string {
+    this.stdoutLineChunks.push(finalChunk);
+    const line = this.stdoutLineChunks.join("").trim();
+    this.stdoutLineChunks = [];
+    return line;
   }
 
   private handleRpcEnvelope(envelope: JsonRpcEnvelope): void {

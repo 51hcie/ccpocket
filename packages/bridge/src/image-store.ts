@@ -2,11 +2,13 @@ import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { extname, isAbsolute, resolve } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import sharp from "sharp";
 
 export interface ImageRef {
   id: string;
   url: string;
   mimeType: string;
+  thumbnailUrl?: string;
 }
 
 interface StoredImage {
@@ -14,10 +16,19 @@ interface StoredImage {
   mimeType: string;
   buffer: Buffer;
   accessedAt: number;
+  thumbnail?: StoredThumbnail;
+  thumbnailPromise?: Promise<StoredThumbnail>;
+}
+
+interface StoredThumbnail {
+  mimeType: string;
+  buffer: Buffer;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_ENTRIES = 100;
+const THUMBNAIL_MAX_DIMENSION = 768;
+const THUMBNAIL_MIME_TYPE = "image/webp";
 
 const MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -69,7 +80,12 @@ export class ImageStore {
   }
 
   private imageRef(id: string, mimeType: string): ImageRef {
-    return { id, url: `/images/${id}`, mimeType };
+    return {
+      id,
+      url: `/images/${id}`,
+      mimeType,
+      thumbnailUrl: `/images/${id}?variant=thumbnail`,
+    };
   }
 
   private touch(id: string): ImageRef | null {
@@ -199,8 +215,8 @@ export class ImageStore {
    * Returns true if the request was handled, false otherwise.
    */
   handleRequest(req: IncomingMessage, res: ServerResponse): boolean {
-    const url = req.url ?? "";
-    const match = url.match(/^\/images\/([a-f0-9-]+)$/);
+    const url = new URL(req.url ?? "", "http://localhost");
+    const match = url.pathname.match(/^\/images\/([a-f0-9-]+)$/);
     if (!match) return false;
 
     const id = match[1];
@@ -212,12 +228,66 @@ export class ImageStore {
     }
 
     entry.accessedAt = Date.now();
+    if (url.searchParams.get("variant") === "thumbnail") {
+      void this.serveThumbnail(entry, res);
+      return true;
+    }
+
+    this.serveBuffer(res, entry.buffer, entry.mimeType);
+    return true;
+  }
+
+  private async serveThumbnail(
+    entry: StoredImage,
+    res: ServerResponse,
+  ): Promise<void> {
+    try {
+      const thumbnail = await this.getOrCreateThumbnail(entry);
+      this.serveBuffer(res, thumbnail.buffer, thumbnail.mimeType);
+    } catch (err) {
+      console.warn(`[image-store] Failed to create thumbnail:`, err);
+      this.serveBuffer(res, entry.buffer, entry.mimeType);
+    }
+  }
+
+  private async getOrCreateThumbnail(
+    entry: StoredImage,
+  ): Promise<StoredThumbnail> {
+    if (entry.thumbnail) return entry.thumbnail;
+    if (entry.thumbnailPromise) return entry.thumbnailPromise;
+
+    entry.thumbnailPromise = sharp(entry.buffer)
+      .rotate()
+      .resize({
+        width: THUMBNAIL_MAX_DIMENSION,
+        height: THUMBNAIL_MAX_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 75, effort: 2 })
+      .toBuffer()
+      .then((buffer) => {
+        const thumbnail = { mimeType: THUMBNAIL_MIME_TYPE, buffer };
+        entry.thumbnail = thumbnail;
+        return thumbnail;
+      })
+      .finally(() => {
+        entry.thumbnailPromise = undefined;
+      });
+    return entry.thumbnailPromise;
+  }
+
+  private serveBuffer(
+    res: ServerResponse,
+    buffer: Buffer,
+    mimeType: string,
+  ): void {
+    if (res.destroyed) return;
     res.writeHead(200, {
-      "Content-Type": entry.mimeType,
-      "Content-Length": entry.buffer.length,
+      "Content-Type": mimeType,
+      "Content-Length": buffer.length,
       "Cache-Control": "public, max-age=604800",
     });
-    res.end(entry.buffer);
-    return true;
+    res.end(buffer);
   }
 }

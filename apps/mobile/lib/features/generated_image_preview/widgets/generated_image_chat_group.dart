@@ -186,9 +186,9 @@ class _IntrinsicAspectRatioImageState
     final bytes = item.bytes;
     if (bytes != null) return MemoryImage(bytes);
     return ExtendedNetworkImageProvider(
-      item.url!,
+      item.chatImageUrl!,
       cache: true,
-      cacheKey: item.cacheKey,
+      cacheKey: item.thumbnailCacheKey,
       cacheMaxAge: _cacheMaxAge,
     );
   }
@@ -268,10 +268,10 @@ class _GeneratedImageThumbnail extends StatelessWidget {
     }
 
     return ExtendedImage.network(
-      item.url!,
+      item.chatImageUrl!,
       fit: fit,
       cache: true,
-      cacheKey: item.cacheKey,
+      cacheKey: item.thumbnailCacheKey,
       cacheMaxAge: _cacheMaxAge,
       loadStateChanged: (state) {
         return switch (state.extendedImageLoadState) {
