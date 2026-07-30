@@ -50,14 +50,14 @@ jobs:
           bundler-cache: true
           working-directory: apps/mobile
 
-      - name: Submit iOS build for review
+      - name: Upload iOS metadata
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          IOS_VERSION: "1.111.1"
-          IOS_BUILD_NUMBER: "206"
-        run: bundle exec fastlane ios submit_review
+          SKIP_SCREENSHOTS: ${{ inputs.upload_screenshots == false }}
+          SPACESHIP_SCREENSHOT_UPLOAD_TIMEOUT: "5"
+        run: bundle exec fastlane ios metadata
 
   android:
     if: ${{ inputs.platform == 'android' || inputs.platform == 'both' }}

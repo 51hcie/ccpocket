@@ -24,44 +24,6 @@ platform :ios do
       run_precheck_before_submit: false,
     )
   end
-
-  desc "Submit an existing App Store build for review"
-  lane :submit_review do
-    app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_KEY_IDENTIFIER"],
-      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_content: ENV["APP_STORE_CONNECT_PRIVATE_KEY"],
-      is_key_content_base64: false,
-    )
-
-    require "spaceship"
-
-    platform = Spaceship::ConnectAPI::Platform::IOS
-    app = Spaceship::ConnectAPI::App.find("com.k9i.ccpocket")
-    submission = app.get_ready_review_submission(
-      platform: platform,
-      includes: "items",
-    )
-    UI.user_error!("No iOS review submission is ready") unless submission
-
-    items = Spaceship::ConnectAPI::ReviewSubmissionItem.all(
-      review_submission_id: submission.id,
-      includes: "appStoreVersion",
-    )
-    UI.user_error!("Expected exactly one review item, found #{items.length}") unless items.length == 1
-
-    version = items.first.app_store_version
-    UI.user_error!("Review item has no App Store version") unless version
-    UI.user_error!("Expected version #{ENV.fetch("IOS_VERSION")}, found #{version.version_string}") unless version.version_string == ENV.fetch("IOS_VERSION")
-
-    build = version.get_build
-    UI.user_error!("Review version has no selected build") unless build
-    UI.user_error!("Expected build #{ENV.fetch("IOS_BUILD_NUMBER")}, found #{build.version}") unless build.version == ENV.fetch("IOS_BUILD_NUMBER")
-
-    UI.message("Submitting iOS #{version.version_string} (#{build.version}) for review")
-    submitted = submission.submit_for_review
-    UI.success("Review submission state: #{submitted.state}")
-  end
 end
 
 # --------------------------------------------------------------------------
