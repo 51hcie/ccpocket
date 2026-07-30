@@ -2,6 +2,13 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.69.5] - 2026-07-30
+
+### Changed
+- Reduce image-heavy Codex session restore time by framing large app-server JSONL responses without repeatedly copying the accumulated payload.
+- Advertise and lazily generate cached WebP thumbnails for generated images to reduce mobile transfer sizes while preserving original images for full-screen previews.
+- Align the minimum supported Node.js version with runtime dependencies at 20.18.1.
+
 ## [1.69.4] - 2026-07-24
 
 ### Fixed
