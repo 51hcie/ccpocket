@@ -2,6 +2,12 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.69.6] - 2026-07-31
+
+### Changed
+- Use GPT-5.6 Luna with no reasoning effort for Codex auto-rename and commit-message assistance, reducing credit usage while preserving output quality.
+- Generate more natural and concise session names by preserving the user's language and favoring specific noun phrases.
+
 ## [1.69.5] - 2026-07-30
 
 ### Changed
