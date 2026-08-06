@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.111.2] - 2026-08-07
+
+### Fixed
+- Improve scrolling and soft-keyboard responsiveness in long chat sessions by avoiding unnecessary message-list rebuilds and caching history-derived data.
+
 ## [1.111.1] - 2026-07-30
 
 ### Changed
