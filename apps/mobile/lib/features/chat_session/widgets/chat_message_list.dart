@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +7,7 @@ import 'package:scroll_to_index/scroll_to_index.dart';
 import '../../../models/messages.dart';
 import '../../../providers/bridge_cubits.dart';
 import '../../../services/bridge_service.dart';
+import '../../../services/performance_probe_extension.dart';
 import '../../../widgets/message_bubble.dart';
 import '../../generated_image_preview/generated_image_preview_mapper.dart';
 import '../../generated_image_preview/generated_image_preview_item.dart';
@@ -14,6 +16,7 @@ import '../../generated_image_preview/widgets/generated_image_chat_group.dart';
 import '../../file_peek/file_peek_sheet.dart';
 import '../../message_images/message_images_screen.dart';
 import '../state/chat_session_cubit.dart';
+import '../state/chat_session_state.dart';
 import '../state/streaming_state.dart';
 import '../state/streaming_state_cubit.dart';
 import 'maintain_reading_position_physics.dart';
@@ -36,6 +39,31 @@ bool shouldShowForkForAssistant(List<ChatEntry> entries, int entryIndex) {
     }
   }
   return false;
+}
+
+@visibleForTesting
+Set<int> forkableAssistantEntryIndices(List<ChatEntry> entries) {
+  final result = <int>{};
+  int? candidate;
+  for (var index = 0; index < entries.length; index++) {
+    final entry = entries[index];
+    if (entry is UserChatEntry) {
+      candidate = null;
+      continue;
+    }
+    if (entry is! ServerChatEntry) continue;
+    switch (entry.message) {
+      case AssistantServerMessage():
+        candidate = index;
+        break;
+      case ResultMessage():
+        if (candidate != null) result.add(candidate);
+        break;
+      default:
+        break;
+    }
+  }
+  return result;
 }
 
 /// Displays the chat message list with [ListView.builder] (reverse: true).
@@ -86,6 +114,10 @@ class ChatMessageList extends StatefulWidget {
 class _ChatMessageListState extends State<ChatMessageList> {
   final _generatedImageItemCache =
       <GeneratedImageItemCacheKey, GeneratedImagePreviewItem>{};
+  ChatSessionState? _derivedForState;
+  List<ChatEntry>? _derivedEntries;
+  String? _derivedForHttpBaseUrl;
+  _ChatListDerivedData? _derivedData;
 
   @override
   void initState() {
@@ -136,47 +168,12 @@ class _ChatMessageListState extends State<ChatMessageList> {
   }
 
   // ---------------------------------------------------------------------------
-  // Plan text resolution
-  // ---------------------------------------------------------------------------
-
-  /// For entries with ExitPlanMode, search all entries for a Write tool
-  /// targeting `.claude/plans/` to resolve the plan text.
-  String? _resolvePlanText(ChatEntry entry) {
-    if (entry is! ServerChatEntry) return null;
-    final msg = entry.message;
-    if (msg is! AssistantServerMessage) return null;
-    final hasExitPlan = msg.message.content.any(
-      (c) => c is ToolUseContent && c.name == 'ExitPlanMode',
-    );
-    if (!hasExitPlan) return null;
-    return _findPlanFromWriteTool();
-  }
-
-  /// Search all entries in reverse for a Write tool targeting `.claude/plans/`.
-  String? _findPlanFromWriteTool() {
-    final entries = context.read<ChatSessionCubit>().state.entries;
-    for (var i = entries.length - 1; i >= 0; i--) {
-      final entry = entries[i];
-      if (entry is! ServerChatEntry) continue;
-      final msg = entry.message;
-      if (msg is! AssistantServerMessage) continue;
-      for (final c in msg.message.content) {
-        if (c is! ToolUseContent || c.name != 'Write') continue;
-        final filePath = c.input['file_path']?.toString() ?? '';
-        if (!filePath.contains('.claude/plans/')) continue;
-        final content = c.input['content']?.toString();
-        if (content != null && content.isNotEmpty) return content;
-      }
-    }
-    return null;
-  }
-
-  // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
+    chatListPerformanceProbe.recordBuild();
     final chatState = context.watch<ChatSessionCubit>().state;
     final hiddenToolUseIds = chatState.hiddenToolUseIds;
     final allEntries = chatState.entries;
@@ -190,22 +187,10 @@ class _ChatMessageListState extends State<ChatMessageList> {
     );
     final totalCount = allEntries.length + (hasStreaming ? 1 : 0);
     final streamingCubit = context.read<StreamingStateCubit>();
-    final imageGroups = groupGeneratedImageResponses(allEntries);
-    final imageGroupMemberIndices = <int>{};
-    final imageItemsByAnchor = <int, List<GeneratedImagePreviewItem>>{};
-    for (final group in imageGroups) {
-      final items = generatedImageItemsFromToolResults(
-        group.messages,
-        httpBaseUrl: widget.httpBaseUrl,
-        itemCache: _generatedImageItemCache,
-      );
-      if (items.isEmpty) continue;
-      imageItemsByAnchor[group.anchorEntryIndex] = items;
-      imageGroupMemberIndices.addAll(group.memberEntryIndices);
-    }
+    final derivedData = _deriveData(chatState, allEntries);
     final effectiveHiddenToolUseIds = {
       ...hiddenToolUseIds,
-      ...completedGeneratedImageToolUseIds(allEntries),
+      ...derivedData.completedGeneratedImageToolUseIds,
     };
 
     return NotificationListener<ScrollNotification>(
@@ -257,15 +242,15 @@ class _ChatMessageListState extends State<ChatMessageList> {
           final previous = entryIndex > 0 ? allEntries[entryIndex - 1] : null;
           final onForkMessage =
               widget.isCodex &&
-                  shouldShowForkForAssistant(allEntries, entryIndex)
+                  derivedData.forkableAssistantEntryIndices.contains(entryIndex)
               ? widget.onForkMessage
               : null;
 
-          final imageItems = imageItemsByAnchor[entryIndex];
+          final imageItems = derivedData.imageItemsByAnchor[entryIndex];
           final Widget child;
           if (imageItems != null) {
             child = GeneratedImageChatGroup(items: imageItems);
-          } else if (imageGroupMemberIndices.contains(entryIndex)) {
+          } else if (derivedData.imageGroupMemberIndices.contains(entryIndex)) {
             child = const SizedBox.shrink();
           } else {
             child = ChatEntryWidget(
@@ -276,7 +261,9 @@ class _ChatMessageListState extends State<ChatMessageList> {
               onRewindMessage: widget.onRewindMessage,
               onForkMessage: onForkMessage,
               collapseToolResults: widget.collapseToolResults,
-              resolvedPlanText: _resolvePlanText(entry),
+              resolvedPlanText: _hasExitPlanMode(entry)
+                  ? derivedData.latestPlanText
+                  : null,
               hiddenToolUseIds: effectiveHiddenToolUseIds,
               onFileTap: (filePath) {
                 final projectPath = widget.projectPath;
@@ -329,6 +316,81 @@ class _ChatMessageListState extends State<ChatMessageList> {
     );
   }
 
+  _ChatListDerivedData _deriveData(
+    ChatSessionState chatState,
+    List<ChatEntry> entries,
+  ) {
+    final cached = _derivedData;
+    if (_derivedForHttpBaseUrl == widget.httpBaseUrl && cached != null) {
+      if (identical(_derivedForState, chatState)) return cached;
+      final previousEntries = _derivedEntries;
+      if (previousEntries != null && listEquals(previousEntries, entries)) {
+        _derivedForState = chatState;
+        return cached;
+      }
+    }
+
+    final stopwatch = kDebugMode ? (Stopwatch()..start()) : null;
+    final imageGroupMemberIndices = <int>{};
+    final imageItemsByAnchor = <int, List<GeneratedImagePreviewItem>>{};
+    for (final group in groupGeneratedImageResponses(entries)) {
+      final items = generatedImageItemsFromToolResults(
+        group.messages,
+        httpBaseUrl: widget.httpBaseUrl,
+        itemCache: _generatedImageItemCache,
+      );
+      if (items.isEmpty) continue;
+      imageItemsByAnchor[group.anchorEntryIndex] = items;
+      imageGroupMemberIndices.addAll(group.memberEntryIndices);
+    }
+    final next = _ChatListDerivedData(
+      imageGroupMemberIndices: imageGroupMemberIndices,
+      imageItemsByAnchor: imageItemsByAnchor,
+      completedGeneratedImageToolUseIds: completedGeneratedImageToolUseIds(
+        entries,
+      ),
+      forkableAssistantEntryIndices: forkableAssistantEntryIndices(entries),
+      latestPlanText: _findPlanFromWriteTool(entries),
+    );
+    _derivedForState = chatState;
+    _derivedEntries = entries;
+    _derivedForHttpBaseUrl = widget.httpBaseUrl;
+    _derivedData = next;
+    stopwatch?.stop();
+    if (stopwatch != null) {
+      chatListPerformanceProbe.recordDerivedData(stopwatch.elapsed);
+    }
+    return next;
+  }
+
+  bool _hasExitPlanMode(ChatEntry entry) {
+    return entry is ServerChatEntry &&
+        entry.message is AssistantServerMessage &&
+        (entry.message as AssistantServerMessage).message.content.any(
+          (content) =>
+              content is ToolUseContent && content.name == 'ExitPlanMode',
+        );
+  }
+
+  String? _findPlanFromWriteTool(List<ChatEntry> entries) {
+    for (var i = entries.length - 1; i >= 0; i--) {
+      final entry = entries[i];
+      if (entry is! ServerChatEntry ||
+          entry.message is! AssistantServerMessage) {
+        continue;
+      }
+      final message = entry.message as AssistantServerMessage;
+      for (final content in message.message.content) {
+        if (content is! ToolUseContent || content.name != 'Write') continue;
+        final filePath = content.input['file_path']?.toString() ?? '';
+        if (!filePath.contains('.claude/plans/')) continue;
+        final plan = content.input['content']?.toString();
+        if (plan != null && plan.isNotEmpty) return plan;
+      }
+    }
+    return null;
+  }
+
   String _entryKey(ChatEntry entry, int index) {
     return switch (entry) {
       ServerChatEntry(:final message) => switch (message) {
@@ -354,4 +416,20 @@ class _ChatMessageListState extends State<ChatMessageList> {
       StreamingChatEntry() => 'streaming',
     };
   }
+}
+
+class _ChatListDerivedData {
+  final Set<int> imageGroupMemberIndices;
+  final Map<int, List<GeneratedImagePreviewItem>> imageItemsByAnchor;
+  final Set<String> completedGeneratedImageToolUseIds;
+  final Set<int> forkableAssistantEntryIndices;
+  final String? latestPlanText;
+
+  const _ChatListDerivedData({
+    required this.imageGroupMemberIndices,
+    required this.imageItemsByAnchor,
+    required this.completedGeneratedImageToolUseIds,
+    required this.forkableAssistantEntryIndices,
+    required this.latestPlanText,
+  });
 }

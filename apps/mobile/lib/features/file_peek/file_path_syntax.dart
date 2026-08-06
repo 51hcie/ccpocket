@@ -1,9 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
 /// Callback invoked when a file path is tapped.
 typedef FilePathTapCallback = void Function(String filePath);
+
+final filePathSuffixPerformanceProbe = FilePathSuffixPerformanceProbe();
+
+class FilePathSuffixPerformanceProbe {
+  var buildCount = 0;
+  var buildMicros = 0;
+  var cacheHits = 0;
+
+  void reset() {
+    buildCount = 0;
+    buildMicros = 0;
+    cacheHits = 0;
+  }
+
+  void record(Duration elapsed) {
+    if (!kDebugMode) return;
+    buildCount++;
+    buildMicros += elapsed.inMicroseconds;
+  }
+
+  Map<String, Object?> summary() => {
+    'buildCount': buildCount,
+    'buildMs': _roundMs(buildMicros),
+    'avgBuildMs': buildCount == 0 ? 0 : _roundMs(buildMicros / buildCount),
+    'cacheHits': cacheHits,
+  };
+
+  double _roundMs(num micros) {
+    return (micros / 1000 * 10).roundToDouble() / 10;
+  }
+}
 
 /// Inline syntax that detects file paths in backtick-quoted inline code
 /// by matching against a known set of project file paths.
@@ -13,6 +45,10 @@ typedef FilePathTapCallback = void Function(String filePath);
 /// Otherwise [tryMatch] returns false and the built-in [CodeSyntax] renders
 /// it as normal inline code.
 class FilePathSyntax extends md.InlineSyntax {
+  static final _suffixCache = Expando<_CachedFilePathSuffixes>(
+    'file path suffixes',
+  );
+
   final Set<String> _knownPathSuffixes;
 
   /// Creates a [FilePathSyntax] with a pre-built suffix set.
@@ -31,6 +67,7 @@ class FilePathSyntax extends md.InlineSyntax {
   /// For each path like `lib/models/messages.dart`, generates all suffixes:
   /// `lib/models/messages.dart`, `models/messages.dart`, `messages.dart`.
   static Set<String> buildSuffixSet(Iterable<String> filePaths) {
+    final stopwatch = kDebugMode ? (Stopwatch()..start()) : null;
     final suffixes = <String>{};
     for (final filePath in filePaths) {
       if (filePath.endsWith('/')) continue;
@@ -39,7 +76,26 @@ class FilePathSyntax extends md.InlineSyntax {
         suffixes.add(parts.sublist(i).join('/'));
       }
     }
+    stopwatch?.stop();
+    if (stopwatch != null) {
+      filePathSuffixPerformanceProbe.record(stopwatch.elapsed);
+    }
     return suffixes;
+  }
+
+  /// Returns suffixes cached by list identity and invalidated by content changes.
+  static Set<String> cachedSuffixSet(List<String> filePaths) {
+    final cached = _suffixCache[filePaths];
+    if (cached != null && listEquals(cached.filePaths, filePaths)) {
+      if (kDebugMode) filePathSuffixPerformanceProbe.cacheHits++;
+      return cached.suffixes;
+    }
+    final next = _CachedFilePathSuffixes(
+      filePaths: List.unmodifiable(filePaths),
+      suffixes: Set.unmodifiable(buildSuffixSet(filePaths)),
+    );
+    _suffixCache[filePaths] = next;
+    return next.suffixes;
   }
 
   static final _lineColPattern = RegExp(r'(:\d+){1,2}$');
@@ -85,6 +141,16 @@ class FilePathSyntax extends md.InlineSyntax {
     // Not called — logic is in tryMatch.
     return false;
   }
+}
+
+class _CachedFilePathSuffixes {
+  final List<String> filePaths;
+  final Set<String> suffixes;
+
+  const _CachedFilePathSuffixes({
+    required this.filePaths,
+    required this.suffixes,
+  });
 }
 
 /// Inline syntax that detects bare file paths (without backticks) in text

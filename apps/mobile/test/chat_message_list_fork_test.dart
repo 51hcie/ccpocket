@@ -18,6 +18,7 @@ void main() {
 
       expect(shouldShowForkForAssistant(entries, 1), isFalse);
       expect(shouldShowForkForAssistant(entries, 3), isTrue);
+      expect(forkableAssistantEntryIndices(entries), {3});
     });
 
     test('does not show fork before the next user turn', () {
@@ -30,6 +31,19 @@ void main() {
 
       expect(shouldShowForkForAssistant(entries, 1), isFalse);
       expect(shouldShowForkForAssistant(entries, 3), isFalse);
+      expect(forkableAssistantEntryIndices(entries), isEmpty);
+    });
+
+    test('precomputes the last assistant before each result boundary', () {
+      final entries = <ChatEntry>[
+        ServerChatEntry(_assistant('a1')),
+        ServerChatEntry(_result()),
+        ServerChatEntry(_assistant('a2')),
+        ServerChatEntry(_toolResult('tool')),
+        ServerChatEntry(_result()),
+      ];
+
+      expect(forkableAssistantEntryIndices(entries), {0, 2});
     });
   });
 }
