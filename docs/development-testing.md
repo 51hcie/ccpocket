@@ -69,6 +69,41 @@ Connect the debug app to:
 Debug builds also include the Mock Preview gallery for UI-only checks that do
 not require a Bridge connection.
 
+## Android deep-link task regression
+
+Use an Android emulator or device to verify that external deep links reach the
+existing CC Pocket task without creating a second `MainActivity` or Bridge
+connection. Test both `ccpocket://session/<id>` and `ccpocket://connect`.
+
+For cold and warm launches, run the supported flag combinations:
+
+```bash
+adb shell am start -W -a android.intent.action.VIEW \
+  -d "ccpocket://session/test-session"
+adb shell am start -W -a android.intent.action.VIEW -f 0x10000000 \
+  -d "ccpocket://session/test-session"
+adb shell am start -W -a android.intent.action.VIEW -f 0x30000000 \
+  -d "ccpocket://session/test-session"
+adb shell am start -W -a android.intent.action.VIEW -f 0x14000000 \
+  -d "ccpocket://session/test-session"
+```
+
+`0x30000000` is `NEW_TASK | SINGLE_TOP`; `NEW_TASK | CLEAR_TOP` is
+`0x14000000`. A sender Activity that calls `startActivity()` without task flags
+is required to reproduce caller-task nesting exactly; `adb shell am start`
+does not provide an existing Activity task as the caller.
+
+After each launch, inspect the task stack:
+
+```bash
+adb shell dumpsys activity activities | grep -E \
+  "Task\{|com\.k9i\.ccpocket/(\.DeepLinkActivity|\.MainActivity)"
+```
+
+Confirm that only the canonical `MainActivity` remains, the URI is handled once,
+the existing Bridge connection stays active, and Back/Recents navigation is
+unchanged. Repeat after selecting each alternate launcher icon.
+
 ## Cleanup
 
 If the Bridge or web app was started in the foreground, stop it with `Ctrl-C`.

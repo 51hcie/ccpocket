@@ -45,6 +45,7 @@ import 'services/app_icon_service.dart';
 import 'services/bridge_service.dart';
 import 'services/connection_url_parser.dart';
 import 'services/database_service.dart';
+import 'services/deep_link_dispatcher.dart';
 import 'services/draft_service.dart';
 import 'services/fcm_service.dart';
 import 'services/in_app_review_service.dart';
@@ -314,6 +315,7 @@ class _CcpocketAppState extends State<CcpocketApp> {
   StreamSubscription<RemoteMessage>? _fcmOnMessageOpenedAppSub;
 
   late final AppRouter _appRouter;
+  late final DeepLinkDispatcher _deepLinkDispatcher;
   bool _routerInitialized = false;
   bool _fcmHandlersInitialized = false;
   late final AppLifecycleListener _lifecycleListener;
@@ -321,6 +323,7 @@ class _CcpocketAppState extends State<CcpocketApp> {
   @override
   void initState() {
     super.initState();
+    _deepLinkDispatcher = DeepLinkDispatcher(_handleUri);
 
     // Clear stale notifications on launch and whenever the app is resumed.
     _lifecycleListener = AppLifecycleListener(
@@ -347,6 +350,11 @@ class _CcpocketAppState extends State<CcpocketApp> {
     NotificationService.instance.onNotificationTap = (payload) {
       _openSessionFromPayload(payload);
     };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _deepLinkDispatcher.markReady();
+      }
+    });
   }
 
   void _initFcmHandlers() {
@@ -464,24 +472,11 @@ class _CcpocketAppState extends State<CcpocketApp> {
     return hash;
   }
 
-  Future<void> _initDeepLinks() async {
-    // Handle cold start
-    try {
-      final initialUri = await _appLinks!.getInitialLink().timeout(
-        const Duration(seconds: 3),
-        onTimeout: () => null,
-      );
-      if (initialUri != null) {
-        _handleUri(initialUri);
-      }
-    } catch (e) {
-      logger.error('[deep_link] getInitialLink failed', e);
-    }
-
-    // Handle warm start / incoming links while running
+  void _initDeepLinks() {
+    // app_links includes the cold-start URI as the first stream event.
     try {
       _linkSub = _appLinks!.uriLinkStream.listen(
-        _handleUri,
+        _deepLinkDispatcher.add,
         onError: (e) => logger.error('[deep_link] stream error', e),
       );
     } catch (e) {
