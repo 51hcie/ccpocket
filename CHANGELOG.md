@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.111.3] - 2026-08-07
+
+### Fixed
+- Keep Android deep links in the existing CC Pocket task instead of creating a second Flutter activity and Bridge connection, including launches from alternate app icons.
+- Deliver cold-start deep links once after router initialization to prevent initial-route errors and duplicate navigation.
+
 ## [1.111.2] - 2026-08-07
 
 ### Fixed
