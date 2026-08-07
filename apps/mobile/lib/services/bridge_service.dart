@@ -2321,8 +2321,12 @@ class BridgeService implements BridgeServiceBase {
   /// [apiKey] should be provided from [FlutterSecureStorage] via
   /// [MachineManagerService]. Falls back to legacy [SharedPreferences]
   /// for migration.
-  Future<bool> autoConnect({String? apiKey}) async {
+  Future<bool> autoConnect({
+    String? apiKey,
+    bool Function()? shouldConnect,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
+    if (shouldConnect?.call() == false) return false;
     final url = prefs.getString(_prefKeyUrl);
     if (url == null || url.isEmpty) return false;
 
@@ -2341,6 +2345,7 @@ class BridgeService implements BridgeServiceBase {
       await prefs.remove(_prefKeyApiKey);
     }
 
+    if (shouldConnect?.call() == false) return false;
     connect(connectUrl);
     return true;
   }

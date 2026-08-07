@@ -203,23 +203,37 @@ void main() {
   group('HomeContent skeleton', () {
     testWidgets('shows Skeletonizer when isInitialLoading is true and '
         'no sessions exist', (tester) async {
-      await tester.pumpWidget(
-        _buildHomeContent(
-          recentSessions: const [],
-          isInitialLoading: true,
-          cubit: cubit,
-          draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
-        ),
-      );
-      await tester.pump();
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(
+          _buildHomeContent(
+            recentSessions: const [],
+            isInitialLoading: true,
+            cubit: cubit,
+            draftService: draftService,
+            revenueCatService: revenueCatService,
+            supportBannerService: supportBannerService,
+          ),
+        );
+        await tester.pump();
 
-      // Skeletonizer internally renders as _Skeletonizer + SkeletonizerScope.
-      // Use SkeletonizerScope to detect presence.
-      expect(find.byType(SkeletonizerScope), findsOneWidget);
-      // Section header should say "Recent Sessions"
-      expect(find.text('Recent Sessions'), findsOneWidget);
+        // Skeletonizer internally renders as _Skeletonizer +
+        // SkeletonizerScope. Use SkeletonizerScope to detect presence.
+        expect(find.byType(SkeletonizerScope), findsOneWidget);
+        expect(find.text('Recent Sessions'), findsOneWidget);
+        expect(find.text('Loading sessions...'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('session_list_loading_status')),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Loading sessions...'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(RegExp('Implement the new feature')),
+          findsNothing,
+        );
+      } finally {
+        semantics.dispose();
+      }
     });
 
     testWidgets('shows empty state when isInitialLoading is false and '

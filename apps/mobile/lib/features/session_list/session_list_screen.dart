@@ -37,6 +37,7 @@ import 'widgets/connect_form.dart';
 import 'widgets/home_content.dart';
 import 'widgets/machine_edit_sheet.dart';
 import 'widgets/session_list_app_bar.dart';
+import 'widgets/session_list_loading_view.dart';
 import 'workspace_shell_screen.dart';
 
 export 'services/session_resume_coordinator.dart'
@@ -392,9 +393,12 @@ class _SessionListScreenState extends State<SessionListScreen>
           final machine = await findAutoConnectMachine(cubit, uri);
           if (machine != null) {
             apiKey = await cubit?.getApiKey(machine.id);
+            if (!mounted || !_isAutoConnecting) return;
             if (machine.sshJumpHost?.trim().isNotEmpty == true) {
-              if (!mounted) return;
-              await _connectToMachineConfig(machine);
+              await _connectToMachineConfig(
+                machine,
+                shouldConnect: () => _isAutoConnecting,
+              );
               return;
             }
           }
@@ -402,11 +406,12 @@ class _SessionListScreenState extends State<SessionListScreen>
       } catch (_) {
         // Ignore — autoConnect falls back to legacy SharedPreferences.
       }
-      if (!mounted) return;
+      if (!mounted || !_isAutoConnecting) return;
       final attempted = await context.read<BridgeService>().autoConnect(
         apiKey: apiKey,
+        shouldConnect: () => mounted && _isAutoConnecting,
       );
-      if (!attempted) {
+      if (!attempted && mounted) {
         setState(() => _isAutoConnecting = false);
       }
     }
@@ -597,6 +602,9 @@ class _SessionListScreenState extends State<SessionListScreen>
   }
 
   void _disconnect() {
+    if (_isAutoConnecting) {
+      setState(() => _isAutoConnecting = false);
+    }
     context.read<BridgeService>().disconnect();
     final tunnelService = context.read<SshBridgeTunnelService?>();
     if (tunnelService != null) {
@@ -1645,6 +1653,10 @@ class _SessionListScreenState extends State<SessionListScreen>
     required MachineManagerCubit? machineManagerCubit,
     required String? connectedBridgeLabel,
   }) {
+    final canDisconnect =
+        showConnectedUI ||
+        _isAutoConnecting ||
+        connectionState == BridgeConnectionState.connecting;
     final chrome = resolveWorkspacePaneChrome(
       platform: Theme.of(context).platform,
       isAdaptiveWorkspace: false,
@@ -1678,7 +1690,7 @@ class _SessionListScreenState extends State<SessionListScreen>
                     onTitleTap: _onTitleTap,
                     onOpenSettings: _openSettings,
                     onOpenGallery: showConnectedUI ? _openGallery : null,
-                    onDisconnect: showConnectedUI ? _disconnect : null,
+                    onDisconnect: canDisconnect ? _disconnect : null,
                     onTogglePaneVisibility: widget.onTogglePaneVisibility,
                     bridgeLabel: connectedBridgeLabel,
                   ),
@@ -1704,7 +1716,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     }
 
     return Scaffold(
-      appBar: showConnectedUI && !_isAutoConnecting
+      appBar: showConnectedUI
           ? null
           : chrome.wrapAppBar(
               AppBar(
@@ -1725,6 +1737,13 @@ class _SessionListScreenState extends State<SessionListScreen>
                     onPressed: _openSettings,
                     tooltip: l.settings,
                   ),
+                  if (canDisconnect)
+                    IconButton(
+                      key: const ValueKey('disconnect_button'),
+                      icon: const Icon(Icons.link_off),
+                      onPressed: _disconnect,
+                      tooltip: l.disconnect,
+                    ),
                 ],
               ),
             ),
@@ -1757,10 +1776,6 @@ class _SessionListScreenState extends State<SessionListScreen>
     required MachineManagerCubit? machineManagerCubit,
     required String? connectedBridgeLabel,
   }) {
-    if (_isAutoConnecting) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     if (showConnectedUI) {
       final bridge = context.read<BridgeService>();
       final settingsState = context.watch<SettingsCubit>().state;
@@ -1941,8 +1956,9 @@ class _SessionListScreenState extends State<SessionListScreen>
       );
     }
 
-    if (connectionState == BridgeConnectionState.connecting) {
-      return const Center(child: CircularProgressIndicator());
+    if (_isAutoConnecting ||
+        connectionState == BridgeConnectionState.connecting) {
+      return const SessionListLoadingView();
     }
 
     return _ConnectFormWidget(
@@ -2055,8 +2071,13 @@ class _SessionListScreenState extends State<SessionListScreen>
     await _connectToMachineConfig(m.machine);
   }
 
-  Future<void> _connectToMachineConfig(Machine machine) async {
+  Future<void> _connectToMachineConfig(
+    Machine machine, {
+    bool Function()? shouldConnect,
+  }) async {
     final cubit = context.read<MachineManagerCubit>();
+    final bridge = context.read<BridgeService>();
+    final tunnelService = context.read<SshBridgeTunnelService?>();
     unawaited(cubit.refreshLatestBridgeVersionIfStale());
     late final String wsUrl;
     try {
@@ -2072,7 +2093,15 @@ class _SessionListScreenState extends State<SessionListScreen>
       }
       return;
     }
+    if (!_canContinueConnection(shouldConnect)) {
+      await tunnelService?.closeAll();
+      return;
+    }
     final apiKey = await cubit.getApiKey(machine.id);
+    if (!_canContinueConnection(shouldConnect)) {
+      await tunnelService?.closeAll();
+      return;
+    }
 
     // Record connection to update lastConnected
     await cubit.recordConnection(
@@ -2082,15 +2111,19 @@ class _SessionListScreenState extends State<SessionListScreen>
       useSsl: machine.useSsl,
     );
 
-    if (!mounted) return;
-    final bridge = context.read<BridgeService>();
+    if (!_canContinueConnection(shouldConnect)) {
+      await tunnelService?.closeAll();
+      return;
+    }
     bridge.connect(wsUrl);
     bridge.savePreferences(machine.wsUrl);
-    final tunnelService = context.read<SshBridgeTunnelService?>();
     if (tunnelService != null) {
       unawaited(tunnelService.closeAllExcept(machine.id));
     }
   }
+
+  bool _canContinueConnection(bool Function()? shouldConnect) =>
+      mounted && (shouldConnect?.call() ?? true);
 
   void _toggleFavorite(MachineWithStatus m) {
     context.read<MachineManagerCubit>().toggleFavorite(m.machine.id);

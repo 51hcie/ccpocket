@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../constants/app_constants.dart';
 import '../../../l10n/app_localizations.dart';
@@ -26,6 +25,7 @@ import '../workspace_shell_screen.dart';
 import 'section_header.dart';
 import 'session_filter_bar.dart';
 import 'session_list_empty_state.dart';
+import 'session_list_loading_view.dart';
 import 'app_update_banner.dart';
 import 'bridge_update_banner.dart';
 import 'macos_native_app_banner.dart';
@@ -582,7 +582,9 @@ class HomeContentState extends State<HomeContent> {
               color: appColors.subtleText,
             ),
             const SizedBox(height: 8),
-            const _SessionListSkeleton(),
+            const SessionListLoadingStatus(),
+            const SizedBox(height: 12),
+            const SessionListSkeleton(),
           ],
         );
       }
@@ -790,7 +792,14 @@ class HomeContentState extends State<HomeContent> {
           ),
           const SizedBox(height: 8),
           if (widget.isInitialLoading)
-            const _SessionListSkeleton()
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SessionListLoadingStatus(),
+                SizedBox(height: 12),
+                SessionListSkeleton(),
+              ],
+            )
           else ...[
             if ((!_groupRecentSessions && filteredSessions.isEmpty) ||
                 (_groupRecentSessions && groupedRecentSessions.isEmpty))
@@ -1397,74 +1406,6 @@ class OfflinePendingSessionCard extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Skeleton placeholder that mimics a list of [RecentSessionCard] widgets.
-///
-/// Uses [Skeletonizer] to render dummy cards with a shimmer animation,
-/// providing visual feedback while the initial session list is loading.
-class _SessionListSkeleton extends StatelessWidget {
-  const _SessionListSkeleton();
-
-  static const _dummySessions = [
-    RecentSession(
-      sessionId: 'skeleton-1',
-      firstPrompt: 'Implement the new feature for user authentication flow',
-      created: '2025-01-01T00:00:00Z',
-      modified: '2025-01-01T01:00:00Z',
-      gitBranch: 'feat/auth',
-      projectPath: '/projects/my-app',
-      isSidechain: false,
-    ),
-    RecentSession(
-      sessionId: 'skeleton-2',
-      firstPrompt: 'Fix the CI pipeline build failure on main branch',
-      created: '2025-01-01T00:00:00Z',
-      modified: '2025-01-01T01:00:00Z',
-      gitBranch: 'fix/ci',
-      projectPath: '/projects/backend',
-      isSidechain: false,
-    ),
-    RecentSession(
-      sessionId: 'skeleton-3',
-      firstPrompt: 'Add dark mode support to the settings page',
-      created: '2025-01-01T00:00:00Z',
-      modified: '2025-01-01T01:00:00Z',
-      gitBranch: 'main',
-      projectPath: '/projects/mobile',
-      isSidechain: false,
-    ),
-    RecentSession(
-      sessionId: 'skeleton-4',
-      firstPrompt: 'Refactor database queries for better performance',
-      created: '2025-01-01T00:00:00Z',
-      modified: '2025-01-01T01:00:00Z',
-      gitBranch: 'perf/db',
-      projectPath: '/projects/api',
-      isSidechain: false,
-    ),
-    RecentSession(
-      sessionId: 'skeleton-5',
-      firstPrompt: 'Update documentation for the REST API endpoints',
-      created: '2025-01-01T00:00:00Z',
-      modified: '2025-01-01T01:00:00Z',
-      gitBranch: 'docs',
-      projectPath: '/projects/docs',
-      isSidechain: false,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Skeletonizer(
-      child: Column(
-        children: [
-          for (final session in _dummySessions)
-            RecentSessionCard(session: session, onTap: () {}),
         ],
       ),
     );

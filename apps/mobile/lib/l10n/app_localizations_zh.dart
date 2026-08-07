@@ -1822,6 +1822,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loading => '加载中...';
 
   @override
+  String get loadingSessions => '正在加载会话列表...';
+
+  @override
   String get setupGuideSubtitle => '第一次使用？从这里开始';
 
   @override

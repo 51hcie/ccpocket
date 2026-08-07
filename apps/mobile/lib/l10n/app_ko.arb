@@ -690,6 +690,7 @@
   "pushNotificationsUnavailable": "Firebase 설정 후 사용 가능",
   "version": "버전",
   "loading": "로딩 중...",
+  "loadingSessions": "세션 목록을 불러오는 중...",
   "setupGuideSubtitle": "처음이라면 여기서 시작하세요",
   "openSourceLicenses": "오픈소스 라이선스",
   "githubRepository": "GitHub 저장소",

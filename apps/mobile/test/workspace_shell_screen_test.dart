@@ -811,6 +811,47 @@ void main() {
     );
   });
 
+  testWidgets(
+    'connecting shows session skeleton and disconnect returns to machines',
+    (tester) async {
+      final bridge = _MockBridgeService(
+        initialState: BridgeConnectionState.disconnected,
+      );
+      final settingsCubit = await _createSettingsCubit(bridge);
+      final draftService = DraftService(await SharedPreferences.getInstance());
+      final revenueCatService = _FakeRevenueCatService();
+      final supportBannerService = await _createSupportBannerService();
+
+      await tester.pumpWidget(
+        _buildWorkspaceApp(
+          bridge: bridge,
+          settingsCubit: settingsCubit,
+          draftService: draftService,
+          revenueCatService: revenueCatService,
+          supportBannerService: supportBannerService,
+        ),
+      );
+      await _pumpUi(tester);
+
+      bridge.emitConnection(BridgeConnectionState.connecting);
+      await _pumpUi(tester);
+
+      expect(find.text('Loading sessions...'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('session_list_loading')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('disconnect_button')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('disconnect_button')));
+      await _pumpUi(tester);
+
+      expect(bridge.disconnectCalled, isTrue);
+      expect(find.byKey(const ValueKey('session_list_loading')), findsNothing);
+      expect(find.text('Machines'), findsOneWidget);
+    },
+  );
+
   testWidgets('disconnecting while overlay is open clears overlay to landing', (
     tester,
   ) async {

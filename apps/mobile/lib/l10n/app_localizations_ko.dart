@@ -1859,6 +1859,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get loading => '로딩 중...';
 
   @override
+  String get loadingSessions => '세션 목록을 불러오는 중...';
+
+  @override
   String get setupGuideSubtitle => '처음이라면 여기서 시작하세요';
 
   @override

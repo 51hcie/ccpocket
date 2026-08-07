@@ -1844,6 +1844,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loading => '読み込み中...';
 
   @override
+  String get loadingSessions => 'セッション一覧を読み込み中...';
+
+  @override
   String get setupGuideSubtitle => '初めての方はこちら';
 
   @override

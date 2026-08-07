@@ -748,6 +748,7 @@
   "pushNotificationsUnavailable": "Available after Firebase setup",
   "version": "Version",
   "loading": "Loading...",
+  "loadingSessions": "Loading sessions...",
   "setupGuideSubtitle": "New here? Start with this",
   "openSourceLicenses": "Open Source Licenses",
   "githubRepository": "GitHub Repository",

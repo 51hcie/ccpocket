@@ -1915,6 +1915,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loading => 'Loading...';
 
   @override
+  String get loadingSessions => 'Loading sessions...';
+
+  @override
   String get setupGuideSubtitle => 'New here? Start with this';
 
   @override

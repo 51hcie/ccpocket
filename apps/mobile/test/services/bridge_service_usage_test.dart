@@ -16,6 +16,26 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
+    test('auto-connect cancellation skips the saved Bridge URL', () async {
+      SharedPreferences.setMockInitialValues({
+        'bridge_url': 'ws://127.0.0.1:8765',
+      });
+      final bridge = BridgeService();
+      var guardChecks = 0;
+
+      final attempted = await bridge.autoConnect(
+        shouldConnect: () => guardChecks++ == 0,
+      );
+
+      expect(attempted, isFalse);
+      expect(guardChecks, 2);
+      expect(
+        bridge.currentBridgeConnectionState,
+        BridgeConnectionState.disconnected,
+      );
+      bridge.dispose();
+    });
+
     test(
       'transport failures use reconnect state without chat errors',
       () async {

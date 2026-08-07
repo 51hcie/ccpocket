@@ -3498,6 +3498,12 @@ abstract class AppLocalizations {
   /// **'読み込み中...'**
   String get loading;
 
+  /// No description provided for @loadingSessions.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッション一覧を読み込み中...'**
+  String get loadingSessions;
+
   /// No description provided for @setupGuideSubtitle.
   ///
   /// In ja, this message translates to:

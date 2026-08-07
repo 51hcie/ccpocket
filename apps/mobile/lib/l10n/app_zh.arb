@@ -790,6 +790,7 @@
   "pushNotificationsUnavailable": "完成 Firebase 设置后可用",
   "version": "版本",
   "loading": "加载中...",
+  "loadingSessions": "正在加载会话列表...",
   "setupGuideSubtitle": "第一次使用？从这里开始",
   "machineSectionTitle": "设备",
   "machineRefreshStatus": "刷新状态",
