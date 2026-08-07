@@ -1,35 +1,59 @@
-# Google Play Review
+# Google Play Review (Fastlane + Developer API)
 
-## 候補確認
+## 自動化の範囲
 
-`android/vX.Y.Z+N` と `android-release.yml` の成功runを対応させる。workflowはAABを内部テストへ `draft` として送るため、本番審査への提出は別に行う。
+`submit-store-review.yml` の Android job は、既存の `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` と Fastlane `supply` を使う。内部テストにある対象 versionCode を本番トラックへ昇格し、Google Play Developer API の edit を審査へ送る。
 
-Google Play Consoleで次を確認する。
+`inspect-store-state.yml` の `android store_state` lane は、読み取り用editでproduction trackを取得し、commitせずabortする。`completed` または `inProgress` のうち最大versionCodeを現在の公開版として `android-store-state` に出力する。成果物にサービスアカウント情報は含めない。
 
-1. App Bundle Explorerまたはリリースライブラリにversion code `N`、version name `X.Y.Z` が存在する。
-2. 内部テストのdraftで処理エラーがない。
-3. 本番トラックに同じversion codeの進行中リリースがない。
+新しいAABはアップロードしない。対象は `android/vX.Y.Z+N` で既に作成された versionCode `N` に限定する。
 
-## 本番リリース準備
+## workflow が行う安全確認
 
-1. 本番トラックで新しいリリースを作成する。
-2. リリースライブラリからversion code `N` のAABを選択する。
-3. リリース名と各言語のリリースノートが対象バージョンと一致することを確認する。
-4. 対象国、配信率、端末除外、警告を確認する。
-5. Data safety、コンテンツレーティング、広告、アプリのアクセスなどの未完了項目がないことを確認する。
+1. `android/vX.Y.Z+N` が存在し、タグ内の `pubspec.yaml` が `X.Y.Z+N` と一致することを確認する。
+2. 全ロケールに `<N>.txt` の本番リリースノートがあり、500文字以内であることを確認する。
+3. 内部テストのリリースから versionCode `N` だけを選択する。
+4. 本番トラックへ `inProgress` または `completed` で昇格する。
+5. `changesNotSentForReview=false` で審査へ送る。
+6. commit時に `changesInReviewBehavior=ERROR_IF_IN_REVIEW` を指定する。
+7. 内部リリースに複数versionCodeが含まれていたら停止し、指定外のビルドを同時昇格しない。
+8. 同じ versionCode が既に本番にある場合は無変更で停止する。APIだけでは「審査へ送信済み」と「反映済みだが未送信」を区別できないため、成功扱いにせず前回workflowを確認する。
 
-配信率が指定されていなければ推奨案を示し、最終送信前にユーザーの意図を確認する。既存のManaged publishing設定は勝手に変更しない。
+最後の指定が重要。Google API のデフォルトは、別の変更が審査中でもそれを取り消して新しいeditを送る挙動になり得る。Fastlane 2.235.0 はこのオプションを直接公開していないため、Fastfileの安全なcommitラッパーで明示する。固定済みAPIクライアントがこの引数をサポートしない場合も、危険なフォールバックをせず停止する。
 
-現在の `upload-metadata.yml` はAndroidのストア説明文や画像を更新できるが、Fastlane laneで `skip_upload_changelogs: true` が指定されている。Google Playの本番リリースノートはworkflowで更新されたと仮定せず、本番リリース作成画面で全言語を入力・確認する。
+## 配信方式
 
-カジュアルリリースを複数回挟んだ場合、リリースノートは最後の本番配信版から対象候補までのユーザー向け変更をまとめる。
+推奨は段階配信。
 
-## 提出
+```text
+android_release_status=inProgress
+android_user_fraction=0.1
+```
 
-1. リリースを保存し、エラーと警告を確認する。
-2. `Review release` でversion code、国、配信率、リリースノートを再確認する。
-3. `Start rollout to production` または変更送信操作を行う。
-4. Overviewの `Send changes for review` が別に必要なら実行する。
-5. 再読み込みし、変更が `審査中` / `Changes in review` になったことを確認する。
+全ユーザーへ配信する意図をユーザーが明示した場合だけ、次を使う。
 
-Managed publishingが有効なら、承認後は手動公開が必要である。審査提出と本番公開を同じ操作として扱わず、公開は別途ユーザーが依頼した場合だけ行う。
+```text
+android_release_status=completed
+```
+
+Google Play の Managed publishing 設定は API workflow から変更しない。有効なら審査承認後に手動公開が必要で、無効なら承認後に指定した段階配信または全体配信が始まる。
+
+## 本番リリースノート
+
+審査提出では `default.txt` を使わず、versionCode別ファイルを必須にする。
+
+```text
+fastlane/metadata/android/en-US/changelogs/<N>.txt
+fastlane/metadata/android/ja-JP/changelogs/<N>.txt
+fastlane/metadata/android/ko-KR/changelogs/<N>.txt
+fastlane/metadata/android/zh-CN/changelogs/<N>.txt
+```
+
+カジュアルリリースを複数回挟んだ場合、最後の本番配信版から対象候補までのユーザー向け変更をまとめる。
+
+## エラー時
+
+- `ERROR_IF_IN_REVIEW` で失敗: 既存の審査を維持したまま停止している。現在の審査完了後に再実行するか、対象を確認する。
+- versionCodeが内部トラックにない: release workflowの成功とGoogle Play側の処理状況を確認する。新しいAABをこのスキルで作らない。
+- ポリシー申告や契約の未完了: APIで扱えない項目を報告し、提出を止める。
+- commit成功: editは審査へ送られている。Managed publishingに応じて承認後の公開操作が別途必要か報告する。
