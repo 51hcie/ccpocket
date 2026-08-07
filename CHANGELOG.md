@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.111.4] - 2026-08-07
+
+### Fixed
+- Keep settings, gallery, new-session, and Bridge disconnect controls available while recent sessions load, with a clear skeleton loading state.
+- Cancel in-flight Bridge and SSH auto-connections when disconnecting so the app reliably returns to the machine list.
+
 ## [1.111.3] - 2026-08-07
 
 ### Fixed
