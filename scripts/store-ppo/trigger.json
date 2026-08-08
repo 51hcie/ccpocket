@@ -1,5 +1,5 @@
 {
-  "requestedAt": "2026-08-08T18:15:00+09:00",
-  "operation": "start",
-  "note": "Verify all treatment screenshots and start the Connection Diagram vs UI Focus PPO test"
+  "requestedAt": "2026-08-08T18:45:00+09:00",
+  "operation": "review-and-start",
+  "note": "Submit only the PPO experiment for review, then start it automatically after approval"
 }

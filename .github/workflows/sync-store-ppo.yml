@@ -2,6 +2,8 @@ name: Sync App Store PPO
 run-name: App Store PPO · ${{ inputs.operation || 'trigger' }}
 
 on:
+  schedule:
+    - cron: '17 */6 * * *'
   workflow_dispatch:
     inputs:
       operation:
@@ -13,6 +15,7 @@ on:
           - verify
           - sync
           - start
+          - review-and-start
   push:
     branches:
       - main
@@ -39,13 +42,15 @@ jobs:
           DISPATCH_OPERATION: ${{ inputs.operation }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            operation="review-and-start"
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             operation="$DISPATCH_OPERATION"
           else
             operation="$(jq -r '.operation' scripts/store-ppo/trigger.json)"
           fi
           case "$operation" in
-            verify|sync|start) ;;
+            verify|sync|start|review-and-start) ;;
             *) echo "Unsupported operation: $operation" >&2; exit 1 ;;
           esac
           echo "value=$operation" >> "$GITHUB_OUTPUT"

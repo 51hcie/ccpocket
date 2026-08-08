@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const API_BASE = "https://api.appstoreconnect.apple.com";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_CONFIG = path.join(SCRIPT_DIR, "config.json");
-const VALID_OPERATIONS = new Set(["validate", "verify", "sync", "start"]);
+const VALID_OPERATIONS = new Set(["validate", "verify", "sync", "start", "review-and-start"]);
 const SYNCHRONIZABLE_EXPERIMENT_STATES = new Set(["PREPARE_FOR_SUBMISSION", "REJECTED"]);
 const VERIFIABLE_EXPERIMENT_STATES = new Set([
   ...SYNCHRONIZABLE_EXPERIMENT_STATES,
@@ -17,12 +17,20 @@ const VERIFIABLE_EXPERIMENT_STATES = new Set([
   "IN_REVIEW",
   "ACCEPTED",
   "APPROVED",
+  "COMPLETED",
+  "STOPPED",
 ]);
 const REVIEW_PENDING_EXPERIMENT_STATES = new Set([
   "READY_FOR_REVIEW",
   "WAITING_FOR_REVIEW",
   "IN_REVIEW",
   "ACCEPTED",
+]);
+const ACTIVE_REVIEW_SUBMISSION_STATES = new Set([
+  "READY_FOR_REVIEW",
+  "WAITING_FOR_REVIEW",
+  "IN_REVIEW",
+  "UNRESOLVED_ISSUES",
 ]);
 
 function argument(name, fallback) {
@@ -397,6 +405,173 @@ async function startExperiment(config, experiment) {
   );
 }
 
+function experimentItemId(item) {
+  return item.relationships?.appStoreVersionExperimentV2?.data?.id ?? null;
+}
+
+async function activeReviewSubmissions(config) {
+  const states = [...ACTIVE_REVIEW_SUBMISSION_STATES].join(",");
+  return apiRequest(
+    `/v1/apps/${config.appId}/reviewSubmissions?filter%5Bplatform%5D=IOS&filter%5Bstate%5D=${states}&fields%5BreviewSubmissionItems%5D=state,appStoreVersionExperimentV2&include=items&limit=200&limit%5Bitems%5D=50`,
+  );
+}
+
+async function assertPpoOnlyReviewSubmission(config, submissionId) {
+  const items = await listAll(
+    `/v1/reviewSubmissions/${submissionId}/items?fields%5BreviewSubmissionItems%5D=state,appStoreVersionExperimentV2&limit=200`,
+  );
+  if (items.length !== 1 || experimentItemId(items[0]) !== config.experimentId) {
+    const summary = items.map((item) => ({
+      id: item.id,
+      experimentId: experimentItemId(item),
+    }));
+    throw new Error(
+      `Review submission must contain only the configured PPO experiment: ${JSON.stringify(summary)}`,
+    );
+  }
+}
+
+async function waitForSubmittedReview(submissionId) {
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    const submission = (await apiRequest(`/v1/reviewSubmissions/${submissionId}`)).data;
+    const state = submission.attributes?.state;
+    if (state === "WAITING_FOR_REVIEW" || state === "IN_REVIEW" || state === "COMPLETE") {
+      return submission;
+    }
+    if (state === "UNRESOLVED_ISSUES") {
+      throw new Error(`PPO review submission has unresolved issues: ${submissionId}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+  throw new Error(`Timed out waiting for PPO review submission ${submissionId}`);
+}
+
+async function submitExperimentForReview(config) {
+  const response = await activeReviewSubmissions(config);
+  const itemsById = new Map(
+    (response.included ?? [])
+      .filter((item) => item.type === "reviewSubmissionItems")
+      .map((item) => [item.id, item]),
+  );
+  const matches = [];
+  for (const submission of response.data ?? []) {
+    const itemIds = submission.relationships?.items?.data?.map((item) => item.id) ?? [];
+    if (itemIds.some((id) => experimentItemId(itemsById.get(id) ?? {}) === config.experimentId)) {
+      matches.push(submission);
+    }
+  }
+  if (matches.length > 1) {
+    throw new Error("PPO experiment is attached to multiple active review submissions");
+  }
+
+  let submission = matches[0];
+  if (!submission) {
+    const emptyDrafts = (response.data ?? []).filter(
+      (candidate) =>
+        candidate.attributes?.state === "READY_FOR_REVIEW" &&
+        (candidate.relationships?.items?.data?.length ?? 0) === 0,
+    );
+    if (emptyDrafts.length > 1) {
+      throw new Error("Multiple empty review submission drafts found; refusing to choose one");
+    }
+    submission = emptyDrafts[0];
+    if (submission) {
+      console.log(`Reusing empty PPO review submission draft ${submission.id}`);
+    } else {
+      submission = (
+        await apiRequest("/v1/reviewSubmissions", {
+          method: "POST",
+          body: {
+            data: {
+              type: "reviewSubmissions",
+              attributes: { platform: "IOS" },
+              relationships: {
+                app: { data: { type: "apps", id: config.appId } },
+              },
+            },
+          },
+        })
+      ).data;
+      console.log(`Created PPO-only review submission ${submission.id}`);
+    }
+
+    await apiRequest("/v1/reviewSubmissionItems", {
+      method: "POST",
+      body: {
+        data: {
+          type: "reviewSubmissionItems",
+          relationships: {
+            reviewSubmission: {
+              data: { type: "reviewSubmissions", id: submission.id },
+            },
+            appStoreVersionExperimentV2: {
+              data: { type: "appStoreVersionExperiments", id: config.experimentId },
+            },
+          },
+        },
+      },
+    });
+    console.log("Added only the configured PPO experiment to the review submission");
+  }
+
+  await assertPpoOnlyReviewSubmission(config, submission.id);
+  submission = (await apiRequest(`/v1/reviewSubmissions/${submission.id}`)).data;
+  const state = submission.attributes?.state;
+  if (state === "WAITING_FOR_REVIEW" || state === "IN_REVIEW") {
+    console.log(`PPO review is already pending: ${state}`);
+    return submission;
+  }
+  if (state !== "READY_FOR_REVIEW") {
+    throw new Error(`PPO review submission cannot be submitted from state ${state}`);
+  }
+
+  const submitted = (
+    await apiRequest(`/v1/reviewSubmissions/${submission.id}`, {
+      method: "PATCH",
+      body: {
+        data: {
+          type: "reviewSubmissions",
+          id: submission.id,
+          attributes: { submitted: true },
+        },
+      },
+    })
+  ).data;
+  console.log(`Submitted PPO experiment for App Review: ${submitted.attributes?.state}`);
+  return waitForSubmittedReview(submission.id);
+}
+
+async function reviewAndStart(config, experiment) {
+  const state = experiment.attributes?.state;
+  if (state === "COMPLETED" || state === "STOPPED") {
+    console.log(`PPO experiment is in terminal state ${state}; no action required`);
+    return;
+  }
+  if (state === "APPROVED" || state === "ACCEPTED") {
+    await startExperiment(config, experiment);
+    return;
+  }
+  if (state === "WAITING_FOR_REVIEW" || state === "IN_REVIEW") {
+    console.log(`PPO experiment is pending App Review: ${state}`);
+    return;
+  }
+  if (!new Set(["PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "REJECTED"]).has(state)) {
+    throw new Error(`PPO experiment cannot be reviewed or started from state ${state}`);
+  }
+
+  const submission = await submitExperimentForReview(config);
+  console.log(`PPO review submission state: ${submission.attributes?.state}`);
+  const refreshed = (
+    await apiRequest(`/v2/appStoreVersionExperiments/${config.experimentId}`)
+  ).data;
+  if (refreshed.attributes?.state === "ACCEPTED" || refreshed.attributes?.state === "APPROVED") {
+    await startExperiment(config, refreshed);
+  } else {
+    console.log(`PPO start will resume after App Review: ${refreshed.attributes?.state}`);
+  }
+}
+
 async function main() {
   const operation = argument("--operation", "validate");
   const configPath = path.resolve(argument("--config", DEFAULT_CONFIG));
@@ -480,6 +655,8 @@ async function main() {
 
   if (operation === "start") {
     await startExperiment(config, experiment);
+  } else if (operation === "review-and-start") {
+    await reviewAndStart(config, experiment);
   }
 }
 
