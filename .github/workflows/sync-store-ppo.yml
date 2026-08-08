@@ -27,21 +27,13 @@ concurrency:
 
 jobs:
   sync:
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install image tooling when missing
-        run: |
-          if ! command -v magick >/dev/null 2>&1; then
-            brew install imagemagick
-          fi
-
-      - name: Generate deterministic PPO assets
-        env:
-          PPO_OUTPUT_DIR: ${{ runner.temp }}/ppo
-        run: bash apps/mobile/fastlane/screenshots/compose.sh
+      - name: Prepare deterministic PPO assets
+        run: bash scripts/store-ppo/prepare-assets.sh "${{ runner.temp }}/ppo"
 
       - name: Validate generated assets
         run: |
