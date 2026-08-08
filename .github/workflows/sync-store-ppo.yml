@@ -1,0 +1,72 @@
+name: Sync App Store PPO
+run-name: App Store PPO · ${{ inputs.operation || 'sync' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Validate the remote draft or synchronize it with the generated assets'
+        required: true
+        type: choice
+        default: verify
+        options:
+          - verify
+          - sync
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/store-ppo/trigger.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-store-ppo
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install image tooling when missing
+        run: |
+          if ! command -v magick >/dev/null 2>&1; then
+            brew install imagemagick
+          fi
+
+      - name: Generate deterministic PPO assets
+        env:
+          PPO_OUTPUT_DIR: ${{ runner.temp }}/ppo
+        run: bash apps/mobile/fastlane/screenshots/compose.sh
+
+      - name: Validate generated assets
+        run: |
+          node scripts/store-ppo/sync.mjs \
+            --operation validate \
+            --assets-dir "${{ runner.temp }}/ppo"
+
+      - name: Synchronize PPO draft through App Store Connect API
+        env:
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+          ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          REQUESTED_OPERATION: ${{ inputs.operation || 'sync' }}
+        run: |
+          node scripts/store-ppo/sync.mjs \
+            --operation "$REQUESTED_OPERATION" \
+            --assets-dir "${{ runner.temp }}/ppo"
+
+      - name: Verify final remote state
+        if: ${{ (inputs.operation || 'sync') == 'sync' }}
+        env:
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+          ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          node scripts/store-ppo/sync.mjs \
+            --operation verify \
+            --assets-dir "${{ runner.temp }}/ppo"

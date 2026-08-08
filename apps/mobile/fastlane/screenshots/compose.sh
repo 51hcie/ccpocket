@@ -47,16 +47,16 @@ FONT_ZH_REG="$(resolve_font PingFang-SC-Regular /System/Library/Fonts/PingFang.t
 FONT_KO_BOLD="$(resolve_font_candidates \
   Noto-Sans-CJK-KR-Bold /Library/Fonts/NotoSansCJKkr-Bold.otf \
   Pretendard-Bold /Library/Fonts/Pretendard-Bold.otf \
-  AppleSDGothicNeo-Bold /System/Library/Fonts/AppleSDGothicNeo.ttc)"
+  Apple-SD-Gothic-Neo-Bold /System/Library/Fonts/AppleSDGothicNeo.ttc)"
 FONT_KO_REG="$(resolve_font_candidates \
   Noto-Sans-CJK-KR-Regular /Library/Fonts/NotoSansCJKkr-Regular.otf \
   Pretendard-Regular /Library/Fonts/Pretendard-Regular.otf \
-  AppleSDGothicNeo-Regular /System/Library/Fonts/AppleSDGothicNeo.ttc)"
-HERO_ILLUSTRATION="${SCRIPT_DIR}/assets/remote-agent-train-laptop.png"
+  Apple-SD-Gothic-Neo-Regular /System/Library/Fonts/AppleSDGothicNeo.ttc)"
+HERO_ILLUSTRATION="${SCRIPT_DIR}/assets/remote-agent-connection.png"
 
 # Screenshot definitions: key, keyword_en, title_en, keyword_ja, title_ja, keyword_zh, title_zh, keyword_ko, title_ko
 SCREENSHOTS=(
-  "01_session_list|Self-hosted agents|Run agents on Mac/Linux. Control from your phone.|セルフホストのエージェント|Mac/Linuxで実行し、スマホから操作|自托管代理|在 Mac/Linux 运行，用手机控制|셀프 호스팅 에이전트|Mac/Linux에서 실행하고 휴대폰으로 제어"
+  "01_session_list|Codex & Claude Code, anywhere|Agents run on your Mac/Linux. You stay in control.|Codex / Claude Codeをスマホで|Mac/Linuxで動かし、どこからでも操作|随时掌控 Codex 与 Claude Code|代理在 Mac/Linux 运行，手机随时操作|Codex와 Claude Code를 어디서나|Mac/Linux에서 실행하고 휴대폰으로 제어"
   "02_recent_sessions|Continue anywhere|Resume Codex App/CLI and Claude Code sessions.|どこでも続きを再開|Codex App/CLI、Claude Codeのセッションを引き継ぎ|随处继续|继续 Codex App/CLI 和 Claude Code 会话|어디서나 이어가기|Codex App/CLI와 Claude Code 세션을 다시 열기"
   "03_approval_list|Approve across sessions|Handle multiple approvals at a glance.|承認をまとめて処理|複数セッションの承認待ちを一目で確認|跨会话审批|一览处理多个审批|세션별 승인 처리|여러 승인 대기를 한눈에 처리"
   "04_multi_question|Decisions built for touch|Answer agent questions without a laptop.|タッチで判断|PCを開かずにエージェントの質問へ回答|触控决策|无需打开电脑即可回答问题|터치로 판단|노트북 없이 에이전트 질문에 답변"
@@ -120,7 +120,7 @@ compose_hero_screenshot() {
   local src_w src_h
   read -r src_w src_h <<< "$(magick identify -format '%w %h' "$input")"
 
-  local ss_y=1010
+  local ss_y=990
   local max_w=1020
   local scale_ratio
   scale_ratio=$(echo "scale=6; $max_w / $src_w" | bc)
@@ -148,13 +148,18 @@ compose_hero_screenshot() {
 
   magick /tmp/ss_$$.png /tmp/bezel_$$.png -composite /tmp/framed_ss_$$.png
 
-  magick "$HERO_ILLUSTRATION" -fuzz 4% -trim +repage -resize "900x620>" /tmp/hero_illustration_$$.png
+  magick "$HERO_ILLUSTRATION" -fuzz 4% -trim +repage -resize "980x620" /tmp/hero_illustration_$$.png
   local hero_w hero_h
   read -r hero_w hero_h <<< "$(magick identify -format '%w %h' /tmp/hero_illustration_$$.png)"
   local hero_x=$(( (CANVAS_W - hero_w) / 2 ))
 
+  local keyword_point=74
+  if [ "$lang_dir" = "ja" ]; then
+    keyword_point=68
+  fi
+
   magick -background none -size "1180x120" -gravity center \
-    -font "$font_bold" -pointsize 74 -fill "$text_fill" \
+    -font "$font_bold" -pointsize "$keyword_point" -fill "$text_fill" \
     caption:"$keyword" /tmp/hero_keyword_$$.png
 
   magick -background none -size "1120x140" -gravity center \
@@ -170,6 +175,67 @@ compose_hero_screenshot() {
 
   rm -f /tmp/mask_$$.png /tmp/ss_$$.png /tmp/bezel_$$.png /tmp/framed_ss_$$.png \
     /tmp/hero_illustration_$$.png /tmp/hero_keyword_$$.png /tmp/hero_title_$$.png
+  echo "  -> $output"
+}
+
+compose_ui_only_hero_screenshot() {
+  local key="$1" keyword="$2" title="$3" lang_dir="$4" font_bold="$5" font_reg="$6" output="$7"
+  local input="${SCRIPT_DIR}/${lang_dir}/${key}.png"
+  local text_fill="#111111"
+  local subtitle_fill="rgba(17,17,17,0.75)"
+  local bg_gradient="gradient:#FFFFFF-#F4F4F5"
+
+  local src_w src_h
+  read -r src_w src_h <<< "$(magick identify -format '%w %h' "$input")"
+
+  local ss_y=430
+  local scaled_w=1160
+  local scale_ratio
+  scale_ratio=$(echo "scale=6; $scaled_w / $src_w" | bc)
+  local scaled_h
+  scaled_h=$(echo "$src_h * $scale_ratio / 1" | bc)
+  local ss_x=$(( (CANVAS_W - scaled_w) / 2 ))
+  local corner_radius=145
+
+  echo "Composing PPO UI-only hero: $key ($lang_dir)"
+
+  magick -size "${scaled_w}x${scaled_h}" xc:none \
+    -fill white -draw "roundrectangle 0,0 $((scaled_w-1)),$((scaled_h-1)) ${corner_radius},${corner_radius}" \
+    /tmp/ppo_mask_$$.png
+
+  magick "$input" -resize "${scaled_w}x${scaled_h}" \
+    /tmp/ppo_mask_$$.png -alpha off -compose CopyOpacity -composite \
+    /tmp/ppo_ss_$$.png
+
+  magick -size "${scaled_w}x${scaled_h}" xc:none \
+    -fill none -stroke "#333333" -strokewidth 12 \
+    -draw "roundrectangle 6,6 $((scaled_w-7)),$((scaled_h-7)) ${corner_radius},${corner_radius}" \
+    /tmp/ppo_bezel_$$.png
+
+  magick /tmp/ppo_ss_$$.png /tmp/ppo_bezel_$$.png -composite /tmp/ppo_framed_ss_$$.png
+
+  local keyword_point=74
+  if [ "$lang_dir" = "ja" ]; then
+    keyword_point=68
+  fi
+
+  magick -background none -size "1180x120" -gravity center \
+    -font "$font_bold" -pointsize "$keyword_point" -fill "$text_fill" \
+    caption:"$keyword" /tmp/ppo_keyword_$$.png
+
+  magick -background none -size "1120x140" -gravity center \
+    -font "$font_reg" -pointsize 42 -fill "$subtitle_fill" \
+    caption:"$title" /tmp/ppo_title_$$.png
+
+  mkdir -p "$(dirname "$output")"
+  magick -size "${CANVAS_W}x${CANVAS_H}" "$bg_gradient" \
+    /tmp/ppo_keyword_$$.png -geometry "+70+104" -composite \
+    /tmp/ppo_title_$$.png -geometry "+100+206" -composite \
+    /tmp/ppo_framed_ss_$$.png -geometry "+${ss_x}+${ss_y}" -composite \
+    -depth 8 $PNG_STRIP "$output"
+
+  rm -f /tmp/ppo_mask_$$.png /tmp/ppo_ss_$$.png /tmp/ppo_bezel_$$.png \
+    /tmp/ppo_framed_ss_$$.png /tmp/ppo_keyword_$$.png /tmp/ppo_title_$$.png
   echo "  -> $output"
 }
 
@@ -521,6 +587,43 @@ for lang_dir in en-US ja zh-CN ko; do
   done
   echo "  Android -> $android_ss_dir/ ($(ls "$android_ss_dir" | wc -l | tr -d ' ') files)"
 done
+
+# === Optional Product Page Optimization upload sets ===
+# Set PPO_OUTPUT_DIR to prepare two iPhone-only treatments without changing
+# the checked-in store upload directories. iPad screenshots remain inherited
+# from the original product page so the test isolates the first iPhone image.
+if [ -n "${PPO_OUTPUT_DIR:-}" ]; then
+  echo ""
+  echo "=== Product Page Optimization ==="
+
+  IFS='|' read -r ppo_key ppo_kw_en ppo_tt_en ppo_kw_ja ppo_tt_ja ppo_kw_zh ppo_tt_zh ppo_kw_ko ppo_tt_ko <<< "${SCREENSHOTS[0]}"
+
+  prepare_ppo_locale() {
+    local source_lang="$1" ios_lang="$2" keyword="$3" title="$4" font_bold="$5" font_reg="$6"
+    local connection_dir="${PPO_OUTPUT_DIR}/connection/${ios_lang}"
+    local ui_only_dir="${PPO_OUTPUT_DIR}/ui-only/${ios_lang}"
+    mkdir -p "$connection_dir" "$ui_only_dir"
+
+    local entry key source
+    for entry in "${SCREENSHOTS[@]}"; do
+      IFS='|' read -r key _ <<< "$entry"
+      source="${SCRIPT_DIR}/store/${ios_lang}/${key}.png"
+      cp "$source" "$connection_dir/${key}.png"
+      cp "$source" "$ui_only_dir/${key}.png"
+    done
+
+    compose_ui_only_hero_screenshot \
+      "$ppo_key" "$keyword" "$title" "$source_lang" "$font_bold" "$font_reg" \
+      "$ui_only_dir/${ppo_key}.png"
+  }
+
+  prepare_ppo_locale "en-US" "en-US" "$ppo_kw_en" "$ppo_tt_en" "$FONT_EN_BOLD" "$FONT_EN_REG"
+  prepare_ppo_locale "ja" "ja" "$ppo_kw_ja" "$ppo_tt_ja" "$FONT_JA_BOLD" "$FONT_JA_REG"
+  prepare_ppo_locale "zh-CN" "zh-Hans" "$ppo_kw_zh" "$ppo_tt_zh" "$FONT_ZH_BOLD" "$FONT_ZH_REG"
+  prepare_ppo_locale "ko" "ko" "$ppo_kw_ko" "$ppo_tt_ko" "$FONT_KO_BOLD" "$FONT_KO_REG"
+
+  echo "  PPO sets -> ${PPO_OUTPUT_DIR}"
+fi
 
 echo ""
 echo "Done! Framed screenshots have '_framed' suffix."
