@@ -35,8 +35,13 @@ description: App Store Connect・Google Playの現在の公開版をAPIで調べ
 
 ```bash
 git status --short
-git fetch origin main --tags
+git fetch origin main
+git fetch --prune origin \
+  '+refs/tags/ios/*:refs/store-review/remote-tags/ios/*' \
+  '+refs/tags/android/*:refs/store-review/remote-tags/android/*'
 ```
+
+候補版と公開版の比較には `refs/store-review/remote-tags/` 配下の隔離refを使う。既存のローカルタグは上書きしない。
 
 公開状態の取得は `main` 上の読み取り専用workflowを使う。dispatch前のUTC時刻を記録し、その時刻より後に作られた同じref・同じplatformのrunだけを採用する。該当runが複数あり一意に決められなければ止める。
 
