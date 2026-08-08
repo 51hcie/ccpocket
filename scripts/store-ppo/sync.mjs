@@ -238,6 +238,35 @@ function matchesDesired(existing, desired) {
   );
 }
 
+function screenshotSummary(existing) {
+  return existing.map((item, index) => ({
+    position: index + 1,
+    fileName: item.attributes?.fileName ?? null,
+    checksum: item.attributes?.sourceFileChecksum?.toLowerCase() ?? null,
+    state: screenshotState(item),
+  }));
+}
+
+async function waitForDesiredSet(setId, desired) {
+  const deadline = Date.now() + 180_000;
+  let existing = [];
+  while (Date.now() < deadline) {
+    existing = await listScreenshots(setId);
+    if (matchesDesired(existing, desired)) return;
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+
+  const expected = desired.map((item, index) => ({
+    position: index + 1,
+    fileName: item.fileName,
+    checksum: item.checksum,
+    state: "COMPLETE",
+  }));
+  throw new Error(
+    `Final screenshot set did not converge: ${JSON.stringify({ actual: screenshotSummary(existing), expected })}`,
+  );
+}
+
 async function uploadScreenshot(setId, screenshot) {
   const reservation = await apiRequest("/v1/appScreenshots", {
     method: "POST",
@@ -322,10 +351,7 @@ async function synchronizeSet(setId, desired, operation) {
     await uploadScreenshot(setId, screenshot);
   }
 
-  existing = await listScreenshots(setId);
-  if (!matchesDesired(existing, desired)) {
-    throw new Error("Final screenshot order or checksum does not match the requested set");
-  }
+  await waitForDesiredSet(setId, desired);
   console.log("  verified screenshot order and checksums (8/8)");
 }
 
@@ -398,11 +424,15 @@ async function main() {
       console.log(` ${locale}`);
       const localization = await ensureLocalization(treatment.id, locale, operation);
       const screenshotSet = await ensureScreenshotSet(localization.id, config.displayType, operation);
-      await synchronizeSet(
-        screenshotSet.id,
-        desiredByTreatment.get(treatment.id).get(locale),
-        operation,
-      );
+      try {
+        await synchronizeSet(
+          screenshotSet.id,
+          desiredByTreatment.get(treatment.id).get(locale),
+          operation,
+        );
+      } catch (error) {
+        throw new Error(`${treatment.name}/${locale}: ${error.message}`, { cause: error });
+      }
     }
   }
 }
