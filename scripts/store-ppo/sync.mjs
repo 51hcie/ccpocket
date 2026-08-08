@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const API_BASE = "https://api.appstoreconnect.apple.com";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_CONFIG = path.join(SCRIPT_DIR, "config.json");
-const VALID_OPERATIONS = new Set(["validate", "verify", "sync"]);
+const VALID_OPERATIONS = new Set(["validate", "verify", "sync", "start"]);
 const SYNCHRONIZABLE_EXPERIMENT_STATES = new Set(["PREPARE_FOR_SUBMISSION", "REJECTED"]);
 const VERIFIABLE_EXPERIMENT_STATES = new Set([
   ...SYNCHRONIZABLE_EXPERIMENT_STATES,
@@ -17,6 +17,12 @@ const VERIFIABLE_EXPERIMENT_STATES = new Set([
   "IN_REVIEW",
   "ACCEPTED",
   "APPROVED",
+]);
+const REVIEW_PENDING_EXPERIMENT_STATES = new Set([
+  "READY_FOR_REVIEW",
+  "WAITING_FOR_REVIEW",
+  "IN_REVIEW",
+  "ACCEPTED",
 ]);
 
 function argument(name, fallback) {
@@ -355,6 +361,42 @@ async function synchronizeSet(setId, desired, operation) {
   console.log("  verified screenshot order and checksums (8/8)");
 }
 
+async function startExperiment(config, experiment) {
+  const attributes = experiment.attributes ?? {};
+  if (attributes.state === "APPROVED" && attributes.startDate) {
+    console.log(`Experiment is already running since ${attributes.startDate}`);
+    return;
+  }
+
+  const response = await apiRequest(`/v2/appStoreVersionExperiments/${config.experimentId}`, {
+    method: "PATCH",
+    body: {
+      data: {
+        type: "appStoreVersionExperiments",
+        id: config.experimentId,
+        attributes: { started: true },
+      },
+    },
+  });
+  const updated = response.data.attributes ?? {};
+  console.log(
+    `Start requested: state=${updated.state}, reviewRequired=${updated.reviewRequired}, startDate=${updated.startDate ?? "pending"}`,
+  );
+
+  if (updated.state === "APPROVED" && updated.startDate) {
+    console.log(`Experiment is running since ${updated.startDate}`);
+    return;
+  }
+  if (REVIEW_PENDING_EXPERIMENT_STATES.has(updated.state)) {
+    throw new Error(
+      `Experiment start is pending App Review: state=${updated.state}, reviewRequired=${updated.reviewRequired}`,
+    );
+  }
+  throw new Error(
+    `Apple did not confirm the experiment start: state=${updated.state}, startDate=${updated.startDate ?? "missing"}`,
+  );
+}
+
 async function main() {
   const operation = argument("--operation", "validate");
   const configPath = path.resolve(argument("--config", DEFAULT_CONFIG));
@@ -434,6 +476,10 @@ async function main() {
         throw new Error(`${treatment.name}/${locale}: ${error.message}`, { cause: error });
       }
     }
+  }
+
+  if (operation === "start") {
+    await startExperiment(config, experiment);
   }
 }
 

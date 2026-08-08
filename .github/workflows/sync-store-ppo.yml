@@ -1,17 +1,18 @@
 name: Sync App Store PPO
-run-name: App Store PPO · ${{ inputs.operation || 'sync' }}
+run-name: App Store PPO · ${{ inputs.operation || 'trigger' }}
 
 on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Validate the remote draft or synchronize it with the generated assets'
+        description: 'Verify, synchronize, or start the configured PPO test'
         required: true
         type: choice
         default: verify
         options:
           - verify
           - sync
+          - start
   push:
     branches:
       - main
@@ -32,6 +33,23 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Resolve requested operation
+        id: operation
+        env:
+          DISPATCH_OPERATION: ${{ inputs.operation }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            operation="$DISPATCH_OPERATION"
+          else
+            operation="$(jq -r '.operation' scripts/store-ppo/trigger.json)"
+          fi
+          case "$operation" in
+            verify|sync|start) ;;
+            *) echo "Unsupported operation: $operation" >&2; exit 1 ;;
+          esac
+          echo "value=$operation" >> "$GITHUB_OUTPUT"
+
       - name: Prepare deterministic PPO assets
         run: bash scripts/store-ppo/prepare-assets.sh "${{ runner.temp }}/ppo"
 
@@ -46,14 +64,14 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
           ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          REQUESTED_OPERATION: ${{ inputs.operation || 'sync' }}
+          REQUESTED_OPERATION: ${{ steps.operation.outputs.value }}
         run: |
           node scripts/store-ppo/sync.mjs \
             --operation "$REQUESTED_OPERATION" \
             --assets-dir "${{ runner.temp }}/ppo"
 
       - name: Verify final remote state
-        if: ${{ (inputs.operation || 'sync') == 'sync' }}
+        if: ${{ steps.operation.outputs.value == 'sync' }}
         env:
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
