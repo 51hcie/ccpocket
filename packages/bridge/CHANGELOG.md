@@ -2,6 +2,14 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.70.0] - 2026-08-10
+
+### Added
+- Add correlated `list_directory` and `directory_listing` WebSocket messages for browsing visible subdirectories within configured allowed roots.
+
+### Fixed
+- Authorize directory listings against canonical paths while preserving configured logical and symlink path namespaces in responses.
+
 ## [1.69.6] - 2026-07-31
 
 ### Changed
