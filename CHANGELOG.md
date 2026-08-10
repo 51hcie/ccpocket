@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.112.0] - 2026-08-10
+
+### Added
+- Browse existing directories within Bridge-allowed roots when choosing a project path for a new session.
+
+### Changed
+- Require Bridge 1.70.0 for directory browsing, with a localized update prompt when an older Bridge does not support the request.
+- Build releases with Flutter 3.44.9, Dart 3.12.2, and Shorebird 1.6.116.
+
+### Fixed
+- Keep directory selection reliable for symlinked allowed roots, Windows drive and UNC paths, and POSIX paths containing backslashes.
+
 ## [1.111.4] - 2026-08-07
 
 ### Fixed
