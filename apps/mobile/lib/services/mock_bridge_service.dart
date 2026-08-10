@@ -430,6 +430,18 @@ class MockBridgeService extends BridgeService {
   }
 
   @override
+  void requestDirectoryListing(String path, {String? requestId}) {
+    if (_mockMessageController.isClosed) return;
+    _mockMessageController.add(
+      DirectoryListingMessage(
+        path: path,
+        directories: const [],
+        requestId: requestId,
+      ),
+    );
+  }
+
+  @override
   void interrupt(String sessionId) {
     // Simulate interrupt: stop running and go idle
     _scheduleMessage(

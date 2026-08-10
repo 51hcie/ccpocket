@@ -294,6 +294,7 @@
   "selectDirectory": "Select directory",
   "noSubdirectories": "No subdirectories",
   "directoryBrowserRoots": "Allowed directories",
+  "directoryBrowserBridgeUpdateRequired": "This feature requires a newer Bridge server. Update Bridge and try again.",
   "worktreeNew": "New",
   "worktreeExisting": "Existing ({count})",
   "branchOptional": "Branch (optional)",

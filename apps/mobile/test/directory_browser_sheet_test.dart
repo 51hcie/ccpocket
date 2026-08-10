@@ -26,12 +26,13 @@ class _DirectoryBrowserBridge extends BridgeService {
     if (!autoRespond) return;
     scheduleMicrotask(() {
       if (_messages.isClosed) return;
-      if (path == '/outside') {
+      if (path == '/workspace/denied') {
         _messages.add(
-          const ErrorMessage(
+          ErrorMessage(
             message: 'Directory path is outside the allowed roots',
             errorCode: 'directory_not_allowed',
-            path: '/outside',
+            path: path,
+            requestId: requestId,
           ),
         );
         return;
@@ -101,11 +102,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('alpha'), findsOneWidget);
     expect(find.text('beta'), findsOneWidget);
+    var upButton = tester.widget<IconButton>(
+      find.byKey(const ValueKey('directory_browser_up_button')),
+    );
+    expect(upButton.onPressed, isNull);
 
     await tester.tap(find.text('alpha'));
     await tester.pumpAndSettle();
     expect(bridge.requests, ['/workspace', '/workspace/alpha']);
     expect(find.text('No subdirectories'), findsOneWidget);
+    upButton = tester.widget<IconButton>(
+      find.byKey(const ValueKey('directory_browser_up_button')),
+    );
+    expect(upButton.onPressed, isNotNull);
 
     await tester.tap(
       find.byKey(const ValueKey('directory_browser_select_action')),
@@ -127,7 +136,7 @@ void main() {
           result = showDirectoryBrowserSheet(
             context: tester.element(find.text('Open browser')),
             bridge: bridge,
-            initialPath: '/outside',
+            initialPath: '/workspace/denied',
             allowedRoots: const ['/workspace'],
           );
         },
@@ -145,55 +154,198 @@ void main() {
     );
     expect(selectButton.onPressed, isNull);
     expect(result, isNotNull);
-    expect(bridge.requests, isEmpty);
+    expect(bridge.requests, ['/workspace/denied']);
   });
 
-  testWidgets(
-    'ignores a directory response for another request',
-    (tester) async {
-      final bridge = _DirectoryBrowserBridge(autoRespond: false);
-      addTearDown(bridge.dispose);
+  testWidgets('ignores a directory response for another request', (
+    tester,
+  ) async {
+    final bridge = _DirectoryBrowserBridge(autoRespond: false);
+    addTearDown(bridge.dispose);
 
-      await tester.pumpWidget(
-        _testApp(
-          onOpen: () {
-            showDirectoryBrowserSheet(
-              context: tester.element(find.text('Open browser')),
-              bridge: bridge,
-              initialPath: '/workspace',
-              allowedRoots: const ['/workspace'],
-            );
-          },
-        ),
-      );
-      await tester.tap(find.text('Open browser'));
-      await tester.pumpAndSettle();
-      expect(bridge.requestIds, hasLength(1));
-      final requestId = bridge.requestIds.single!;
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: '/workspace',
+            allowedRoots: const ['/workspace'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(bridge.requestIds, hasLength(1));
+    final requestId = bridge.requestIds.single!;
 
-      bridge.emit(
-        const DirectoryListingMessage(
-          path: '/workspace',
-          requestId: 'stale-request',
-          directories: [
-            DirectoryListingEntry(name: 'stale', path: '/workspace/stale'),
-          ],
-        ),
-      );
-      await tester.pump();
-      expect(find.text('stale'), findsNothing);
+    bridge.emit(
+      const DirectoryListingMessage(
+        path: '/workspace',
+        requestId: 'stale-request',
+        directories: [
+          DirectoryListingEntry(name: 'stale', path: '/workspace/stale'),
+        ],
+      ),
+    );
+    await tester.pump();
+    expect(find.text('stale'), findsNothing);
 
-      bridge.emit(
-        DirectoryListingMessage(
-          path: '/workspace',
-          requestId: requestId,
-          directories: const [
-            DirectoryListingEntry(name: 'current', path: '/workspace/current'),
-          ],
-        ),
-      );
-      await tester.pump();
-      expect(find.text('current'), findsOneWidget);
-    },
-  );
+    bridge.emit(
+      DirectoryListingMessage(
+        path: '/workspace',
+        requestId: requestId,
+        directories: const [
+          DirectoryListingEntry(name: 'current', path: '/workspace/current'),
+        ],
+      ),
+    );
+    await tester.pump();
+    expect(find.text('current'), findsOneWidget);
+  });
+
+  testWidgets('shows an update hint only for a legacy list request error', (
+    tester,
+  ) async {
+    final bridge = _DirectoryBrowserBridge(autoRespond: false);
+    addTearDown(bridge.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: '/workspace',
+            allowedRoots: const ['/workspace'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    bridge.emit(
+      const ErrorMessage(
+        message: 'another_action',
+        errorCode: 'unsupported_message',
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    bridge.emit(
+      const ErrorMessage(
+        message: 'list_directory',
+        errorCode: 'unsupported_message',
+      ),
+    );
+    await tester.pump();
+    expect(
+      find.text(
+        'This feature requires a newer Bridge server. '
+        'Update Bridge and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('compares UNC allowed roots case-insensitively', (tester) async {
+    final bridge = _DirectoryBrowserBridge(autoRespond: false);
+    addTearDown(bridge.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: r'\\server\share\project',
+            allowedRoots: const [r'\\SERVER\SHARE'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(bridge.requests, [r'\\server\share\project']);
+  });
+
+  testWidgets('disables upward navigation at a UNC allowed root', (
+    tester,
+  ) async {
+    final bridge = _DirectoryBrowserBridge(autoRespond: false);
+    addTearDown(bridge.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: r'\\server\share',
+            allowedRoots: const [r'\\SERVER\SHARE'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final upButton = tester.widget<IconButton>(
+      find.byKey(const ValueKey('directory_browser_up_button')),
+    );
+    expect(upButton.onPressed, isNull);
+  });
+
+  testWidgets('preserves backslashes in POSIX path names', (tester) async {
+    final bridge = _DirectoryBrowserBridge(autoRespond: false);
+    addTearDown(bridge.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: r'/workspace\escape',
+            allowedRoots: const ['/workspace'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pumpAndSettle();
+
+    expect(bridge.requests, isEmpty);
+    expect(
+      find.text('Directory path is outside the allowed roots'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('normalizes extended UNC allowed roots', (tester) async {
+    final bridge = _DirectoryBrowserBridge(autoRespond: false);
+    addTearDown(bridge.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: r'\\server\share\project',
+            allowedRoots: const [r'\\?\UNC\SERVER\SHARE'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(bridge.requests, [r'\\server\share\project']);
+  });
 }

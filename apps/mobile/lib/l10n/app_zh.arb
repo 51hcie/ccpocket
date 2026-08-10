@@ -379,6 +379,7 @@
   "selectDirectory": "选择目录",
   "noSubdirectories": "没有子目录",
   "directoryBrowserRoots": "允许的目录",
+  "directoryBrowserBridgeUpdateRequired": "此功能需要较新版本的 Bridge Server。请更新 Bridge 后重试。",
   "worktreeNew": "新建",
   "worktreeExisting": "已有 ({count})",
   "branchOptional": "分支（可选）",

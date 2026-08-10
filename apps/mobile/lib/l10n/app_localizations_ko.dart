@@ -765,6 +765,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get directoryBrowserRoots => '허용된 디렉터리';
 
   @override
+  String get directoryBrowserBridgeUpdateRequired =>
+      '이 기능을 사용하려면 최신 Bridge Server가 필요합니다. Bridge를 업데이트한 후 다시 시도해 주세요.';
+
+  @override
   String get worktreeNew => '새로 만들기';
 
   @override

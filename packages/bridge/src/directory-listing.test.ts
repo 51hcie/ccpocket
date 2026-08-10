@@ -93,6 +93,30 @@ describe("listAllowedDirectories", () => {
     });
   });
 
+  it("preserves the configured symlink root namespace", async () => {
+    const root = makeTempDirectory();
+    const aliases = makeTempDirectory();
+    const alias = resolve(aliases, "allowed-link");
+    symlinkSync(root, alias, "dir");
+    mkdirSync(resolve(root, "project"));
+    mkdirSync(resolve(root, "project", "nested"));
+
+    const listing = await listAllowedDirectories(alias, [alias]);
+
+    expect(listing).toEqual({
+      path: alias,
+      directories: [{ name: "project", path: resolve(alias, "project") }],
+    });
+    await expect(
+      listAllowedDirectories(resolve(alias, "project"), [alias]),
+    ).resolves.toEqual({
+      path: resolve(alias, "project"),
+      directories: [
+        { name: "nested", path: resolve(alias, "project", "nested") },
+      ],
+    });
+  });
+
   it("omits symlinked child directories", async () => {
     const root = makeTempDirectory();
     const outside = makeTempDirectory();

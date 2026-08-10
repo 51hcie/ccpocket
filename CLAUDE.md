@@ -115,6 +115,7 @@ Cloud Functions (relay) がFCMトークンの管理とプッシュ送信を担�
 - `stop_session` - セッション停止 (sessionId)
 - `get_history` - セッション履歴取得 (sessionId)
 - `get_diff` - プロジェクトのgit diff取得 (projectPath)
+- `list_directory` - 許可ルート配下のディレクトリ一覧取得 (path, requestId?)
 
 ### Server → Client メッセージ
 - `system` - システムイベント (init, session_created)
@@ -128,6 +129,7 @@ Cloud Functions (relay) がFCMトークンの管理とプッシュ送信を担�
 - `stream_delta` - ストリーミングテキスト差分
 - `session_list` - セッション一覧
 - `diff_result` - git diff結果 (diff, error?)
+- `directory_listing` - ディレクトリ一覧結果 (path, directories, requestId?)
 
 ### Bridge 非対応メッセージの Graceful Degradation
 
@@ -137,7 +139,9 @@ Cloud Functions (relay) がFCMトークンの管理とプッシュ送信を担�
 - **App 側**: `chat_message_handler.dart` の `_unsupportedActions` マップでタイプ別に振る舞いを制御
   - `suppress` (デフォルト) — ログのみ、UIに表示しない (バックグラウンド機能向け)
   - `showUpdateHint` — amber warning バブルで Bridge 更新を案内 (ユーザー操作向け)
-- 新機能追加時は `_unsupportedActions` に1行追加するだけでOK
+- 通常のチャット操作は、新機能追加時に `_unsupportedActions` へ1行追加する
+- 専用UIが直接レスポンスを待つ操作（例: `list_directory`）は、そのUI内で
+  `unsupported_message` と元のタイプ名を照合し、Bridge更新案内を表示する
 
 ## リモートアクセス設定
 

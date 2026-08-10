@@ -152,7 +152,18 @@ export async function listAllowedDirectories(
       ) {
         continue;
       }
-      directories.push({ name: entry.name, path: canonicalChildPath });
+      // Keep the path in the same lexical namespace as the request. The
+      // canonical path is only used for authorization so configured roots
+      // that are symlinks (for example /tmp -> /private/tmp on macOS) remain
+      // navigable on subsequent requests.
+      directories.push({
+        name: entry.name,
+        path: resolvePlatformPathFrom(
+          resolvedRequestedPath,
+          entry.name,
+          platform,
+        ),
+      });
     } catch {
       // Entries may disappear or become unreadable while the directory is
       // being listed. Omit that entry rather than failing the whole listing.
@@ -166,5 +177,5 @@ export async function listAllowedDirectories(
     }),
   );
 
-  return { path: canonicalPath, directories };
+  return { path: resolvedRequestedPath, directories };
 }

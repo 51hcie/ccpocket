@@ -157,6 +157,7 @@ class ReplayBridgeService extends BridgeService {
     'list_sessions',
     'list_recent_sessions',
     'list_files',
+    'list_directory',
     'list_gallery',
     'list_project_history',
     'get_debug_bundle',
@@ -262,6 +263,17 @@ class ReplayBridgeService extends BridgeService {
 
   @override
   void requestFileList(String projectPath) {}
+
+  @override
+  void requestDirectoryListing(String path, {String? requestId}) {
+    _emit(
+      DirectoryListingMessage(
+        path: path,
+        directories: const [],
+        requestId: requestId,
+      ),
+    );
+  }
 
   @override
   void requestSessionList() {}

@@ -760,6 +760,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get directoryBrowserRoots => '允许的目录';
 
   @override
+  String get directoryBrowserBridgeUpdateRequired =>
+      '此功能需要较新版本的 Bridge Server。请更新 Bridge 后重试。';
+
+  @override
   String get worktreeNew => '新建';
 
   @override

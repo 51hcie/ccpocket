@@ -780,6 +780,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get directoryBrowserRoots => 'Allowed directories';
 
   @override
+  String get directoryBrowserBridgeUpdateRequired =>
+      'This feature requires a newer Bridge server. Update Bridge and try again.';
+
+  @override
   String get worktreeNew => 'New';
 
   @override

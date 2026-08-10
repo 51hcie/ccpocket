@@ -1524,6 +1524,12 @@ abstract class AppLocalizations {
   /// **'許可されたディレクトリ'**
   String get directoryBrowserRoots;
 
+  /// No description provided for @directoryBrowserBridgeUpdateRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'この機能には新しい Bridge Server が必要です。Bridge を更新して、もう一度お試しください。'**
+  String get directoryBrowserBridgeUpdateRequired;
+
   /// No description provided for @worktreeNew.
   ///
   /// In ja, this message translates to:
