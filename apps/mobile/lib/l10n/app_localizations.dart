@@ -1494,6 +1494,42 @@ abstract class AppLocalizations {
   /// **'ディレクトリパス'**
   String get directoryPath;
 
+  /// No description provided for @directoryPathOutsideAllowedRoots.
+  ///
+  /// In ja, this message translates to:
+  /// **'ディレクトリパスが許可されたルートの外側です'**
+  String get directoryPathOutsideAllowedRoots;
+
+  /// No description provided for @browseDirectory.
+  ///
+  /// In ja, this message translates to:
+  /// **'ディレクトリを参照'**
+  String get browseDirectory;
+
+  /// No description provided for @selectDirectory.
+  ///
+  /// In ja, this message translates to:
+  /// **'ディレクトリを選択'**
+  String get selectDirectory;
+
+  /// No description provided for @noSubdirectories.
+  ///
+  /// In ja, this message translates to:
+  /// **'サブディレクトリはありません'**
+  String get noSubdirectories;
+
+  /// No description provided for @directoryBrowserRoots.
+  ///
+  /// In ja, this message translates to:
+  /// **'許可されたディレクトリ'**
+  String get directoryBrowserRoots;
+
+  /// No description provided for @directoryBrowserBridgeUpdateRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'この機能には新しい Bridge Server が必要です。Bridge を更新して、もう一度お試しください。'**
+  String get directoryBrowserBridgeUpdateRequired;
+
   /// No description provided for @worktreeNew.
   ///
   /// In ja, this message translates to:

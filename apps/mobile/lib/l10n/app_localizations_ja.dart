@@ -751,6 +751,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get directoryPath => 'ディレクトリパス';
 
   @override
+  String get directoryPathOutsideAllowedRoots => 'ディレクトリパスが許可されたルートの外側です';
+
+  @override
+  String get browseDirectory => 'ディレクトリを参照';
+
+  @override
+  String get selectDirectory => 'ディレクトリを選択';
+
+  @override
+  String get noSubdirectories => 'サブディレクトリはありません';
+
+  @override
+  String get directoryBrowserRoots => '許可されたディレクトリ';
+
+  @override
+  String get directoryBrowserBridgeUpdateRequired =>
+      'この機能には新しい Bridge Server が必要です。Bridge を更新して、もう一度お試しください。';
+
+  @override
   String get worktreeNew => '新規';
 
   @override

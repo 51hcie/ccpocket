@@ -764,6 +764,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get directoryPath => 'Directory path';
 
   @override
+  String get directoryPathOutsideAllowedRoots =>
+      'Directory path is outside the allowed roots';
+
+  @override
+  String get browseDirectory => 'Browse directory';
+
+  @override
+  String get selectDirectory => 'Select directory';
+
+  @override
+  String get noSubdirectories => 'No subdirectories';
+
+  @override
+  String get directoryBrowserRoots => 'Allowed directories';
+
+  @override
+  String get directoryBrowserBridgeUpdateRequired =>
+      'This feature requires a newer Bridge server. Update Bridge and try again.';
+
+  @override
   String get worktreeNew => 'New';
 
   @override
