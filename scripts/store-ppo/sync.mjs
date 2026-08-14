@@ -369,11 +369,11 @@ async function synchronizeSet(setId, desired, operation) {
   console.log("  verified screenshot order and checksums (8/8)");
 }
 
-async function startExperiment(config, experiment) {
+async function startExperiment(config, experiment, { allowReviewPending = false } = {}) {
   const attributes = experiment.attributes ?? {};
   if (attributes.state === "APPROVED" && attributes.startDate) {
     console.log(`Experiment is already running since ${attributes.startDate}`);
-    return;
+    return experiment;
   }
 
   const response = await apiRequest(`/v2/appStoreVersionExperiments/${config.experimentId}`, {
@@ -393,12 +393,17 @@ async function startExperiment(config, experiment) {
 
   if (updated.state === "APPROVED" && updated.startDate) {
     console.log(`Experiment is running since ${updated.startDate}`);
-    return;
+    return response.data;
   }
   if (REVIEW_PENDING_EXPERIMENT_STATES.has(updated.state)) {
-    throw new Error(
-      `Experiment start is pending App Review: state=${updated.state}, reviewRequired=${updated.reviewRequired}`,
-    );
+    const message =
+      `Experiment start is pending App Review: state=${updated.state}, ` +
+      `reviewRequired=${updated.reviewRequired}`;
+    if (allowReviewPending) {
+      console.log(message);
+      return response.data;
+    }
+    throw new Error(message);
   }
   throw new Error(
     `Apple did not confirm the experiment start: state=${updated.state}, startDate=${updated.startDate ?? "missing"}`,
@@ -558,6 +563,20 @@ async function reviewAndStart(config, experiment) {
   }
   if (!new Set(["PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "REJECTED"]).has(state)) {
     throw new Error(`PPO experiment cannot be reviewed or started from state ${state}`);
+  }
+
+  if (state !== "REJECTED") {
+    const startRequested = await startExperiment(config, experiment, {
+      allowReviewPending: true,
+    });
+    const requestedState = startRequested.attributes?.state;
+    if (requestedState === "APPROVED" && startRequested.attributes?.startDate) {
+      return;
+    }
+    if (requestedState === "WAITING_FOR_REVIEW" || requestedState === "IN_REVIEW") {
+      console.log(`PPO experiment is pending App Review: ${requestedState}`);
+      return;
+    }
   }
 
   const submission = await submitExperimentForReview(config);
