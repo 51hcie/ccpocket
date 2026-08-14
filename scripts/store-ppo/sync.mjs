@@ -565,7 +565,7 @@ async function reviewAndStart(config, experiment) {
     throw new Error(`PPO experiment cannot be reviewed or started from state ${state}`);
   }
 
-  if (state !== "REJECTED") {
+  if (state === "PREPARE_FOR_SUBMISSION") {
     const startRequested = await startExperiment(config, experiment, {
       allowReviewPending: true,
     });
@@ -634,7 +634,10 @@ async function main() {
   ) {
     throw new Error("Experiment name, platform, or traffic proportion does not match config");
   }
-  console.log(`Experiment: ${experiment.attributes?.name} (${experimentState})`);
+  console.log(
+    `Experiment: ${experiment.attributes?.name} (${experimentState}, ` +
+      `reviewRequired=${experiment.attributes?.reviewRequired})`,
+  );
 
   const experimentTreatmentIds = new Set(
     (experiment.relationships?.appStoreVersionExperimentTreatments?.data ?? []).map(
