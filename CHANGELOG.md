@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.113.0] - 2026-08-14
+
+### Added
+- Automatically detect whether each Bridge endpoint supports WSS or WS, preferring secure connections without sending credentials during discovery.
+
+### Changed
+- Replace the secure-connection toggle with Automatic, Secure only, and Standard connection modes, with clearer first-connection guidance.
+- Use WS inside encrypted SSH jump-host tunnels and explain the effective transport in machine settings.
+
+### Fixed
+- Prevent established WSS endpoints from silently downgrading to WS, and require confirmation before sending an API key over automatically selected plaintext WS.
+- Preserve the latest machine settings while health checks and connection attempts are in flight, including startup auto-connect and transport upgrades.
+- Show actionable localized errors when Bridge discovery or secure connection setup fails instead of exposing low-level handshake errors.
+
 ## [1.112.0] - 2026-08-10
 
 ### Added
