@@ -411,20 +411,28 @@ async function startExperiment(config, experiment, { allowReviewPending = false 
 }
 
 function experimentItemId(item) {
-  return item.relationships?.appStoreVersionExperimentV2?.data?.id ?? null;
+  return (
+    item.relationships?.appStoreVersionExperimentV2?.data?.id ??
+    item.relationships?.appStoreVersionExperiment?.data?.id ??
+    null
+  );
 }
 
 async function activeReviewSubmissions(config) {
   const states = [...ACTIVE_REVIEW_SUBMISSION_STATES].join(",");
   return apiRequest(
-    `/v1/apps/${config.appId}/reviewSubmissions?filter%5Bplatform%5D=IOS&filter%5Bstate%5D=${states}&fields%5BreviewSubmissionItems%5D=state,appStoreVersionExperimentV2&include=items&limit=200&limit%5Bitems%5D=50`,
+    `/v1/apps/${config.appId}/reviewSubmissions?filter%5Bplatform%5D=IOS&filter%5Bstate%5D=${states}&limit=200`,
+  );
+}
+
+async function reviewSubmissionItems(submissionId) {
+  return listAll(
+    `/v1/reviewSubmissions/${submissionId}/items?fields%5BreviewSubmissionItems%5D=state,appStoreVersionExperiment,appStoreVersionExperimentV2&limit=200`,
   );
 }
 
 async function assertPpoOnlyReviewSubmission(config, submissionId) {
-  const items = await listAll(
-    `/v1/reviewSubmissions/${submissionId}/items?fields%5BreviewSubmissionItems%5D=state,appStoreVersionExperimentV2&limit=200`,
-  );
+  const items = await reviewSubmissionItems(submissionId);
   if (items.length !== 1 || experimentItemId(items[0]) !== config.experimentId) {
     const summary = items.map((item) => ({
       id: item.id,
@@ -454,15 +462,14 @@ async function waitForSubmittedReview(submissionId) {
 
 async function submitExperimentForReview(config) {
   const response = await activeReviewSubmissions(config);
-  const itemsById = new Map(
-    (response.included ?? [])
-      .filter((item) => item.type === "reviewSubmissionItems")
-      .map((item) => [item.id, item]),
-  );
+  const itemsBySubmissionId = new Map();
+  for (const submission of response.data ?? []) {
+    itemsBySubmissionId.set(submission.id, await reviewSubmissionItems(submission.id));
+  }
   const matches = [];
   for (const submission of response.data ?? []) {
-    const itemIds = submission.relationships?.items?.data?.map((item) => item.id) ?? [];
-    if (itemIds.some((id) => experimentItemId(itemsById.get(id) ?? {}) === config.experimentId)) {
+    const items = itemsBySubmissionId.get(submission.id) ?? [];
+    if (items.some((item) => experimentItemId(item) === config.experimentId)) {
       matches.push(submission);
     }
   }
@@ -475,7 +482,7 @@ async function submitExperimentForReview(config) {
     const emptyDrafts = (response.data ?? []).filter(
       (candidate) =>
         candidate.attributes?.state === "READY_FOR_REVIEW" &&
-        (candidate.relationships?.items?.data?.length ?? 0) === 0,
+        (itemsBySubmissionId.get(candidate.id)?.length ?? 0) === 0,
     );
     if (emptyDrafts.length > 1) {
       throw new Error("Multiple empty review submission drafts found; refusing to choose one");
