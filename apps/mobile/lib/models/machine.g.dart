@@ -32,6 +32,13 @@ _Machine _$MachineFromJson(Map<String, dynamic> json) => _Machine(
   host: json['host'] as String,
   port: (json['port'] as num?)?.toInt() ?? 8765,
   useSsl: json['useSsl'] as bool? ?? false,
+  connectionMode:
+      $enumDecodeNullable(
+        _$BridgeConnectionModeEnumMap,
+        json['connectionMode'],
+      ) ??
+      BridgeConnectionMode.automatic,
+  hasResolvedTransport: json['hasResolvedTransport'] as bool? ?? false,
   hasApiKey: json['hasApiKey'] as bool? ?? false,
   lastConnected: json['lastConnected'] == null
       ? null
@@ -59,6 +66,8 @@ Map<String, dynamic> _$MachineToJson(_Machine instance) => <String, dynamic>{
   'host': instance.host,
   'port': instance.port,
   'useSsl': instance.useSsl,
+  'connectionMode': _$BridgeConnectionModeEnumMap[instance.connectionMode]!,
+  'hasResolvedTransport': instance.hasResolvedTransport,
   'hasApiKey': instance.hasApiKey,
   'lastConnected': instance.lastConnected?.toIso8601String(),
   'isFavorite': instance.isFavorite,
@@ -72,6 +81,12 @@ Map<String, dynamic> _$MachineToJson(_Machine instance) => <String, dynamic>{
   'sshJumpAuthType': _$SshAuthTypeEnumMap[instance.sshJumpAuthType]!,
   'hasCredentials': instance.hasCredentials,
   'hasJumpCredentials': instance.hasJumpCredentials,
+};
+
+const _$BridgeConnectionModeEnumMap = {
+  BridgeConnectionMode.automatic: 'automatic',
+  BridgeConnectionMode.secureOnly: 'secureOnly',
+  BridgeConnectionMode.standardOnly: 'standardOnly',
 };
 
 const _$SshAuthTypeEnumMap = {

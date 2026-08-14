@@ -322,6 +322,52 @@ class AppLocalizationsKo extends AppLocalizations {
       'WSS로 연결하고 상태 확인에는 HTTPS를 사용합니다';
 
   @override
+  String get machineEditConnectionMode => '연결 방식';
+
+  @override
+  String get machineEditConnectionModeAutomatic => '자동(권장)';
+
+  @override
+  String get machineEditConnectionModeAutomaticSubtitle =>
+      '인증 정보를 보내지 않고 확인하며 HTTPS를 우선해 자동 연결합니다';
+
+  @override
+  String get machineEditConnectionModeAutomaticSshSubtitle =>
+      'SSH 터널 안에서는 WS를 사용하며 통신은 SSH 연결로 암호화됩니다';
+
+  @override
+  String get machineEditConnectionModeSecureOnly => '보안 연결만(WSS)';
+
+  @override
+  String get machineEditConnectionModeSecureOnlySubtitle =>
+      'TLS 연결을 필수로 하며 WS로 자동 전환하지 않습니다';
+
+  @override
+  String get machineEditConnectionModeStandardOnly => '표준(WS)';
+
+  @override
+  String get machineEditConnectionModeStandardOnlySubtitle =>
+      '로컬 네트워크 또는 Tailscale 같은 VPN에서 사용하세요';
+
+  @override
+  String get machineErrorBridgeNotFound =>
+      'Bridge를 찾을 수 없습니다. 실행 상태와 같은 네트워크 또는 VPN 연결을 확인하세요.';
+
+  @override
+  String get machineErrorSecureConnectionUnavailable =>
+      '보안 연결을 설정할 수 없습니다. TLS를 확인하거나 필요한 경우에만 명시적으로 표준(WS)을 선택하세요.';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningTitle => '표준 연결(WS)이 감지되었습니다';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningBody =>
+      '이 Bridge는 암호화되지 않은 WS로 발견되었습니다. API 키가 전송 암호화 없이 전송됩니다. 신뢰할 수 있는 로컬 네트워크 또는 VPN에서만 계속하세요.';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningConnect => 'WS로 연결';
+
+  @override
   String get machineEditSshConfiguration => 'SSH 설정';
 
   @override

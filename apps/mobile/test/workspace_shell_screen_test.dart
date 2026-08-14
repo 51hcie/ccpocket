@@ -263,12 +263,14 @@ class _StaticMachineManagerService implements MachineManagerService {
     String? apiKey,
     String? name,
     bool? useSsl,
+    BridgeConnectionMode? connectionMode,
   }) async => Machine(
     id: 'recorded',
     host: host,
     port: port,
     name: name,
     useSsl: useSsl ?? false,
+    connectionMode: connectionMode ?? BridgeConnectionMode.automatic,
   );
 
   @override

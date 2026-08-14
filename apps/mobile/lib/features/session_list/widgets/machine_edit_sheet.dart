@@ -95,7 +95,7 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
   late final TextEditingController _sshJumpPrivateKeyController;
   late final TextEditingController _sshPasswordController;
   late final TextEditingController _sshPrivateKeyController;
-  bool _useSsl = false;
+  BridgeConnectionMode _connectionMode = BridgeConnectionMode.automatic;
   bool _sshEnabled = false;
   bool _sshJumpEnabled = false;
   SshAuthType _sshAuthType = SshAuthType.password;
@@ -105,7 +105,7 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
   String? _testResult;
   bool _testSuccess = false;
 
-  bool get isEditing => widget.machine != null;
+  bool get isEditing => widget.machine?.id.isNotEmpty == true;
 
   bool get _hasExistingSshPrivateKey =>
       widget.existingSshPrivateKey?.isNotEmpty ?? false;
@@ -163,9 +163,14 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
     _sshPrivateKeyController = TextEditingController();
 
     if (m != null) {
-      _useSsl = m.useSsl;
+      _connectionMode = m.connectionMode;
       _sshEnabled = m.sshEnabled;
       _sshJumpEnabled = _hasSavedJumpHostConfiguration;
+      if (_sshEnabled &&
+          _sshJumpEnabled &&
+          _connectionMode == BridgeConnectionMode.secureOnly) {
+        _connectionMode = BridgeConnectionMode.automatic;
+      }
       _sshAuthType = m.sshAuthType;
       _sshJumpAuthType = m.sshJumpAuthType;
     }
@@ -280,14 +285,39 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
     setState(() => _isSaving = true);
 
     try {
+      final existing = widget.machine;
+      final host = normalizeHostInput(_hostController.text);
+      final port = int.tryParse(_portController.text) ?? 8765;
+      final usesSshTunnel =
+          _sshEnabled &&
+          _sshJumpEnabled &&
+          _sshJumpHostController.text.trim().isNotEmpty;
+      final useSsl = switch (_connectionMode) {
+        BridgeConnectionMode.automatic =>
+          usesSshTunnel ? false : existing?.useSsl ?? false,
+        BridgeConnectionMode.secureOnly => true,
+        BridgeConnectionMode.standardOnly => false,
+      };
+      final endpointPolicyChanged =
+          existing == null ||
+          normalizeHostInput(existing.host) != host ||
+          existing.port != port ||
+          existing.connectionMode != _connectionMode;
       final machine = Machine(
-        id: widget.machine?.id ?? '',
+        id: existing?.id ?? '',
         name: _nameController.text.trim().isNotEmpty
             ? _nameController.text.trim()
             : null,
-        host: normalizeHostInput(_hostController.text),
-        port: int.tryParse(_portController.text) ?? 8765,
-        useSsl: _useSsl,
+        host: host,
+        port: port,
+        useSsl: useSsl,
+        connectionMode: _connectionMode,
+        hasResolvedTransport:
+            usesSshTunnel ||
+            (!endpointPolicyChanged && existing.hasResolvedTransport),
+        hasApiKey: existing?.hasApiKey ?? false,
+        lastConnected: existing?.lastConnected,
+        isFavorite: existing?.isFavorite ?? false,
         sshEnabled: _sshEnabled,
         sshUsername: _sshEnabled ? _sshUsernameController.text.trim() : null,
         sshPort: int.tryParse(_sshPortController.text) ?? 22,
@@ -306,6 +336,8 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
             ? _sshJumpUsernameController.text.trim()
             : null,
         sshJumpAuthType: _sshJumpAuthType,
+        hasCredentials: existing?.hasCredentials ?? false,
+        hasJumpCredentials: existing?.hasJumpCredentials ?? false,
       );
 
       final apiKey = _apiKeyController.text.isNotEmpty
@@ -510,25 +542,11 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
                       ),
                       const SizedBox(height: 12),
 
-                      _TileCard(
-                        child: SwitchListTile(
-                          title: Text(
-                            l.machineEditUseSecureConnection,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          subtitle: Text(
-                            l.machineEditUseSecureConnectionSubtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          value: _useSsl,
-                          onChanged: (v) => setState(() => _useSsl = v),
-                          secondary: const Icon(Icons.lock),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
+                      _ConnectionModeField(
+                        value: _connectionMode,
+                        usesSshTunnel: _sshEnabled && _sshJumpEnabled,
+                        onChanged: (value) =>
+                            setState(() => _connectionMode = value),
                       ),
 
                       const SizedBox(height: 24),
@@ -686,8 +704,15 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
                               ),
                             ),
                             value: _sshJumpEnabled,
-                            onChanged: (v) =>
-                                setState(() => _sshJumpEnabled = v),
+                            onChanged: (v) => setState(() {
+                              _sshJumpEnabled = v;
+                              if (v &&
+                                  _connectionMode ==
+                                      BridgeConnectionMode.secureOnly) {
+                                _connectionMode =
+                                    BridgeConnectionMode.automatic;
+                              }
+                            }),
                             secondary: const Icon(Icons.hub),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -978,6 +1003,63 @@ class _MachineEditSheetState extends State<MachineEditSheet> {
           );
         },
       ),
+    );
+  }
+}
+
+class _ConnectionModeField extends StatelessWidget {
+  final BridgeConnectionMode value;
+  final bool usesSshTunnel;
+  final ValueChanged<BridgeConnectionMode> onChanged;
+
+  const _ConnectionModeField({
+    required this.value,
+    required this.usesSshTunnel,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final description = switch (value) {
+      BridgeConnectionMode.automatic =>
+        usesSshTunnel
+            ? l.machineEditConnectionModeAutomaticSshSubtitle
+            : l.machineEditConnectionModeAutomaticSubtitle,
+      BridgeConnectionMode.secureOnly =>
+        l.machineEditConnectionModeSecureOnlySubtitle,
+      BridgeConnectionMode.standardOnly =>
+        l.machineEditConnectionModeStandardOnlySubtitle,
+    };
+
+    return DropdownButtonFormField<BridgeConnectionMode>(
+      key: const ValueKey('connection_mode_dropdown'),
+      initialValue: value,
+      decoration: InputDecoration(
+        labelText: l.machineEditConnectionMode,
+        helperText: description,
+        helperMaxLines: 2,
+        prefixIcon: const Icon(Icons.security),
+        border: const OutlineInputBorder(),
+      ),
+      items: [
+        DropdownMenuItem(
+          value: BridgeConnectionMode.automatic,
+          child: Text(l.machineEditConnectionModeAutomatic),
+        ),
+        if (!usesSshTunnel)
+          DropdownMenuItem(
+            value: BridgeConnectionMode.secureOnly,
+            child: Text(l.machineEditConnectionModeSecureOnly),
+          ),
+        DropdownMenuItem(
+          value: BridgeConnectionMode.standardOnly,
+          child: Text(l.machineEditConnectionModeStandardOnly),
+        ),
+      ],
+      onChanged: (next) {
+        if (next != null) onChanged(next);
+      },
     );
   }
 }

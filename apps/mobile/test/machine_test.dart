@@ -7,6 +7,8 @@ void main() {
       const machine = Machine(id: 'm1', host: 'bridge.example.com');
 
       expect(machine.useSsl, isFalse);
+      expect(machine.connectionMode, BridgeConnectionMode.automatic);
+      expect(machine.hasResolvedTransport, isFalse);
       expect(machine.wsUrl, 'ws://bridge.example.com:8765');
       expect(machine.httpUrl, 'http://bridge.example.com:8765');
     });
@@ -48,7 +50,22 @@ void main() {
       });
 
       expect(machine.useSsl, isFalse);
+      expect(machine.connectionMode, BridgeConnectionMode.automatic);
+      expect(machine.hasResolvedTransport, isFalse);
       expect(machine.wsUrl, 'ws://bridge.example.com:8765');
+    });
+
+    test('migrates an existing SSL machine to secure-only', () {
+      final machine = Machine.fromJson({
+        'id': 'secure-machine',
+        'host': 'bridge.example.com',
+        'port': 8765,
+        'useSsl': true,
+      });
+
+      expect(machine.useSsl, isTrue);
+      expect(machine.connectionMode, BridgeConnectionMode.secureOnly);
+      expect(machine.hasResolvedTransport, isFalse);
     });
 
     test(

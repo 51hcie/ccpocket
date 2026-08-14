@@ -20,6 +20,7 @@ import '../../providers/unseen_sessions_cubit.dart';
 import '../../providers/server_discovery_cubit.dart';
 import '../../router/app_router.dart';
 import '../../services/app_update_service.dart';
+import '../../services/bridge_endpoint_probe.dart';
 import '../../services/bridge_service.dart';
 import '../../services/connection_url_parser.dart';
 import '../../services/platform_environment_service.dart';
@@ -385,30 +386,29 @@ class _SessionListScreenState extends State<SessionListScreen>
     if (url != null && url.isNotEmpty) {
       setState(() => _isAutoConnecting = true);
       // Try to get API key from SecureStorage via MachineManagerCubit.
-      String? apiKey;
+      Machine? machine;
+      MachineManagerCubit? cubit;
       try {
         final uri = Uri.tryParse(url);
         if (uri != null) {
-          final cubit = context.read<MachineManagerCubit?>();
-          final machine = await findAutoConnectMachine(cubit, uri);
-          if (machine != null) {
-            apiKey = await cubit?.getApiKey(machine.id);
-            if (!mounted || !_isAutoConnecting) return;
-            if (machine.sshJumpHost?.trim().isNotEmpty == true) {
-              await _connectToMachineConfig(
-                machine,
-                shouldConnect: () => _isAutoConnecting,
-              );
-              return;
-            }
-          }
+          cubit = context.read<MachineManagerCubit?>();
+          machine = await findAutoConnectMachine(cubit, uri);
         }
       } catch (_) {
-        // Ignore — autoConnect falls back to legacy SharedPreferences.
+        // Ignore lookup failures — legacy preferences remain available below.
+      }
+      if (machine != null) {
+        final started = await _connectToMachineConfig(
+          cubit?.getMachine(machine.id) ?? machine,
+          shouldConnect: () => _isAutoConnecting,
+        );
+        if (!started && mounted) {
+          setState(() => _isAutoConnecting = false);
+        }
+        return;
       }
       if (!mounted || !_isAutoConnecting) return;
       final attempted = await context.read<BridgeService>().autoConnect(
-        apiKey: apiKey,
         shouldConnect: () => mounted && _isAutoConnecting,
       );
       if (!attempted && mounted) {
@@ -417,15 +417,64 @@ class _SessionListScreenState extends State<SessionListScreen>
     }
   }
 
-  Future<void> _connectWithParams(String rawUrl, String? apiKey) async {
+  Future<void> _connectWithParams(
+    String rawUrl,
+    String? apiKey, {
+    BridgeConnectionMode? requestedConnectionMode,
+  }) async {
     var url = rawUrl.trim();
     if (url.isEmpty) return;
+    if (!mounted) return;
+    final machineManagerCubit = context.read<MachineManagerCubit?>();
+    final hasExplicitScheme =
+        url.startsWith('ws://') || url.startsWith('wss://');
+    var connectionMode =
+        requestedConnectionMode ?? BridgeConnectionMode.automatic;
     // Allow shorthand: just IP or host:port without ws:// prefix
-    if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+    if (!hasExplicitScheme) {
       url = 'ws://$url';
+      final candidate = Uri.tryParse(url);
+      if (candidate != null && candidate.host.isNotEmpty) {
+        final port = candidate.hasPort ? candidate.port : 8765;
+        final existing = machineManagerCubit?.findByHostPort(
+          candidate.host,
+          port,
+        );
+        connectionMode =
+            requestedConnectionMode ??
+            existing?.connectionMode ??
+            BridgeConnectionMode.automatic;
+        final probeMode = switch (connectionMode) {
+          BridgeConnectionMode.secureOnly => BridgeConnectionMode.secureOnly,
+          BridgeConnectionMode.standardOnly =>
+            BridgeConnectionMode.standardOnly,
+          BridgeConnectionMode.automatic =>
+            existing?.hasResolvedTransport == true && existing?.useSsl == true
+                ? BridgeConnectionMode.secureOnly
+                : BridgeConnectionMode.automatic,
+        };
+        final probe = await BridgeEndpointProbe().probe(
+          host: candidate.host,
+          port: port,
+          mode: probeMode,
+        );
+        final useSsl = probe.isReachable
+            ? probe.useSsl
+            : probeMode == BridgeConnectionMode.secureOnly;
+        url = formatUriOrigin(
+          scheme: useSsl ? 'wss' : 'ws',
+          host: candidate.host,
+          port: port,
+        );
+      }
+    } else if (requestedConnectionMode == null) {
+      connectionMode = url.startsWith('wss://')
+          ? BridgeConnectionMode.secureOnly
+          : BridgeConnectionMode.standardOnly;
     }
 
-    final machineManagerCubit = context.read<MachineManagerCubit?>();
+    if (!mounted) return;
+
     if (machineManagerCubit != null) {
       unawaited(machineManagerCubit.refreshLatestBridgeVersionIfStale());
     }
@@ -440,6 +489,15 @@ class _SessionListScreenState extends State<SessionListScreen>
     if (!mounted) return;
     // Auto-save to Machines on successful health check (or user choosing to connect)
     final trimmedApiKey = apiKey?.trim() ?? '';
+    if (shouldConfirmAutomaticWsWithApiKey(
+      connectionMode: connectionMode,
+      useSsl: url.startsWith('wss://'),
+      usesEncryptedTunnel: false,
+      apiKey: trimmedApiKey,
+    )) {
+      final shouldContinue = await _confirmAutomaticWsWithApiKey();
+      if (shouldContinue != true || !mounted) return;
+    }
     if (machineManagerCubit != null) {
       // Parse host and port from URL
       final uri = Uri.tryParse(
@@ -451,6 +509,7 @@ class _SessionListScreenState extends State<SessionListScreen>
           port: uri.port != 0 ? uri.port : 8765,
           apiKey: trimmedApiKey.isNotEmpty ? trimmedApiKey : null,
           useSsl: uri.scheme == 'https',
+          connectionMode: connectionMode,
         );
       }
     }
@@ -469,6 +528,29 @@ class _SessionListScreenState extends State<SessionListScreen>
     final bridge = context.read<BridgeService>();
     bridge.connect(connectUrl);
     bridge.savePreferences(url);
+  }
+
+  Future<bool?> _confirmAutomaticWsWithApiKey() {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final l = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l.machineAutomaticWsApiKeyWarningTitle),
+          content: Text(l.machineAutomaticWsApiKeyWarningBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l.machineAutomaticWsApiKeyWarningConnect),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   /// Show setup guide when health check fails. Returns true if user wants
@@ -2000,6 +2082,7 @@ class _SessionListScreenState extends State<SessionListScreen>
 
   void _addMachineFromDiscovered(DiscoveredServer server) {
     final cubit = context.read<MachineManagerCubit>();
+    Machine? savedMachine;
     final uri = Uri.tryParse(
       server.wsUrl
           .replaceFirst('ws://', 'http://')
@@ -2021,6 +2104,9 @@ class _SessionListScreenState extends State<SessionListScreen>
           port: port,
           name: server.name,
           useSsl: useSsl,
+          connectionMode: useSsl
+              ? BridgeConnectionMode.secureOnly
+              : BridgeConnectionMode.standardOnly,
         ),
         onSave:
             ({
@@ -2040,6 +2126,7 @@ class _SessionListScreenState extends State<SessionListScreen>
               await cubit.addMachine(
                 newMachine.copyWith(
                   useSsl: machine.useSsl,
+                  connectionMode: machine.connectionMode,
                   sshEnabled: machine.sshEnabled,
                   sshUsername: machine.sshUsername,
                   sshPort: machine.sshPort,
@@ -2056,9 +2143,21 @@ class _SessionListScreenState extends State<SessionListScreen>
                 sshJumpPassword: sshJumpPassword,
                 sshJumpPrivateKey: sshJumpPrivateKey,
               );
+              savedMachine = cubit.findByHostPort(machine.host, machine.port);
             },
         onSaveAndConnect: (machine, apiKey) {
-          _connectWithParams(machine.wsUrl, apiKey);
+          final saved = savedMachine;
+          if (saved?.sshJumpHost?.trim().isNotEmpty == true) {
+            unawaited(_connectToMachineConfig(saved!));
+          } else if (saved != null) {
+            _connectWithParams(
+              saved.wsUrl,
+              apiKey,
+              requestedConnectionMode: saved.connectionMode,
+            );
+          } else {
+            _connectWithParams(machine.wsUrl, apiKey);
+          }
         },
         onTestConnection: cubit.testConnectionWithCredentials,
       ),
@@ -2071,7 +2170,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     await _connectToMachineConfig(m.machine);
   }
 
-  Future<void> _connectToMachineConfig(
+  Future<bool> _connectToMachineConfig(
     Machine machine, {
     bool Function()? shouldConnect,
   }) async {
@@ -2091,39 +2190,95 @@ class _SessionListScreenState extends State<SessionListScreen>
           context,
         ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
-      return;
+      return false;
     }
     if (!_canContinueConnection(shouldConnect)) {
       await tunnelService?.closeAll();
-      return;
+      return false;
     }
     final apiKey = await cubit.getApiKey(machine.id);
     if (!_canContinueConnection(shouldConnect)) {
       await tunnelService?.closeAll();
-      return;
+      return false;
     }
 
-    // Record connection to update lastConnected
-    await cubit.recordConnection(
-      host: machine.host,
-      port: machine.port,
+    final resolvedMachine = cubit.getMachine(machine.id) ?? machine;
+    final usesEncryptedTunnel =
+        resolvedMachine.sshJumpHost?.trim().isNotEmpty == true;
+    final actualUseSsl = wsUrl.startsWith('wss://');
+    if (!usesEncryptedTunnel && actualUseSsl != resolvedMachine.useSsl) {
+      await tunnelService?.closeAll();
+      return await _connectToMachineConfig(
+        resolvedMachine,
+        shouldConnect: shouldConnect,
+      );
+    }
+    if (shouldConfirmAutomaticWsWithApiKey(
+      connectionMode: resolvedMachine.connectionMode,
+      useSsl: actualUseSsl,
+      usesEncryptedTunnel: usesEncryptedTunnel,
       apiKey: apiKey,
-      useSsl: machine.useSsl,
+    )) {
+      final shouldContinue = await _confirmAutomaticWsWithApiKey();
+      if (shouldContinue != true || !_canContinueConnection(shouldConnect)) {
+        await tunnelService?.closeAll();
+        return false;
+      }
+    }
+
+    final machineBeforeRecord = cubit.getMachine(machine.id) ?? machine;
+    if (!_hasSameConnectionTarget(resolvedMachine, machineBeforeRecord)) {
+      await tunnelService?.closeAll();
+      return await _connectToMachineConfig(
+        machineBeforeRecord,
+        shouldConnect: shouldConnect,
+      );
+    }
+
+    // Record connection without overwriting a transport that may have been
+    // resolved while buildWsUrl was awaiting an SSH tunnel or health check.
+    await cubit.recordConnection(
+      host: machineBeforeRecord.host,
+      port: machineBeforeRecord.port,
+      apiKey: apiKey,
     );
 
     if (!_canContinueConnection(shouldConnect)) {
       await tunnelService?.closeAll();
-      return;
+      return false;
+    }
+    final machineBeforeConnect = cubit.getMachine(machine.id) ?? machine;
+    if (!_hasSameConnectionTarget(machineBeforeRecord, machineBeforeConnect)) {
+      await tunnelService?.closeAll();
+      return await _connectToMachineConfig(
+        machineBeforeConnect,
+        shouldConnect: shouldConnect,
+      );
     }
     bridge.connect(wsUrl);
-    bridge.savePreferences(machine.wsUrl);
+    bridge.savePreferences(machineBeforeConnect.wsUrl);
     if (tunnelService != null) {
       unawaited(tunnelService.closeAllExcept(machine.id));
     }
+    return true;
   }
 
   bool _canContinueConnection(bool Function()? shouldConnect) =>
       mounted && (shouldConnect?.call() ?? true);
+
+  bool _hasSameConnectionTarget(Machine before, Machine after) =>
+      before.host == after.host &&
+      before.port == after.port &&
+      before.useSsl == after.useSsl &&
+      before.connectionMode == after.connectionMode &&
+      before.sshEnabled == after.sshEnabled &&
+      before.sshUsername == after.sshUsername &&
+      before.sshPort == after.sshPort &&
+      before.sshAuthType == after.sshAuthType &&
+      before.sshJumpHost == after.sshJumpHost &&
+      before.sshJumpPort == after.sshJumpPort &&
+      before.sshJumpUsername == after.sshJumpUsername &&
+      before.sshJumpAuthType == after.sshJumpAuthType;
 
   void _toggleFavorite(MachineWithStatus m) {
     context.read<MachineManagerCubit>().toggleFavorite(m.machine.id);
@@ -2296,6 +2451,7 @@ class _SessionListScreenState extends State<SessionListScreen>
                     machine.sshJumpHost == null ||
                     machine.sshJumpAuthType != m.machine.sshJumpAuthType,
               );
+              await cubit.checkHealth(machine.id);
             },
         onTestConnection: cubit.testConnectionWithCredentials,
       ),
@@ -2332,6 +2488,7 @@ class _SessionListScreenState extends State<SessionListScreen>
 
   void _addMachine() {
     final cubit = context.read<MachineManagerCubit>();
+    Machine? savedMachine;
 
     showModalBottomSheet(
       context: context,
@@ -2357,6 +2514,7 @@ class _SessionListScreenState extends State<SessionListScreen>
               await cubit.addMachine(
                 newMachine.copyWith(
                   useSsl: machine.useSsl,
+                  connectionMode: machine.connectionMode,
                   sshEnabled: machine.sshEnabled,
                   sshUsername: machine.sshUsername,
                   sshPort: machine.sshPort,
@@ -2373,9 +2531,21 @@ class _SessionListScreenState extends State<SessionListScreen>
                 sshJumpPassword: sshJumpPassword,
                 sshJumpPrivateKey: sshJumpPrivateKey,
               );
+              savedMachine = cubit.findByHostPort(machine.host, machine.port);
             },
         onSaveAndConnect: (machine, apiKey) {
-          _connectWithParams(machine.wsUrl, apiKey);
+          final saved = savedMachine;
+          if (saved?.sshJumpHost?.trim().isNotEmpty == true) {
+            unawaited(_connectToMachineConfig(saved!));
+          } else if (saved != null) {
+            _connectWithParams(
+              saved.wsUrl,
+              apiKey,
+              requestedConnectionMode: saved.connectionMode,
+            );
+          } else {
+            _connectWithParams(machine.wsUrl, apiKey);
+          }
         },
         onTestConnection: cubit.testConnectionWithCredentials,
       ),

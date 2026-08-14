@@ -73,6 +73,7 @@ class MockMachineManagerService implements MachineManagerService {
     String? apiKey,
     String? name,
     bool? useSsl,
+    BridgeConnectionMode? connectionMode,
   }) async {
     calls.add('recordConnection:$host:$port');
     return Machine(
@@ -81,6 +82,7 @@ class MockMachineManagerService implements MachineManagerService {
       port: port,
       name: name,
       useSsl: useSsl ?? false,
+      connectionMode: connectionMode ?? BridgeConnectionMode.automatic,
     );
   }
 

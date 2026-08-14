@@ -33,6 +33,7 @@ Future<void> _pumpCard(
   required MachineStatus status,
   String? version,
   String? latestBridgeVersion,
+  String? lastError,
   bool sshEnabled = true,
   String? sshUsername = 'k9i',
   VoidCallback? onConnect,
@@ -45,6 +46,7 @@ Future<void> _pumpCard(
         machineWithStatus: MachineWithStatus(
           machine: _machine(sshEnabled: sshEnabled, sshUsername: sshUsername),
           status: status,
+          lastError: lastError,
           versionInfo: version == null
               ? null
               : BridgeVersionInfo(version: version),
@@ -63,6 +65,22 @@ Future<void> _pumpCard(
 }
 
 void main() {
+  testWidgets('shows friendly text for connection mode errors', (tester) async {
+    await _pumpCard(
+      tester,
+      status: MachineStatus.offline,
+      lastError: machineErrorSecureConnectionUnavailable,
+    );
+
+    expect(
+      find.text(
+        'A secure connection could not be established. Check TLS, or explicitly choose Standard (WS) if intended.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(machineErrorSecureConnectionUnavailable), findsNothing);
+  });
+
   group('MachineCard menu', () {
     testWidgets('uses a full touch target and routes edit and delete taps', (
       tester,

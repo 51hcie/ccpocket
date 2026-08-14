@@ -696,6 +696,84 @@ abstract class AppLocalizations {
   /// **'WSS で接続し、ヘルスチェックに HTTPS を使います'**
   String get machineEditUseSecureConnectionSubtitle;
 
+  /// No description provided for @machineEditConnectionMode.
+  ///
+  /// In ja, this message translates to:
+  /// **'接続方式'**
+  String get machineEditConnectionMode;
+
+  /// No description provided for @machineEditConnectionModeAutomatic.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動（推奨）'**
+  String get machineEditConnectionModeAutomatic;
+
+  /// No description provided for @machineEditConnectionModeAutomaticSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'認証情報を送らずに確認し、HTTPSを優先して自動接続します'**
+  String get machineEditConnectionModeAutomaticSubtitle;
+
+  /// No description provided for @machineEditConnectionModeAutomaticSshSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'SSHトンネル内ではWSを使用し、通信はSSH接続で暗号化されます'**
+  String get machineEditConnectionModeAutomaticSshSubtitle;
+
+  /// No description provided for @machineEditConnectionModeSecureOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'セキュアのみ（WSS）'**
+  String get machineEditConnectionModeSecureOnly;
+
+  /// No description provided for @machineEditConnectionModeSecureOnlySubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'TLS接続を必須にし、WSへ自動的に切り替えません'**
+  String get machineEditConnectionModeSecureOnlySubtitle;
+
+  /// No description provided for @machineEditConnectionModeStandardOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'標準（WS）'**
+  String get machineEditConnectionModeStandardOnly;
+
+  /// No description provided for @machineEditConnectionModeStandardOnlySubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカルネットワークまたはTailscaleなどのVPN内で使用してください'**
+  String get machineEditConnectionModeStandardOnlySubtitle;
+
+  /// No description provided for @machineErrorBridgeNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'Bridgeが見つかりません。起動状態と同じネットワークまたはVPNへの接続を確認してください'**
+  String get machineErrorBridgeNotFound;
+
+  /// No description provided for @machineErrorSecureConnectionUnavailable.
+  ///
+  /// In ja, this message translates to:
+  /// **'セキュア接続を確立できません。TLSの設定を確認するか、意図する場合のみ「標準（WS）」を選択してください'**
+  String get machineErrorSecureConnectionUnavailable;
+
+  /// No description provided for @machineAutomaticWsApiKeyWarningTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'標準接続（WS）が見つかりました'**
+  String get machineAutomaticWsApiKeyWarningTitle;
+
+  /// No description provided for @machineAutomaticWsApiKeyWarningBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'このBridgeは暗号化されていないWSで見つかりました。APIキーは通信の暗号化なしで送信されます。信頼できるローカルネットワークまたはVPN内の場合のみ続けてください。'**
+  String get machineAutomaticWsApiKeyWarningBody;
+
+  /// No description provided for @machineAutomaticWsApiKeyWarningConnect.
+  ///
+  /// In ja, this message translates to:
+  /// **'WSで接続'**
+  String get machineAutomaticWsApiKeyWarningConnect;
+
   /// No description provided for @machineEditSshConfiguration.
   ///
   /// In ja, this message translates to:

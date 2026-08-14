@@ -327,6 +327,53 @@ class AppLocalizationsEn extends AppLocalizations {
       'Connect with WSS and use HTTPS for health checks';
 
   @override
+  String get machineEditConnectionMode => 'Connection method';
+
+  @override
+  String get machineEditConnectionModeAutomatic => 'Automatic (recommended)';
+
+  @override
+  String get machineEditConnectionModeAutomaticSubtitle =>
+      'Checks without credentials and connects automatically, preferring HTTPS';
+
+  @override
+  String get machineEditConnectionModeAutomaticSshSubtitle =>
+      'Uses WS inside the SSH tunnel; the SSH connection encrypts the traffic';
+
+  @override
+  String get machineEditConnectionModeSecureOnly => 'Secure only (WSS)';
+
+  @override
+  String get machineEditConnectionModeSecureOnlySubtitle =>
+      'Requires TLS and never falls back to WS';
+
+  @override
+  String get machineEditConnectionModeStandardOnly => 'Standard (WS)';
+
+  @override
+  String get machineEditConnectionModeStandardOnlySubtitle =>
+      'Use on a local network or through a VPN such as Tailscale';
+
+  @override
+  String get machineErrorBridgeNotFound =>
+      'Bridge not found. Check that it is running and that this device is on the same network or VPN.';
+
+  @override
+  String get machineErrorSecureConnectionUnavailable =>
+      'A secure connection could not be established. Check TLS, or explicitly choose Standard (WS) if intended.';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningTitle =>
+      'Standard connection detected';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningBody =>
+      'This Bridge was found over unencrypted WS. The API key will be sent without transport encryption. Continue only on a trusted local network or VPN.';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningConnect => 'Connect with WS';
+
+  @override
   String get machineEditSshConfiguration => 'SSH Configuration';
 
   @override

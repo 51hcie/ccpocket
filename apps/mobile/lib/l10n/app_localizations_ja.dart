@@ -322,6 +322,52 @@ class AppLocalizationsJa extends AppLocalizations {
       'WSS で接続し、ヘルスチェックに HTTPS を使います';
 
   @override
+  String get machineEditConnectionMode => '接続方式';
+
+  @override
+  String get machineEditConnectionModeAutomatic => '自動（推奨）';
+
+  @override
+  String get machineEditConnectionModeAutomaticSubtitle =>
+      '認証情報を送らずに確認し、HTTPSを優先して自動接続します';
+
+  @override
+  String get machineEditConnectionModeAutomaticSshSubtitle =>
+      'SSHトンネル内ではWSを使用し、通信はSSH接続で暗号化されます';
+
+  @override
+  String get machineEditConnectionModeSecureOnly => 'セキュアのみ（WSS）';
+
+  @override
+  String get machineEditConnectionModeSecureOnlySubtitle =>
+      'TLS接続を必須にし、WSへ自動的に切り替えません';
+
+  @override
+  String get machineEditConnectionModeStandardOnly => '標準（WS）';
+
+  @override
+  String get machineEditConnectionModeStandardOnlySubtitle =>
+      'ローカルネットワークまたはTailscaleなどのVPN内で使用してください';
+
+  @override
+  String get machineErrorBridgeNotFound =>
+      'Bridgeが見つかりません。起動状態と同じネットワークまたはVPNへの接続を確認してください';
+
+  @override
+  String get machineErrorSecureConnectionUnavailable =>
+      'セキュア接続を確立できません。TLSの設定を確認するか、意図する場合のみ「標準（WS）」を選択してください';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningTitle => '標準接続（WS）が見つかりました';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningBody =>
+      'このBridgeは暗号化されていないWSで見つかりました。APIキーは通信の暗号化なしで送信されます。信頼できるローカルネットワークまたはVPN内の場合のみ続けてください。';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningConnect => 'WSで接続';
+
+  @override
   String get machineEditSshConfiguration => 'SSH 設定';
 
   @override

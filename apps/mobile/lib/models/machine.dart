@@ -5,6 +5,19 @@ import '../utils/network_endpoint.dart';
 part 'machine.freezed.dart';
 part 'machine.g.dart';
 
+const machineErrorBridgeNotFound = 'bridge_not_found';
+const machineErrorSecureConnectionUnavailable = 'secure_connection_unavailable';
+
+Map<String, dynamic> _migrateMachineJson(Map<String, dynamic> json) {
+  final migrated = Map<String, dynamic>.from(json);
+  migrated.putIfAbsent(
+    'connectionMode',
+    () => json['useSsl'] == true ? 'secureOnly' : 'automatic',
+  );
+  migrated.putIfAbsent('hasResolvedTransport', () => false);
+  return migrated;
+}
+
 /// Compare semantic version strings with up to three numeric components.
 ///
 /// Returns a negative value when [left] is older than [right], zero when they
@@ -34,6 +47,18 @@ enum MachineStatus {
 
   /// Network unreachable or connection refused
   unreachable,
+}
+
+/// How the app chooses the Bridge transport for a machine.
+enum BridgeConnectionMode {
+  /// Probe HTTPS and HTTP without credentials, preferring HTTPS.
+  automatic,
+
+  /// Require HTTPS/WSS and never fall back to plaintext.
+  secureOnly,
+
+  /// Use HTTP/WS without probing HTTPS.
+  standardOnly,
 }
 
 /// SSH authentication type
@@ -98,6 +123,13 @@ abstract class Machine with _$Machine {
     /// Whether to connect via secure WebSocket/HTTP
     @Default(false) bool useSsl,
 
+    /// Whether the transport is detected or explicitly required.
+    @Default(BridgeConnectionMode.automatic)
+    BridgeConnectionMode connectionMode,
+
+    /// Whether [useSsl] contains a successful automatic probe result.
+    @Default(false) bool hasResolvedTransport,
+
     /// Whether API key is stored in secure storage
     @Default(false) bool hasApiKey,
 
@@ -141,7 +173,7 @@ abstract class Machine with _$Machine {
   }) = _Machine;
 
   factory Machine.fromJson(Map<String, dynamic> json) =>
-      _$MachineFromJson(json);
+      _$MachineFromJson(_migrateMachineJson(json));
 
   /// Display name (name if set, otherwise host:port)
   String get displayName => name ?? formatHostPort(host, port);

@@ -47,6 +47,7 @@ void main() {
     String? existingSshJumpPrivateKey,
     Locale locale = const Locale('en'),
     double keyboardInset = 0,
+    void Function(Machine machine, String? apiKey)? onSaveAndConnect,
     required Future<void> Function({
       required Machine machine,
       String? apiKey,
@@ -80,6 +81,7 @@ void main() {
               existingSshJumpPassword: existingSshJumpPassword,
               existingSshJumpPrivateKey: existingSshJumpPrivateKey,
               onSave: onSave,
+              onSaveAndConnect: onSaveAndConnect,
               onTestConnection:
                   ({
                     required host,
@@ -133,6 +135,51 @@ void main() {
   }
 
   group('MachineEditSheet secure connection', () {
+    testWidgets('defaults connection method to automatic when adding', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        onSave:
+            ({
+              required machine,
+              apiKey,
+              sshPassword,
+              sshPrivateKey,
+              sshJumpPassword,
+              sshJumpPrivateKey,
+            }) async {},
+      );
+
+      final dropdown = tester
+          .widget<DropdownButtonFormField<BridgeConnectionMode>>(
+            find.byKey(const ValueKey('connection_mode_dropdown')),
+          );
+      expect(dropdown.initialValue, BridgeConnectionMode.automatic);
+    });
+
+    testWidgets('treats a discovered machine with an empty id as new', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        machine: const Machine(id: '', host: 'bridge.local'),
+        onSaveAndConnect: (machine, apiKey) {},
+        onSave:
+            ({
+              required machine,
+              apiKey,
+              sshPassword,
+              sshPrivateKey,
+              sshJumpPassword,
+              sshJumpPrivateKey,
+            }) async {},
+      );
+
+      expect(find.text('Add Machine'), findsOneWidget);
+      expect(find.text('Add & Connect'), findsOneWidget);
+    });
+
     testWidgets('header keyboard button dismisses focused text field', (
       tester,
     ) async {
@@ -200,13 +247,14 @@ void main() {
       expect(jumpPasswordField.scrollPadding.bottom, greaterThan(320));
     });
 
-    testWidgets('loads existing SSL setting into the toggle', (tester) async {
+    testWidgets('loads an existing secure-only setting', (tester) async {
       await pumpSheet(
         tester,
         machine: const Machine(
           id: 'm1',
           host: 'secure.example.com',
           useSsl: true,
+          connectionMode: BridgeConnectionMode.secureOnly,
         ),
         onSave:
             ({
@@ -219,15 +267,14 @@ void main() {
             }) async {},
       );
 
-      final switchTile = tester.widget<SwitchListTile>(
-        find.byType(SwitchListTile).first,
-      );
-      expect(switchTile.value, isTrue);
+      final dropdown = tester
+          .widget<DropdownButtonFormField<BridgeConnectionMode>>(
+            find.byKey(const ValueKey('connection_mode_dropdown')),
+          );
+      expect(dropdown.initialValue, BridgeConnectionMode.secureOnly);
     });
 
-    testWidgets('saves useSsl when secure connection is enabled', (
-      tester,
-    ) async {
+    testWidgets('saves WSS when secure-only is selected', (tester) async {
       Machine? savedMachine;
 
       await pumpSheet(
@@ -246,7 +293,9 @@ void main() {
             },
       );
 
-      await tester.tap(find.text('Use secure connection'));
+      await tester.tap(find.byKey(const ValueKey('connection_mode_dropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Secure only (WSS)').last);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Save'));
@@ -254,11 +303,98 @@ void main() {
 
       expect(savedMachine, isNotNull);
       expect(savedMachine!.useSsl, isTrue);
+      expect(savedMachine!.connectionMode, BridgeConnectionMode.secureOnly);
       expect(savedMachine!.wsUrl, 'wss://bridge.example.com:8765');
+    });
+
+    testWidgets('preserves stored metadata when editing the same endpoint', (
+      tester,
+    ) async {
+      Machine? savedMachine;
+      final lastConnected = DateTime(2026, 8, 14, 9, 30);
+
+      await pumpSheet(
+        tester,
+        machine: Machine(
+          id: 'metadata',
+          host: 'bridge.example.com',
+          hasResolvedTransport: true,
+          hasApiKey: true,
+          hasCredentials: true,
+          hasJumpCredentials: true,
+          isFavorite: true,
+          lastConnected: lastConnected,
+        ),
+        onSave:
+            ({
+              required machine,
+              apiKey,
+              sshPassword,
+              sshPrivateKey,
+              sshJumpPassword,
+              sshJumpPrivateKey,
+            }) async {
+              savedMachine = machine;
+            },
+      );
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(savedMachine!.hasResolvedTransport, isTrue);
+      expect(savedMachine!.hasApiKey, isTrue);
+      expect(savedMachine!.hasCredentials, isTrue);
+      expect(savedMachine!.hasJumpCredentials, isTrue);
+      expect(savedMachine!.isFavorite, isTrue);
+      expect(savedMachine!.lastConnected, lastConnected);
     });
   });
 
   group('MachineEditSheet SSH jump host', () {
+    testWidgets('uses encrypted tunnel mode instead of WSS for a jump host', (
+      tester,
+    ) async {
+      Machine? savedMachine;
+
+      await pumpSheet(
+        tester,
+        machine: const Machine(
+          id: 'jump-mode',
+          host: 'target.internal',
+          useSsl: true,
+          connectionMode: BridgeConnectionMode.secureOnly,
+          sshEnabled: true,
+          sshUsername: 'target-user',
+          sshJumpHost: 'jump.example.com',
+        ),
+        existingSshPassword: 'target-pw',
+        onSave:
+            ({
+              required machine,
+              apiKey,
+              sshPassword,
+              sshPrivateKey,
+              sshJumpPassword,
+              sshJumpPrivateKey,
+            }) async {
+              savedMachine = machine;
+            },
+      );
+
+      expect(
+        find.text(
+          'Uses WS inside the SSH tunnel; the SSH connection encrypts the traffic',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(savedMachine!.connectionMode, BridgeConnectionMode.automatic);
+      expect(savedMachine!.useSsl, isFalse);
+      expect(savedMachine!.hasResolvedTransport, isTrue);
+    });
+
     testWidgets('hides SSH jump host fields until enabled', (tester) async {
       await pumpSheet(
         tester,

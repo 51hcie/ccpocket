@@ -168,6 +168,7 @@ class _StaticMachineManagerService implements MachineManagerService {
     String? apiKey,
     String? name,
     bool? useSsl,
+    BridgeConnectionMode? connectionMode,
   }) async {
     return Machine(
       id: 'recorded',
@@ -175,6 +176,7 @@ class _StaticMachineManagerService implements MachineManagerService {
       port: port,
       name: name,
       useSsl: useSsl ?? false,
+      connectionMode: connectionMode ?? BridgeConnectionMode.automatic,
     );
   }
 

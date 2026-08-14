@@ -195,13 +195,19 @@ class _MetadataLine extends StatelessWidget {
 
     // Show error if present and not online
     if (lastError != null && status != MachineStatus.online) {
+      final displayError = switch (lastError) {
+        machineErrorBridgeNotFound => l.machineErrorBridgeNotFound,
+        machineErrorSecureConnectionUnavailable =>
+          l.machineErrorSecureConnectionUnavailable,
+        _ => lastError!,
+      };
       return Row(
         children: [
           Icon(Icons.error_outline, size: 12, color: colorScheme.error),
           const SizedBox(width: 4),
           Expanded(
             child: Text(
-              lastError!,
+              displayError,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.error,
                 fontSize: 12,

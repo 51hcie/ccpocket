@@ -320,6 +320,52 @@ class AppLocalizationsZh extends AppLocalizations {
       '使用 WSS 连接，并用 HTTPS 进行健康检查';
 
   @override
+  String get machineEditConnectionMode => '连接方式';
+
+  @override
+  String get machineEditConnectionModeAutomatic => '自动（推荐）';
+
+  @override
+  String get machineEditConnectionModeAutomaticSubtitle =>
+      '不发送凭据进行检查，优先使用 HTTPS 自动连接';
+
+  @override
+  String get machineEditConnectionModeAutomaticSshSubtitle =>
+      '在 SSH 隧道内使用 WS；通信由 SSH 连接加密';
+
+  @override
+  String get machineEditConnectionModeSecureOnly => '仅安全连接（WSS）';
+
+  @override
+  String get machineEditConnectionModeSecureOnlySubtitle =>
+      '强制使用 TLS，绝不自动降级到 WS';
+
+  @override
+  String get machineEditConnectionModeStandardOnly => '标准（WS）';
+
+  @override
+  String get machineEditConnectionModeStandardOnlySubtitle =>
+      '请仅在本地网络或 Tailscale 等 VPN 中使用';
+
+  @override
+  String get machineErrorBridgeNotFound =>
+      '找不到 Bridge。请确认它正在运行，且此设备已连接到同一网络或 VPN。';
+
+  @override
+  String get machineErrorSecureConnectionUnavailable =>
+      '无法建立安全连接。请检查 TLS 设置，或仅在确定需要时明确选择“标准（WS）”。';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningTitle => '检测到标准连接（WS）';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningBody =>
+      '此 Bridge 通过未加密的 WS 找到。API 密钥将在没有传输加密的情况下发送。请仅在可信的本地网络或 VPN 中继续。';
+
+  @override
+  String get machineAutomaticWsApiKeyWarningConnect => '使用 WS 连接';
+
+  @override
   String get machineEditSshConfiguration => 'SSH 设置';
 
   @override

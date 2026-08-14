@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../constants/app_constants.dart';
 import '../models/machine.dart';
 import '../utils/network_endpoint.dart';
+import 'bridge_endpoint_probe.dart';
 
 typedef BridgeWsUrlResolver =
     Future<String> Function(
@@ -45,6 +46,7 @@ class MachineManagerService {
 
   final SharedPreferences _prefs;
   final FlutterSecureStorage _secureStorage;
+  final BridgeEndpointProbe _endpointProbe;
 
   final _machinesController =
       StreamController<List<MachineWithStatus>>.broadcast();
@@ -57,7 +59,11 @@ class MachineManagerService {
   BridgeHttpBaseUrlResolver? _bridgeHttpBaseUrlResolver;
   Timer? _healthCheckTimer;
 
-  MachineManagerService(this._prefs, this._secureStorage);
+  MachineManagerService(
+    this._prefs,
+    this._secureStorage, {
+    BridgeEndpointProbe? endpointProbe,
+  }) : _endpointProbe = endpointProbe ?? BridgeEndpointProbe();
 
   void configureBridgeTunnelResolvers({
     BridgeWsUrlResolver? wsUrlResolver,
@@ -123,6 +129,10 @@ class MachineManagerService {
                 host: host,
                 port: port,
                 useSsl: old['useSsl'] as bool? ?? false,
+                connectionMode: old['useSsl'] == true
+                    ? BridgeConnectionMode.secureOnly
+                    : BridgeConnectionMode.automatic,
+                hasResolvedTransport: old['useSsl'] == true,
                 hasApiKey: old['hasApiKey'] as bool? ?? false,
                 isFavorite: true, // Mark saved machines as favorites
                 sshEnabled: old['sshEnabled'] as bool? ?? false,
@@ -184,6 +194,10 @@ class MachineManagerService {
                 host: host,
                 port: port,
                 useSsl: useSsl,
+                connectionMode: useSsl
+                    ? BridgeConnectionMode.secureOnly
+                    : BridgeConnectionMode.automatic,
+                hasResolvedTransport: useSsl,
                 hasApiKey: apiKey != null && apiKey.isNotEmpty,
                 lastConnected: lastConnected,
                 isFavorite: false, // URL history entries are not favorites
@@ -387,6 +401,7 @@ class MachineManagerService {
     String? apiKey,
     String? name,
     bool? useSsl,
+    BridgeConnectionMode? connectionMode,
   }) async {
     final normalizedHost = normalizeHostInput(host);
     var machine = findByHostPort(normalizedHost, port);
@@ -398,6 +413,11 @@ class MachineManagerService {
         lastConnected: DateTime.now(),
         name: name ?? machine.name,
         useSsl: useSsl ?? machine.useSsl,
+        connectionMode: connectionMode ?? machine.connectionMode,
+        hasResolvedTransport:
+            connectionMode == BridgeConnectionMode.automatic && useSsl != null
+            ? true
+            : machine.hasResolvedTransport,
       );
       final index = _machines.indexWhere((m) => m.id == machine!.id);
       if (index != -1) {
@@ -411,6 +431,13 @@ class MachineManagerService {
         port: port,
         name: name,
         useSsl: useSsl ?? false,
+        connectionMode:
+            connectionMode ??
+            (useSsl == true
+                ? BridgeConnectionMode.secureOnly
+                : BridgeConnectionMode.automatic),
+        hasResolvedTransport:
+            connectionMode == BridgeConnectionMode.automatic && useSsl != null,
         lastConnected: DateTime.now(),
         hasApiKey: apiKey != null && apiKey.isNotEmpty,
       );
@@ -660,10 +687,88 @@ class MachineManagerService {
     String? password,
     Future<String?> Function()? promptForPassword,
   }) async {
-    final machine = getMachine(machineId);
-    if (machine == null) return MachineStatus.unknown;
+    final storedMachine = getMachine(machineId);
+    if (storedMachine == null) return MachineStatus.unknown;
+    var machine = storedMachine;
 
     try {
+      final usesSshTunnel = machine.sshJumpHost?.trim().isNotEmpty == true;
+      final canProbeDirectly = !usesSshTunnel;
+      if (machine.connectionMode == BridgeConnectionMode.automatic &&
+          canProbeDirectly) {
+        var result = await _endpointProbe.probe(
+          host: machine.host,
+          port: machine.port,
+          mode: machine.hasResolvedTransport
+              ? machine.useSsl
+                    ? BridgeConnectionMode.secureOnly
+                    : BridgeConnectionMode.standardOnly
+              : BridgeConnectionMode.automatic,
+          timeout: timeout,
+        );
+        if (!result.isReachable &&
+            machine.hasResolvedTransport &&
+            !machine.useSsl) {
+          result = await _endpointProbe.probe(
+            host: machine.host,
+            port: machine.port,
+            mode: BridgeConnectionMode.secureOnly,
+            timeout: timeout,
+          );
+        }
+        final latest = getMachine(machineId);
+        if (latest == null) return MachineStatus.unknown;
+        if (!_hasSameProbeTarget(storedMachine, latest)) {
+          return _statusCache[machineId] ?? MachineStatus.unknown;
+        }
+        if (!result.isReachable) {
+          _statusCache[machineId] = MachineStatus.offline;
+          _lastErrors[machineId] =
+              machine.hasResolvedTransport && machine.useSsl
+              ? machineErrorSecureConnectionUnavailable
+              : machineErrorBridgeNotFound;
+          _versionCache.remove(machineId);
+          return _finishHealthCheck(machineId);
+        }
+
+        if (machine.useSsl != result.useSsl || !machine.hasResolvedTransport) {
+          machine = latest.copyWith(
+            useSsl: result.useSsl,
+            hasResolvedTransport: true,
+          );
+          final index = _machines.indexWhere((item) => item.id == machineId);
+          if (index != -1) {
+            _machines[index] = machine;
+            await _saveToPrefs();
+          }
+        }
+
+        _statusCache[machineId] = MachineStatus.online;
+        _lastErrors.remove(machineId);
+        await _fetchVersionInfo(
+          machine,
+          password: password,
+          promptForPassword: promptForPassword,
+        );
+        return _finishHealthCheck(machineId);
+      }
+
+      if (machine.connectionMode == BridgeConnectionMode.automatic &&
+          usesSshTunnel &&
+          (machine.useSsl || !machine.hasResolvedTransport)) {
+        final latest = getMachine(machineId);
+        if (latest == null) return MachineStatus.unknown;
+        if (!_hasSameProbeTarget(storedMachine, latest)) {
+          return _statusCache[machineId] ?? MachineStatus.unknown;
+        }
+        machine = latest.copyWith(useSsl: false, hasResolvedTransport: true);
+        final index = _machines.indexWhere((item) => item.id == machineId);
+        if (index != -1) {
+          _machines[index] = machine;
+          await _saveToPrefs();
+        }
+      }
+
       final httpBaseUrl = await _buildHttpBaseUrl(
         machine,
         password: password,
@@ -684,24 +789,48 @@ class MachineManagerService {
         );
       } else {
         _statusCache[machineId] = MachineStatus.offline;
-        _lastErrors[machineId] = 'HTTP ${response.statusCode}';
+        _lastErrors[machineId] =
+            machine.connectionMode == BridgeConnectionMode.secureOnly
+            ? machineErrorSecureConnectionUnavailable
+            : 'HTTP ${response.statusCode}';
         _versionCache.remove(machineId);
       }
     } on http.ClientException catch (e) {
       // Connection refused = server not running (offline), not network issue
       _statusCache[machineId] = MachineStatus.offline;
-      _lastErrors[machineId] = e.message;
+      _lastErrors[machineId] =
+          machine.connectionMode == BridgeConnectionMode.secureOnly
+          ? machineErrorSecureConnectionUnavailable
+          : e.message;
       _versionCache.remove(machineId);
     } on TimeoutException {
       _statusCache[machineId] = MachineStatus.unreachable;
-      _lastErrors[machineId] = 'Connection timeout';
+      _lastErrors[machineId] =
+          machine.connectionMode == BridgeConnectionMode.secureOnly
+          ? machineErrorSecureConnectionUnavailable
+          : 'Connection timeout';
       _versionCache.remove(machineId);
     } catch (e) {
       _statusCache[machineId] = MachineStatus.offline;
-      _lastErrors[machineId] = e.toString();
+      _lastErrors[machineId] =
+          machine.connectionMode == BridgeConnectionMode.secureOnly
+          ? machineErrorSecureConnectionUnavailable
+          : e.toString();
       _versionCache.remove(machineId);
     }
 
+    return _finishHealthCheck(machineId);
+  }
+
+  bool _hasSameProbeTarget(Machine before, Machine after) =>
+      before.host == after.host &&
+      before.port == after.port &&
+      before.connectionMode == after.connectionMode &&
+      before.useSsl == after.useSsl &&
+      before.hasResolvedTransport == after.hasResolvedTransport &&
+      before.sshJumpHost == after.sshJumpHost;
+
+  MachineStatus _finishHealthCheck(String machineId) {
     _lastChecked[machineId] = DateTime.now();
     _notifyListeners();
     return _statusCache[machineId]!;
