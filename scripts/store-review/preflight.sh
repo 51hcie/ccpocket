@@ -7,7 +7,7 @@ version="${2:-}"
 build_number="${3:-}"
 confirmation="${4:-}"
 ios_release_type="${5:-KEEP}"
-android_release_status="${6:-inProgress}"
+android_release_status="${6:-completed}"
 android_user_fraction="${7:-0.1}"
 ios_review_scope="${8:-UNCONFIRMED}"
 

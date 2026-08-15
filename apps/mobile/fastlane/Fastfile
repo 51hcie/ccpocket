@@ -209,7 +209,7 @@ platform :android do
   desc "Promote an existing internal build to production and submit it for review"
   lane :submit_review do |options|
     version_code = (options[:version_code] || ENV["ANDROID_VERSION_CODE"]).to_s.strip
-    release_status = (options[:release_status] || ENV["ANDROID_RELEASE_STATUS"] || "inProgress").to_s.strip
+    release_status = (options[:release_status] || ENV["ANDROID_RELEASE_STATUS"] || "completed").to_s.strip
     user_fraction_raw = (options[:user_fraction] || ENV["ANDROID_USER_FRACTION"] || "0.1").to_s.strip
     credentials = ENV["GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"].to_s
 

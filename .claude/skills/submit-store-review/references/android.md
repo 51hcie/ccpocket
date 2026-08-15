@@ -23,17 +23,17 @@
 
 ## 配信方式
 
-推奨は段階配信。
+既定は全ユーザーへの100%公開。
+
+```text
+android_release_status=completed
+```
+
+段階配信を使うのはユーザーが明示した場合だけ。その場合は配信率も確認して指定する。
 
 ```text
 android_release_status=inProgress
 android_user_fraction=0.1
-```
-
-全ユーザーへ配信する意図をユーザーが明示した場合だけ、次を使う。
-
-```text
-android_release_status=completed
 ```
 
 Google Play の Managed publishing 設定は API workflow から変更しない。有効なら審査承認後に手動公開が必要で、無効なら承認後に指定した段階配信または全体配信が始まる。

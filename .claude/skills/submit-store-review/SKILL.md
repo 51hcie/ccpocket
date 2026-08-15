@@ -118,7 +118,7 @@ apps/mobile/fastlane/metadata/android/zh-CN/changelogs/<N>.txt
 ```bash
 scripts/store-review/preflight.sh \
   <ios|android|both> <X.Y.Z> <N> 'SUBMIT <X.Y.Z>+<N>' \
-  KEEP inProgress 0.1 APP_VERSION_ONLY
+  KEEP completed 0.1 APP_VERSION_ONLY
 git diff --check
 ```
 
@@ -131,7 +131,7 @@ iOSとAndroidの候補バージョンまたはビルド番号が異なる場合�
 - 各ストアの `公開版 → 候補` と候補release workflow URL
 - 4言語のリリースノート全文と文字数
 - iOS: `KEEP`、審査対象 `APP_VERSION_ONLY`
-- Android: `inProgress`、初期配信率 `0.1`
+- Android: `completed`（全ユーザーへ100%公開）
 - 対象ref、完全なcommit SHA、メタデータ反映・審査提出を続けて行うこと
 - Managed publishing、既知の警告、APIで確認できない必須項目
 
@@ -170,11 +170,11 @@ gh workflow run submit-store-review.yml \
   -f expected_ref_sha=<review-sha> \
   -f ios_release_type=KEEP \
   -f ios_review_scope=APP_VERSION_ONLY \
-  -f android_release_status=inProgress \
+  -f android_release_status=completed \
   -f android_user_fraction=0.1
 ```
 
-全ユーザーへの即時配信は、ユーザーが明示した場合だけ Androidを `completed` にする。GitHub Environment `store-review` の Required reviewers は追加の組織側ゲートとして維持する。
+Androidは全ユーザーへの100%公開（`completed`）を既定にする。段階配信を使うのはユーザーが明示した場合だけで、そのときは `inProgress` と指定された初期配信率を使う。GitHub Environment `store-review` の Required reviewers は追加の組織側ゲートとして維持する。
 
 ## 6. 完了を検証する
 

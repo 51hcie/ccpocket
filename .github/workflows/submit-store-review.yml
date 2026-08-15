@@ -50,10 +50,10 @@ on:
         description: 'Production rollout mode after review approval'
         required: true
         type: choice
-        default: inProgress
+        default: completed
         options:
-          - inProgress
           - completed
+          - inProgress
       android_user_fraction:
         description: 'Initial production fraction when status is inProgress (0 < value < 1)'
         required: true
