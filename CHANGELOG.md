@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.114.0] - 2026-08-15
+
+### Changed
+- Pause live-output auto-scrolling as soon as the user starts reading older messages, and resume it near the latest message or through the scroll-to-bottom button.
+- Update the Marionette integration to 0.6.0 for UI automation compatibility.
+- Default Android store submissions to a full rollout instead of a staged rollout.
+
+### Fixed
+- Preserve the visible reading position while streaming text, tool output, and finalized message heights grow or shrink.
+- Restore each session's explicit live-output following state together with its saved scroll position.
+
 ## [1.113.0] - 2026-08-14
 
 ### Added
