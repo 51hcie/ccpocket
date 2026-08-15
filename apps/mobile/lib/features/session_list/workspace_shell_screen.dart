@@ -800,9 +800,8 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
                   bottom: 0,
                   width: resizeHandleHitWidth,
                   child: _WorkspaceResizeHandle(
-                    color: Theme.of(
-                      context,
-                    ).dividerColor.withValues(alpha: 0.18),
+                    color: Theme.of(context).dividerColor
+                        .withValues(alpha: 0.18),
                     onDragUpdate: (delta) => resizeRightPane(
                       rightWidth - delta,
                       constraints.maxWidth,
@@ -891,9 +890,8 @@ class _WorkspaceResizeHandleState extends State<_WorkspaceResizeHandle> {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = Theme.of(
-      context,
-    ).colorScheme.primary.withValues(alpha: 0.55);
+    final activeColor = Theme.of(context).colorScheme.primary
+        .withValues(alpha: 0.55);
 
     return MouseRegion(
       cursor: SystemMouseCursors.resizeColumn,
@@ -1062,9 +1060,8 @@ class _WorkspaceContentHost extends StatelessWidget {
         initialApprovalPolicy: selection.approvalPolicy,
         initialApprovalsReviewer: selection.approvalsReviewer,
         pendingSessionCreated: selection.pendingSessionCreated,
-        onBackToSessions: WorkspaceShellScreen.maybeOf(
-          context,
-        )?.clearSelectedSession,
+        onBackToSessions: WorkspaceShellScreen.maybeOf(context)
+            ?.clearSelectedSession,
         hideSessionBackButton: true,
       ),
       _ => ClaudeSessionScreen(
@@ -1077,9 +1074,8 @@ class _WorkspaceContentHost extends StatelessWidget {
         initialPermissionMode: selection.permissionMode,
         initialSandboxMode: selection.sandboxMode,
         pendingSessionCreated: selection.pendingSessionCreated,
-        onBackToSessions: WorkspaceShellScreen.maybeOf(
-          context,
-        )?.clearSelectedSession,
+        onBackToSessions: WorkspaceShellScreen.maybeOf(context)
+            ?.clearSelectedSession,
         hideSessionBackButton: true,
       ),
     };

@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'session_list_state.dart';
@@ -9,6 +9,7 @@ part of 'session_list_state.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
@@ -80,7 +81,7 @@ class _$SessionListStateCopyWithImpl<$Res>
 /// Create a copy of SessionListState
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? sessions = null,Object? hasMore = null,Object? isLoadingMore = null,Object? isInitialLoading = null,Object? searchQuery = null,Object? accumulatedProjectPaths = null,Object? collapsedProjectPaths = null,Object? loadingProjectPaths = null,Object? exhaustedProjectPaths = null,Object? projectSessionDisplayLimits = null,Object? pinnedSessionKeys = null,Object? pinnedProjectPaths = null,Object? providerFilter = null,Object? namedOnly = null,}) {
-  return _then(_self.copyWith(
+  return _then(SessionListState(
 sessions: null == sessions ? _self.sessions : sessions // ignore: cast_nullable_to_non_nullable
 as List<RecentSession>,hasMore: null == hasMore ? _self.hasMore : hasMore // ignore: cast_nullable_to_non_nullable
 as bool,isLoadingMore: null == isLoadingMore ? _self.isLoadingMore : isLoadingMore // ignore: cast_nullable_to_non_nullable
@@ -236,7 +237,7 @@ return $default(_that.sessions,_that.hasMore,_that.isLoadingMore,_that.isInitial
 
 
 class _SessionListState implements SessionListState {
-  const _SessionListState({final  List<RecentSession> sessions = const [], this.hasMore = false, this.isLoadingMore = false, this.isInitialLoading = true, this.searchQuery = '', final  Set<String> accumulatedProjectPaths = const {}, final  Set<String> collapsedProjectPaths = const {}, final  Set<String> loadingProjectPaths = const {}, final  Set<String> exhaustedProjectPaths = const {}, final  Map<String, int> projectSessionDisplayLimits = const {}, final  Set<String> pinnedSessionKeys = const {}, final  Set<String> pinnedProjectPaths = const {}, this.providerFilter = ProviderFilter.all, this.namedOnly = false}): _sessions = sessions,_accumulatedProjectPaths = accumulatedProjectPaths,_collapsedProjectPaths = collapsedProjectPaths,_loadingProjectPaths = loadingProjectPaths,_exhaustedProjectPaths = exhaustedProjectPaths,_projectSessionDisplayLimits = projectSessionDisplayLimits,_pinnedSessionKeys = pinnedSessionKeys,_pinnedProjectPaths = pinnedProjectPaths;
+  const _SessionListState({ List<RecentSession> sessions = const [], this.hasMore = false, this.isLoadingMore = false, this.isInitialLoading = true, this.searchQuery = '',  Set<String> accumulatedProjectPaths = const {},  Set<String> collapsedProjectPaths = const {},  Set<String> loadingProjectPaths = const {},  Set<String> exhaustedProjectPaths = const {},  Map<String, int> projectSessionDisplayLimits = const {},  Set<String> pinnedSessionKeys = const {},  Set<String> pinnedProjectPaths = const {}, this.providerFilter = ProviderFilter.all, this.namedOnly = false}): _sessions = sessions,_accumulatedProjectPaths = accumulatedProjectPaths,_collapsedProjectPaths = collapsedProjectPaths,_loadingProjectPaths = loadingProjectPaths,_exhaustedProjectPaths = exhaustedProjectPaths,_projectSessionDisplayLimits = projectSessionDisplayLimits,_pinnedSessionKeys = pinnedSessionKeys,_pinnedProjectPaths = pinnedProjectPaths;
   
 
 /// All sessions loaded from the server (including paginated results).

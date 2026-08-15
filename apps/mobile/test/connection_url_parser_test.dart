@@ -5,9 +5,9 @@ void main() {
   group('ConnectionUrlParser.parse', () {
     group('ws:// and wss:// URLs', () {
       test('parses ws:// URL', () {
-        final result =
-            ConnectionUrlParser.parse('ws://192.168.1.1:8765')
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          'ws://192.168.1.1:8765',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'ws://192.168.1.1:8765');
@@ -15,9 +15,9 @@ void main() {
       });
 
       test('parses wss:// URL', () {
-        final result =
-            ConnectionUrlParser.parse('wss://example.com:8765')
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          'wss://example.com:8765',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'wss://example.com:8765');
@@ -33,9 +33,9 @@ void main() {
       });
 
       test('parses ws:// with path', () {
-        final result =
-            ConnectionUrlParser.parse('ws://192.168.1.1:8765/ws')
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          'ws://192.168.1.1:8765/ws',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'ws://192.168.1.1:8765/ws');
@@ -85,9 +85,9 @@ void main() {
       });
 
       test('parses bracketed IPv6 host:port', () {
-        final result =
-            ConnectionUrlParser.parse('[fe80::1%25en0]:19000')
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          '[fe80::1%25en0]:19000',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'ws://[fe80::1%25en0]:19000');
@@ -102,11 +102,9 @@ void main() {
 
     group('deep link - connect (ccpocket://connect)', () {
       test('parses deep link with url and token', () {
-        final result =
-            ConnectionUrlParser.parse(
-                  'ccpocket://connect?url=ws://192.168.1.1:8765&token=my-secret',
-                )
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://connect?url=ws://192.168.1.1:8765&token=my-secret',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'ws://192.168.1.1:8765');
@@ -114,11 +112,9 @@ void main() {
       });
 
       test('parses deep link with url only (no token)', () {
-        final result =
-            ConnectionUrlParser.parse(
-                  'ccpocket://connect?url=ws://192.168.1.1:8765',
-                )
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://connect?url=ws://192.168.1.1:8765',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'ws://192.168.1.1:8765');
@@ -140,11 +136,9 @@ void main() {
       });
 
       test('treats empty token as null', () {
-        final result =
-            ConnectionUrlParser.parse(
-                  'ccpocket://connect?url=ws://192.168.1.1:8765&token=',
-                )
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://connect?url=ws://192.168.1.1:8765&token=',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.token, isNull);
@@ -163,31 +157,27 @@ void main() {
 
     group('deep link - session (ccpocket://session)', () {
       test('parses session link with sessionId', () {
-        final result =
-            ConnectionUrlParser.parse('ccpocket://session/abc-123-def')
-                as SessionLinkParams?;
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://session/abc-123-def',
+        ) as SessionLinkParams?;
 
         expect(result, isNotNull);
         expect(result!.sessionId, 'abc-123-def');
       });
 
       test('parses session link with UUID sessionId', () {
-        final result =
-            ConnectionUrlParser.parse(
-                  'ccpocket://session/550e8400-e29b-41d4-a716-446655440000',
-                )
-                as SessionLinkParams?;
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://session/550e8400-e29b-41d4-a716-446655440000',
+        ) as SessionLinkParams?;
 
         expect(result, isNotNull);
         expect(result!.sessionId, '550e8400-e29b-41d4-a716-446655440000');
       });
 
       test('parses Codex provider from session link query', () {
-        final result =
-            ConnectionUrlParser.parse(
-                  'ccpocket://session/codex-session?provider=codex',
-                )
-                as SessionLinkParams?;
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://session/codex-session?provider=codex',
+        ) as SessionLinkParams?;
 
         expect(result, isNotNull);
         expect(result!.sessionId, 'codex-session');
@@ -195,11 +185,9 @@ void main() {
       });
 
       test('defaults unsupported session link provider to Claude', () {
-        final result =
-            ConnectionUrlParser.parse(
-                  'ccpocket://session/claude-session?provider=unknown',
-                )
-                as SessionLinkParams?;
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://session/claude-session?provider=unknown',
+        ) as SessionLinkParams?;
 
         expect(result, isNotNull);
         expect(result!.provider, 'claude');
@@ -266,18 +254,18 @@ void main() {
 
     group('whitespace handling', () {
       test('trims leading and trailing whitespace', () {
-        final result =
-            ConnectionUrlParser.parse('  ws://192.168.1.1:8765  ')
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          '  ws://192.168.1.1:8765  ',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'ws://192.168.1.1:8765');
       });
 
       test('trims bare host:port', () {
-        final result =
-            ConnectionUrlParser.parse(' 192.168.1.1:8765 ')
-                as ConnectionParams?;
+        final result = ConnectionUrlParser.parse(
+          ' 192.168.1.1:8765 ',
+        ) as ConnectionParams?;
 
         expect(result, isNotNull);
         expect(result!.serverUrl, 'ws://192.168.1.1:8765');

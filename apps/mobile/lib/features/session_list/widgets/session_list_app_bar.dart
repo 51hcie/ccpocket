@@ -97,9 +97,8 @@ class SessionListPaneHeader extends StatelessWidget {
       isLeftPaneVisible: true,
       slot: WorkspacePaneSlot.left,
     );
-    final titleStyle = Theme.of(
-      context,
-    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700);
+    final titleStyle = Theme.of(context).textTheme.titleLarge
+        ?.copyWith(fontWeight: FontWeight.w700);
     final actionGap = chrome.useMacOSAdaptiveChrome ? 8.0 : 0.0;
 
     return SizedBox(

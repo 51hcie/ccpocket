@@ -218,8 +218,9 @@ class RevenueCatOfferingData {
   final List<SupportPackage> packages;
 }
 
-typedef RevenueCatCustomerInfoListener =
-    void Function(RevenueCatCustomerInfo info);
+typedef RevenueCatCustomerInfoListener = void Function(
+  RevenueCatCustomerInfo info,
+);
 
 abstract class RevenueCatGateway {
   Future<void> setDebugLogsEnabled();

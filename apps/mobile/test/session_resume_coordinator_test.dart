@@ -60,9 +60,8 @@ void main() {
   });
 
   test('resumes a deep link with the same persisted Claude settings', () async {
-    final result = await SessionResumeCoordinator(
-      bridge: bridge,
-    ).resume(_session, resumeRequestId: 'link-request-1');
+    final result = await SessionResumeCoordinator(bridge: bridge)
+        .resume(_session, resumeRequestId: 'link-request-1');
 
     expect(result.disposition, SessionResumeDisposition.dispatched);
     expect(result.projectPath, '/workspace/app/worktree');
@@ -95,9 +94,8 @@ void main() {
       ),
     ];
 
-    final result = await SessionResumeCoordinator(
-      bridge: bridge,
-    ).resume(_session);
+    final result = await SessionResumeCoordinator(bridge: bridge)
+        .resume(_session);
 
     expect(result.disposition, SessionResumeDisposition.alreadyQueued);
     expect(bridge.sentMessages, isEmpty);

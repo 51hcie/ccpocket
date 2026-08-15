@@ -335,24 +335,20 @@ void main() {
       expect(autoRenameForProvider(settings, Provider.codex), isTrue);
       expect(autoRenameForProvider(settings, Provider.claude), isFalse);
 
-      final codexJson =
-          jsonDecode(
-                ClientMessage.start(
-                  '/tmp/project',
-                  provider: Provider.codex.value,
-                  autoRename: autoRenameForProvider(settings, Provider.codex),
-                ).toJson(),
-              )
-              as Map<String, dynamic>;
-      final claudeJson =
-          jsonDecode(
-                ClientMessage.start(
-                  '/tmp/project',
-                  provider: Provider.claude.value,
-                  autoRename: autoRenameForProvider(settings, Provider.claude),
-                ).toJson(),
-              )
-              as Map<String, dynamic>;
+      final codexJson = jsonDecode(
+        ClientMessage.start(
+          '/tmp/project',
+          provider: Provider.codex.value,
+          autoRename: autoRenameForProvider(settings, Provider.codex),
+        ).toJson(),
+      ) as Map<String, dynamic>;
+      final claudeJson = jsonDecode(
+        ClientMessage.start(
+          '/tmp/project',
+          provider: Provider.claude.value,
+          autoRename: autoRenameForProvider(settings, Provider.claude),
+        ).toJson(),
+      ) as Map<String, dynamic>;
 
       expect(codexJson['autoRename'], isTrue);
       expect(claudeJson['autoRename'], isFalse);

@@ -139,9 +139,8 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
             children: [
               Text(
                 l.showAllMain,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: cs.onSurfaceVariant),
               ),
               Switch(
                 value: _showAll,

@@ -194,9 +194,8 @@ class _IntrinsicAspectRatioImageState
   }
 
   void _resolveAspectRatio() {
-    final stream = _providerFor(
-      widget.item,
-    ).resolve(createLocalImageConfiguration(context));
+    final stream = _providerFor(widget.item)
+        .resolve(createLocalImageConfiguration(context));
     if (stream.key == _imageStream?.key) return;
     _removeImageStreamListener();
     _imageStream = stream;

@@ -34,9 +34,8 @@ class _TodoWriteWidgetState extends State<TodoWriteWidget> {
     if (_restoredFromStorage) return;
     _restoredFromStorage = true;
 
-    final saved = PageStorage.maybeOf(
-      context,
-    )?.readState(context, identifier: _storageKey);
+    final saved = PageStorage.maybeOf(context)
+        ?.readState(context, identifier: _storageKey);
     if (saved is bool) {
       _expanded = saved;
     }
@@ -48,9 +47,8 @@ class _TodoWriteWidgetState extends State<TodoWriteWidget> {
   }
 
   void _persistExpansion() {
-    PageStorage.maybeOf(
-      context,
-    )?.writeState(context, _expanded, identifier: _storageKey);
+    PageStorage.maybeOf(context)
+        ?.writeState(context, _expanded, identifier: _storageKey);
   }
 
   void _toggleExpanded() {

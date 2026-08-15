@@ -25,8 +25,10 @@ class BridgeEndpointProbeResult {
   bool get useSsl => transport == BridgeTransport.secure;
 }
 
-typedef BridgeHealthRequest =
-    Future<http.Response> Function(Uri uri, Duration timeout);
+typedef BridgeHealthRequest = Future<http.Response> Function(
+  Uri uri,
+  Duration timeout,
+);
 
 /// Whether sending an API key requires explicit confirmation because the
 /// automatically selected transport is not encrypted.

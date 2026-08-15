@@ -55,8 +55,7 @@ void main() {
       await emitAndPump($.tester, bridge, [
         const StatusMessage(status: ProcessStatus.running),
         const ErrorMessage(
-          message:
-              '⚠ Claude Code authentication required\n\nClaude is not logged in.',
+          message: '⚠ Claude Code authentication required\n\nClaude is not logged in.',
           errorCode: 'auth_login_required',
         ),
       ]);
@@ -78,8 +77,7 @@ void main() {
       await emitAndPump($.tester, bridge, [
         const StatusMessage(status: ProcessStatus.running),
         const ErrorMessage(
-          message:
-              '⚠ Claude Code session expired\n\nYour login session has expired.',
+          message: '⚠ Claude Code session expired\n\nYour login session has expired.',
           errorCode: 'auth_token_expired',
         ),
       ]);
@@ -164,8 +162,7 @@ void main() {
       await emitAndPump($.tester, bridge, [
         const StatusMessage(status: ProcessStatus.running),
         const ErrorMessage(
-          message:
-              '⚠ Project path not allowed\n\n"/foo/bar" is not in the allowed directories.',
+          message: '⚠ Project path not allowed\n\n"/foo/bar" is not in the allowed directories.',
           errorCode: 'path_not_allowed',
         ),
       ]);

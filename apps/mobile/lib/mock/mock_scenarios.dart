@@ -144,8 +144,7 @@ final _longToolCommands = MockScenario(
               id: 'tool-long-bash-1',
               name: 'Bash',
               input: {
-                'command':
-                    'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt apps/mobile/fastlane/metadata/ja/description.txt apps/mobile/fastlane/metadata/android/en-US/full_description.txt apps/mobile/fastlane/metadata/android/ja-JP/full_description.txt',
+                'command': 'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt apps/mobile/fastlane/metadata/ja/description.txt apps/mobile/fastlane/metadata/android/en-US/full_description.txt apps/mobile/fastlane/metadata/android/ja-JP/full_description.txt',
               },
             ),
           ],
@@ -170,8 +169,7 @@ final _longToolCommands = MockScenario(
           role: 'assistant',
           content: [
             const TextContent(
-              text:
-                  'Now let me search for all Dart files that reference ToolUseTile.',
+              text: 'Now let me search for all Dart files that reference ToolUseTile.',
             ),
             const ToolUseContent(
               id: 'tool-long-bash-2',
@@ -323,8 +321,7 @@ final _longCommandApproval = MockScenario(
               id: 'tool-long-approval-bash',
               name: 'Bash',
               input: {
-                'command':
-                    'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt apps/mobile/fastlane/metadata/ja/description.txt apps/mobile/fastlane/metadata/android/en-US/full_description.txt apps/mobile/fastlane/metadata/android/ja-JP/full_description.txt',
+                'command': 'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt apps/mobile/fastlane/metadata/ja/description.txt apps/mobile/fastlane/metadata/android/en-US/full_description.txt apps/mobile/fastlane/metadata/android/ja-JP/full_description.txt',
               },
             ),
           ],
@@ -338,8 +335,7 @@ final _longCommandApproval = MockScenario(
         toolUseId: 'tool-long-approval-bash',
         toolName: 'Bash',
         input: {
-          'command':
-              'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt apps/mobile/fastlane/metadata/ja/description.txt apps/mobile/fastlane/metadata/android/en-US/full_description.txt apps/mobile/fastlane/metadata/android/ja-JP/full_description.txt',
+          'command': 'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt apps/mobile/fastlane/metadata/ja/description.txt apps/mobile/fastlane/metadata/android/en-US/full_description.txt apps/mobile/fastlane/metadata/android/ja-JP/full_description.txt',
         },
       ),
     ),
@@ -613,18 +609,15 @@ final _askUserQuestion = MockScenario(
                     'options': [
                       {
                         'label': 'Retry with backoff (Recommended)',
-                        'description':
-                            'Exponential backoff with max 3 retries. Handles transient failures gracefully.',
+                        'description': 'Exponential backoff with max 3 retries. Handles transient failures gracefully.',
                       },
                       {
                         'label': 'Fail fast',
-                        'description':
-                            'Immediately surface the error to the user. Simpler but less resilient.',
+                        'description': 'Immediately surface the error to the user. Simpler but less resilient.',
                       },
                       {
                         'label': 'Circuit breaker',
-                        'description':
-                            'Track failure rate and temporarily disable requests when threshold is reached.',
+                        'description': 'Track failure rate and temporarily disable requests when threshold is reached.',
                       },
                     ],
                     'multiSelect': false,
@@ -711,8 +704,7 @@ final _askUserQuestionOverflow = MockScenario(
           role: 'assistant',
           content: [
             const TextContent(
-              text:
-                  'I need a product decision before implementing the onboarding changes.',
+              text: 'I need a product decision before implementing the onboarding changes.',
             ),
             const ToolUseContent(
               id: 'tool-ask-overflow-1',
@@ -720,29 +712,24 @@ final _askUserQuestionOverflow = MockScenario(
               input: {
                 'questions': [
                   {
-                    'question':
-                        'Which onboarding strategy should I implement for the next release, given that first-time users often need setup guidance while returning users want to start sessions quickly?',
+                    'question': 'Which onboarding strategy should I implement for the next release, given that first-time users often need setup guidance while returning users want to start sessions quickly?',
                     'header': 'Onboarding',
                     'options': [
                       {
                         'label': 'Guided setup (Recommended)',
-                        'description':
-                            'Keep users in a single guided path with connection setup, project selection, permission guidance, first prompt education, and recovery hints shown in sequence. This is easiest to understand, but it takes more space and asks users to read each step before reaching the first session.',
+                        'description': 'Keep users in a single guided path with connection setup, project selection, permission guidance, first prompt education, and recovery hints shown in sequence. This is easiest to understand, but it takes more space and asks users to read each step before reaching the first session.',
                       },
                       {
                         'label': 'Progressive disclosure',
-                        'description':
-                            'Show only the minimum setup first, then reveal permissions, prompt tips, workspace switching, and recovery actions as users encounter each feature naturally. This keeps the first screen lighter, but it requires careful timing so hints appear before users get stuck.',
+                        'description': 'Show only the minimum setup first, then reveal permissions, prompt tips, workspace switching, and recovery actions as users encounter each feature naturally. This keeps the first screen lighter, but it requires careful timing so hints appear before users get stuck.',
                       },
                       {
                         'label': 'Power-user shortcuts',
-                        'description':
-                            'Prioritize returning users with quick connect, recent projects, direct session start, saved machines, and compact troubleshooting entry points. This makes daily use faster, but first-time users may need to open help when their Bridge or project setup is incomplete.',
+                        'description': 'Prioritize returning users with quick connect, recent projects, direct session start, saved machines, and compact troubleshooting entry points. This makes daily use faster, but first-time users may need to open help when their Bridge or project setup is incomplete.',
                       },
                       {
                         'label': 'Diagnostic-first flow',
-                        'description':
-                            'Start with environment checks and clear remediation steps so users fix Bridge, network, shell path, and permission issues before creating a session. This reduces failed starts, but it puts troubleshooting ahead of the core chat experience.',
+                        'description': 'Start with environment checks and clear remediation steps so users fix Bridge, network, shell path, and permission issues before creating a session. This reduces failed starts, but it puts troubleshooting ahead of the core chat experience.',
                       },
                     ],
                     'multiSelect': false,
@@ -883,23 +870,19 @@ final _askUserSingleMultiSelect = MockScenario(
                     'options': [
                       {
                         'label': 'All of the above',
-                        'description':
-                            'Implement auto-reconnect, keyboard enhancement, and error handling all at once.',
+                        'description': 'Implement auto-reconnect, keyboard enhancement, and error handling all at once.',
                       },
                       {
                         'label': 'Auto-reconnect + error handling',
-                        'description':
-                            'Auto-reconnect on disconnect and H.264→JPEG fallback.',
+                        'description': 'Auto-reconnect on disconnect and H.264→JPEG fallback.',
                       },
                       {
                         'label': 'Keyboard enhancement',
-                        'description':
-                            'Modifier key support and iOS keyboard UI improvements.',
+                        'description': 'Modifier key support and iOS keyboard UI improvements.',
                       },
                       {
                         'label': 'Multi-simulator support',
-                        'description':
-                            'Connect to multiple simulators simultaneously from different clients.',
+                        'description': 'Connect to multiple simulators simultaneously from different clients.',
                       },
                     ],
                     'multiSelect': true,
@@ -935,8 +918,7 @@ final _askUserMultiQuestion = MockScenario(
           role: 'assistant',
           content: [
             const TextContent(
-              text:
-                  'Before I set up the project, I need to clarify a few things.',
+              text: 'Before I set up the project, I need to clarify a few things.',
             ),
             const ToolUseContent(
               id: 'tool-ask-multi-1',
@@ -961,8 +943,7 @@ final _askUserMultiQuestion = MockScenario(
                     'multiSelect': false,
                   },
                   {
-                    'question':
-                        'Which components should be included in the initial scaffold?',
+                    'question': 'Which components should be included in the initial scaffold?',
                     'header': 'Components',
                     'options': [
                       {
@@ -1867,13 +1848,11 @@ final _codexMcpApproval = MockScenario(
                       },
                       {
                         'label': 'Allow for this session',
-                        'description':
-                            'Run the tool and remember this choice for this session.',
+                        'description': 'Run the tool and remember this choice for this session.',
                       },
                       {
                         'label': 'Always allow',
-                        'description':
-                            'Run the tool and remember this choice for future tool calls.',
+                        'description': 'Run the tool and remember this choice for future tool calls.',
                       },
                       {
                         'label': 'Cancel',
@@ -1910,8 +1889,7 @@ final _codexMcpApproval = MockScenario(
                 },
                 {
                   'label': 'Always allow',
-                  'description':
-                      'Run the tool and remember this choice for future tool calls.',
+                  'description': 'Run the tool and remember this choice for future tool calls.',
                 },
                 {'label': 'Cancel', 'description': 'Cancel this tool call.'},
               ],
@@ -1959,19 +1937,16 @@ final _codexAskUserQuestion = MockScenario(
               input: {
                 'questions': [
                   {
-                    'question':
-                        'Which refactoring approach should I use for the state management?',
+                    'question': 'Which refactoring approach should I use for the state management?',
                     'header': 'Approach',
                     'options': [
                       {
                         'label': 'BLoC pattern (Recommended)',
-                        'description':
-                            'Use BLoC/Cubit with Freezed states for predictable state management.',
+                        'description': 'Use BLoC/Cubit with Freezed states for predictable state management.',
                       },
                       {
                         'label': 'Riverpod',
-                        'description':
-                            'Use Riverpod providers for a more functional approach.',
+                        'description': 'Use Riverpod providers for a more functional approach.',
                       },
                       {
                         'label': 'Keep current',
@@ -2013,8 +1988,7 @@ final _codexWebSearch = MockScenario(
           role: 'assistant',
           content: [
             const TextContent(
-              text:
-                  'Let me search for the latest Flutter testing best practices.',
+              text: 'Let me search for the latest Flutter testing best practices.',
             ),
             const ToolUseContent(
               id: 'tool-codex-ws-1',
@@ -2334,8 +2308,7 @@ final _subagentSummary = MockScenario(
               name: 'Task',
               input: {
                 'description': 'Explore codebase structure',
-                'prompt':
-                    'Explore the project directory, identify key files and architecture patterns.',
+                'prompt': 'Explore the project directory, identify key files and architecture patterns.',
                 'subagent_type': 'Explore',
               },
             ),

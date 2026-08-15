@@ -6,8 +6,7 @@ void main() {
   group('getToolFullInput', () {
     test('bash: returns full command string', () {
       final result = getToolFullInput(ToolCategory.bash, {
-        'command':
-            'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt',
+        'command': 'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt',
       });
       expect(
         result,
@@ -47,8 +46,7 @@ void main() {
 
     test('read: returns full file path', () {
       final result = getToolFullInput(ToolCategory.read, {
-        'file_path':
-            '/Users/project/apps/mobile/lib/widgets/bubbles/assistant_bubble.dart',
+        'file_path': '/Users/project/apps/mobile/lib/widgets/bubbles/assistant_bubble.dart',
       });
       expect(
         result,

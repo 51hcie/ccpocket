@@ -108,9 +108,8 @@ class _GoalHeader extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           'Goal',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -163,10 +162,8 @@ class _GoalStatusChip extends StatelessWidget {
         _statusLabel(status),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: color, fontWeight: FontWeight.w700),
       ),
     );
   }

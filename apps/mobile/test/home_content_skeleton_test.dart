@@ -135,18 +135,17 @@ Widget _buildHomeContent({
             hasMoreSessions: hasMoreSessions,
             currentProjectFilter: currentProjectFilter,
             onNewSession: () {},
-            onTapRunning:
-                (
-                  id, {
-                  projectPath,
-                  gitBranch,
-                  worktreePath,
-                  provider,
-                  permissionMode,
-                  sandboxMode,
-                  approvalPolicy,
-                  approvalsReviewer,
-                }) {},
+            onTapRunning: (
+              id, {
+              projectPath,
+              gitBranch,
+              worktreePath,
+              provider,
+              permissionMode,
+              sandboxMode,
+              approvalPolicy,
+              approvalsReviewer,
+            }) {},
             onStopSession: (_) {},
             onResumeSession: (_) {},
             onLongPressRecentSession: (_, _) {},

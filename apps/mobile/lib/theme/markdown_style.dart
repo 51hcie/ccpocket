@@ -177,9 +177,8 @@ class ColorCodeBuilder extends MarkdownElementBuilder {
             color: color,
             shape: BoxShape.circle,
             border: Border.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.outline.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.outline
+                  .withValues(alpha: 0.3),
               width: 0.5,
             ),
           ),
@@ -227,9 +226,8 @@ class FencedCodeBlockBuilder extends MarkdownElementBuilder {
     final hasExplicitLanguage = language != null;
 
     final appColors = Theme.of(context).extension<AppColors>()!;
-    final baseStyle = codeTextSettingsOf(
-      context,
-    ).style(height: 1.45, color: Theme.of(context).colorScheme.onSurface);
+    final baseStyle = codeTextSettingsOf(context)
+        .style(height: 1.45, color: Theme.of(context).colorScheme.onSurface);
     final highlightedSpans = highlightToTextSpans(
       context: context,
       source: source,
@@ -283,9 +281,8 @@ class FencedCodeBlockBuilder extends MarkdownElementBuilder {
                   style: baseStyle.copyWith(
                     fontSize: 10,
                     letterSpacing: 0.2,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.52),
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.52),
                   ),
                 ),
               ),

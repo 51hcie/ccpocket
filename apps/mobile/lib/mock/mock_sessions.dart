@@ -146,18 +146,15 @@ SessionInfo mockSessionMultiQuestion() => SessionInfo(
           'options': [
             {
               'label': 'Feature-first (Recommended)',
-              'description':
-                  'Group by feature with co-located state, widgets, and models.',
+              'description': 'Group by feature with co-located state, widgets, and models.',
             },
             {
               'label': 'Layer-first',
-              'description':
-                  'Group by layer (screens/, models/, services/) across features.',
+              'description': 'Group by layer (screens/, models/, services/) across features.',
             },
             {
               'label': 'Hybrid',
-              'description':
-                  'Feature-first for complex features, shared layer for common code.',
+              'description': 'Feature-first for complex features, shared layer for common code.',
             },
           ],
           'multiSelect': false,
@@ -347,8 +344,7 @@ SessionInfo mockSessionSingleQuestion() => SessionInfo(
           'options': [
             {
               'label': 'YAML file (Recommended)',
-              'description':
-                  'Human-readable config in config.yaml with environment overrides.',
+              'description': 'Human-readable config in config.yaml with environment overrides.',
             },
             {
               'label': 'Environment variables',
@@ -773,8 +769,7 @@ SessionInfo mockSessionCodexMcpApproval() => SessionInfo(
             },
             {
               'label': 'Always allow',
-              'description':
-                  'Run the tool and remember this choice for future tool calls.',
+              'description': 'Run the tool and remember this choice for future tool calls.',
             },
             {'label': 'Cancel', 'description': 'Cancel this tool call.'},
           ],

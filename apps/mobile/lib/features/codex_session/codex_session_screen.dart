@@ -720,10 +720,12 @@ class _CodexChatBody extends HookWidget {
 
     useEffect(() {
       final sub = bridge.messagesForSession(sessionId).listen((msg) {
-        if (msg case SystemMessage(
-          sessionId: final messageSessionId?,
-          :final codexCliJoin,
-        ) when messageSessionId == sessionId) {
+        if (msg
+            case SystemMessage(
+              sessionId: final messageSessionId?,
+              :final codexCliJoin,
+            )
+            when messageSessionId == sessionId) {
           final command = codexCliJoin?.command.trim();
           if (codexCliJoin?.isValid == true &&
               command != null &&
@@ -796,9 +798,8 @@ class _CodexChatBody extends HookWidget {
         } catch (_) {}
         final sub = bridge.messagesForSession(sessionId).listen((msg) {
           if (isBackgroundRef.value) return;
-          if (msg case ToolResultMessage(
-            :final toolName,
-          ) when _fileListRefreshToolNames.contains(toolName)) {
+          if (msg case ToolResultMessage(:final toolName)
+              when _fileListRefreshToolNames.contains(toolName)) {
             bridge.requestFileList(effectiveProjectPath);
           } else if (msg case ResultMessage(:final fileEdits)) {
             if ((fileEdits ?? 0) > 0) {
@@ -901,9 +902,8 @@ class _CodexChatBody extends HookWidget {
           (uri.scheme == 'https' || uri.scheme == 'http') &&
           await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.toolSuggestionOpenFailed)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.toolSuggestionOpenFailed)));
       }
     }
 
@@ -1035,9 +1035,9 @@ class _CodexChatBody extends HookWidget {
                           icon: Icon(
                             Icons.folder_outlined,
                             size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -1097,9 +1097,9 @@ class _CodexChatBody extends HookWidget {
                             child: Icon(
                               Icons.difference,
                               size: 18,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                           padding: EdgeInsets.zero,
@@ -1124,9 +1124,9 @@ class _CodexChatBody extends HookWidget {
                           icon: Icon(
                             Icons.history,
                             size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -1150,9 +1150,9 @@ class _CodexChatBody extends HookWidget {
                           icon: Icon(
                             Icons.terminal,
                             size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -1773,9 +1773,8 @@ Future<void> _openInTerminal(BuildContext context, String? projectPath) async {
 
   if (!launched && context.mounted) {
     final l = AppLocalizations.of(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l.terminalAppNotInstalled)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l.terminalAppNotInstalled)));
   }
 }
 
@@ -1867,9 +1866,8 @@ Future<void> _forkCodexFromAssistant(
     message,
   );
   if (targetUuid == null) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l.forkTargetNotFound)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l.forkTargetNotFound)));
     return;
   }
 
@@ -2141,9 +2139,8 @@ void _retryFailedMessages(BuildContext context) {
 
 String? _latestCodexCliJoinCommand(List<ServerMessage> messages) {
   for (final msg in messages.reversed) {
-    if (msg case SystemMessage(
-      :final codexCliJoin,
-    ) when codexCliJoin?.isValid == true) {
+    if (msg case SystemMessage(:final codexCliJoin)
+        when codexCliJoin?.isValid == true) {
       return codexCliJoin!.command.trim();
     }
   }

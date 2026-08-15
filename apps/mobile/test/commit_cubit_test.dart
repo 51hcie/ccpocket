@@ -75,9 +75,9 @@ void main() {
       cubit.commit();
 
       expect(cubit.state.status, CommitStatus.committing);
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_commit');
       expect(json['message'], 'feat: add x');
     });
@@ -85,9 +85,9 @@ void main() {
     test('commit with autoGenerate sends autoGenerate: true', () {
       cubit.commit();
 
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['autoGenerate'], isTrue);
       expect(json.containsKey('message'), isFalse);
     });
@@ -134,9 +134,9 @@ void main() {
       await Future.microtask(() {});
 
       expect(cubit.state.status, CommitStatus.pushing);
-      final pushJson =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final pushJson = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(pushJson['type'], 'git_push');
 
       mockBridge.emitPush(const GitPushResultMessage(success: true));

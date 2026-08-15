@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'branch_state.dart';
@@ -9,6 +9,7 @@ part of 'branch_state.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
@@ -71,7 +72,7 @@ class _$BranchStateCopyWithImpl<$Res>
 /// Create a copy of BranchState
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? current = freezed,Object? branches = null,Object? query = null,Object? loading = null,Object? error = freezed,Object? creating = null,Object? checkedOutBranches = null,Object? remoteStatusByBranch = null,}) {
-  return _then(_self.copyWith(
+  return _then(BranchState(
 current: freezed == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
 as String?,branches: null == branches ? _self.branches : branches // ignore: cast_nullable_to_non_nullable
 as List<String>,query: null == query ? _self.query : query // ignore: cast_nullable_to_non_nullable
@@ -221,7 +222,7 @@ return $default(_that.current,_that.branches,_that.query,_that.loading,_that.err
 
 
 class _BranchState implements BranchState {
-  const _BranchState({this.current, final  List<String> branches = const [], this.query = '', this.loading = false, this.error, this.creating = false, final  List<String> checkedOutBranches = const [], final  Map<String, GitBranchRemoteStatus> remoteStatusByBranch = const {}}): _branches = branches,_checkedOutBranches = checkedOutBranches,_remoteStatusByBranch = remoteStatusByBranch;
+  const _BranchState({this.current,  List<String> branches = const [], this.query = '', this.loading = false, this.error, this.creating = false,  List<String> checkedOutBranches = const [],  Map<String, GitBranchRemoteStatus> remoteStatusByBranch = const {}}): _branches = branches,_checkedOutBranches = checkedOutBranches,_remoteStatusByBranch = remoteStatusByBranch;
   
 
 /// Current branch name.

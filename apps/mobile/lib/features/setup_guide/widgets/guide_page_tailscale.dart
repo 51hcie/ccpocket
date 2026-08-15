@@ -56,9 +56,8 @@ class GuidePageTailscale extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             l.guideTailscaleWebsiteHint,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: cs.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
         ],

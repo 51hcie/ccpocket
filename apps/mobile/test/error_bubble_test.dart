@@ -85,8 +85,7 @@ void main() {
 
     testWidgets('shows Codex CLI install guidance', (tester) async {
       const message = ErrorMessage(
-        message:
-            'Codex CLI is not installed or not available on PATH on the Bridge machine.',
+        message: 'Codex CLI is not installed or not available on PATH on the Bridge machine.',
         errorCode: 'codex_cli_not_found',
       );
 
@@ -110,8 +109,7 @@ void main() {
       tester,
     ) async {
       const message = ErrorMessage(
-        message:
-            'You are not logged into any GitHub hosts. To log in, run: gh auth login',
+        message: 'You are not logged into any GitHub hosts. To log in, run: gh auth login',
       );
 
       await tester.pumpWidget(

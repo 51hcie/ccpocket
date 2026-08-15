@@ -33,9 +33,8 @@ class GuidePageAbout extends StatelessWidget {
               children: [
                 Text(
                   l.guideAboutDiagramTitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
                 _ArchDiagramRow(
@@ -50,9 +49,8 @@ class GuidePageAbout extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   l.guideAboutDiagramCaption,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -77,16 +75,14 @@ class GuidePageAbout extends StatelessWidget {
                     children: [
                       Text(
                         l.guideAboutSdkNoteTitle,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         l.guideAboutSdkNoteBody,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
                       ),
                     ],
                   ),

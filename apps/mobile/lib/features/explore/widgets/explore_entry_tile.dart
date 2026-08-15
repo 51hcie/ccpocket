@@ -19,9 +19,8 @@ class ExploreEntryTile extends StatelessWidget {
     return ListTile(
       key: ValueKey('explore_entry_${entry.relativePath}'),
       tileColor: isHighlighted
-          ? Theme.of(
-              context,
-            ).colorScheme.primaryContainer.withValues(alpha: 0.4)
+          ? Theme.of(context).colorScheme.primaryContainer
+                .withValues(alpha: 0.4)
           : null,
       dense: true,
       leading: Icon(

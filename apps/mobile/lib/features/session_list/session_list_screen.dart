@@ -322,9 +322,8 @@ class _SessionListScreenState extends State<SessionListScreen>
             : (msg.error?.isNotEmpty == true
                   ? l.archiveFailedWithError(msg.error!)
                   : l.archiveFailed);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(text)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(text)));
       }
     });
     widget.deepLinkNotifier?.addListener(_onDeepLink);
@@ -1327,9 +1326,8 @@ class _SessionListScreenState extends State<SessionListScreen>
     if (action == 'copy_resume_command') {
       await Clipboard.setData(ClipboardData(text: buildResumeCommand(session)));
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.resumeCommandCopied)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.resumeCommandCopied)));
       return;
     }
 
@@ -1439,9 +1437,8 @@ class _SessionListScreenState extends State<SessionListScreen>
 
   void _resumeSession(RecentSession session) async {
     final bridge = context.read<BridgeService>();
-    final result = await SessionResumeCoordinator(
-      bridge: bridge,
-    ).resume(session);
+    final result = await SessionResumeCoordinator(bridge: bridge)
+        .resume(session);
     if (!mounted) return;
     if (result.disposition == SessionResumeDisposition.alreadyQueued) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2186,9 +2183,8 @@ class _SessionListScreenState extends State<SessionListScreen>
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
       return false;
     }
@@ -2301,9 +2297,8 @@ class _SessionListScreenState extends State<SessionListScreen>
     final success = await cubit.updateBridge(m.machine.id, password: password);
 
     if (success && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.bridgeServerUpdated)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.bridgeServerUpdated)));
     } else if (mounted) {
       final error = cubit.state.error;
       ScaffoldMessenger.of(
@@ -2329,9 +2324,8 @@ class _SessionListScreenState extends State<SessionListScreen>
     final success = await cubit.startBridge(m.machine.id, password: password);
 
     if (success && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.bridgeServerStarted)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.bridgeServerStarted)));
     } else if (mounted) {
       final error = cubit.state.error;
       ScaffoldMessenger.of(
@@ -2357,14 +2351,12 @@ class _SessionListScreenState extends State<SessionListScreen>
     final success = await cubit.stopBridge(m.machine.id, password: password);
 
     if (success && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.bridgeServerStopped)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.bridgeServerStopped)));
     } else if (mounted) {
       final error = cubit.state.error;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error ?? l.failedToStopServer)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error ?? l.failedToStopServer)));
     }
   }
 

@@ -68,16 +68,13 @@ index 111..222 100644
     },
   );
 
-  test(
-    'buildAgentInvestigationPrompt falls back to json when file paths are missing',
-    () {
-      final bundle = _buildBundle(diff: '');
+  test('buildAgentInvestigationPrompt falls back to json when file paths are missing', () {
+    final bundle = _buildBundle(diff: '');
 
-      final text = buildAgentInvestigationPrompt(bundle);
+    final text = buildAgentInvestigationPrompt(bundle);
 
-      expect(text, contains('sessionId: s-123'));
-      expect(text, contains('fallback_bundle_json:'));
-      expect(text, contains('"type": "ccpocket_debug_bundle"'));
-    },
-  );
+    expect(text, contains('sessionId: s-123'));
+    expect(text, contains('fallback_bundle_json:'));
+    expect(text, contains('"type": "ccpocket_debug_bundle"'));
+  });
 }

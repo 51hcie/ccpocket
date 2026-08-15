@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ccpocket/models/messages.dart';
+
 import 'dart:convert';
 
 void main() {
@@ -16,17 +17,15 @@ void main() {
         {'type': 'list_directory', 'path': '/workspace', 'requestId': 'dir-1'},
       );
 
-      final message =
-          ServerMessage.fromJson({
-                'type': 'directory_listing',
-                'path': '/workspace',
-                'requestId': 'dir-1',
-                'directories': [
-                  {'name': 'alpha', 'path': '/workspace/alpha'},
-                  {'name': 'beta', 'path': '/workspace/beta'},
-                ],
-              })
-              as DirectoryListingMessage;
+      final message = ServerMessage.fromJson({
+        'type': 'directory_listing',
+        'path': '/workspace',
+        'requestId': 'dir-1',
+        'directories': [
+          {'name': 'alpha', 'path': '/workspace/alpha'},
+          {'name': 'beta', 'path': '/workspace/beta'},
+        ],
+      }) as DirectoryListingMessage;
 
       expect(message.path, '/workspace');
       expect(message.requestId, 'dir-1');
@@ -52,25 +51,23 @@ void main() {
       },
     );
 
-    final message =
-        ServerMessage.fromJson({
-              'type': 'session_link_resolution',
-              'requestId': 'link-1',
-              'sourceSessionId': 'claude-uuid',
-              'status': 'recent',
-              'provider': 'claude',
-              'recentSession': {
-                'sessionId': 'claude-uuid',
-                'provider': 'claude',
-                'projectPath': '/workspace/app',
-                'gitBranch': 'main',
-                'firstPrompt': 'Continue this task',
-                'created': '2026-07-24T00:00:00Z',
-                'modified': '2026-07-24T01:00:00Z',
-                'isSidechain': false,
-              },
-            })
-            as SessionLinkResolutionMessage;
+    final message = ServerMessage.fromJson({
+      'type': 'session_link_resolution',
+      'requestId': 'link-1',
+      'sourceSessionId': 'claude-uuid',
+      'status': 'recent',
+      'provider': 'claude',
+      'recentSession': {
+        'sessionId': 'claude-uuid',
+        'provider': 'claude',
+        'projectPath': '/workspace/app',
+        'gitBranch': 'main',
+        'firstPrompt': 'Continue this task',
+        'created': '2026-07-24T00:00:00Z',
+        'modified': '2026-07-24T01:00:00Z',
+        'isSidechain': false,
+      },
+    }) as SessionLinkResolutionMessage;
 
     expect(message.requestId, 'link-1');
     expect(message.status, SessionLinkResolutionStatus.recent);
@@ -79,14 +76,12 @@ void main() {
   });
 
   test('parses a scoped session-not-found error', () {
-    final message =
-        ServerMessage.fromJson({
-              'type': 'error',
-              'message': 'Session missing not found',
-              'errorCode': 'session_not_found',
-              'sessionId': 'missing',
-            })
-            as ErrorMessage;
+    final message = ServerMessage.fromJson({
+      'type': 'error',
+      'message': 'Session missing not found',
+      'errorCode': 'session_not_found',
+      'sessionId': 'missing',
+    }) as ErrorMessage;
 
     expect(message.errorCode, 'session_not_found');
     expect(message.sessionId, 'missing');
@@ -109,26 +104,24 @@ void main() {
   });
 
   test('parses structured tool suggestion state', () {
-    final message =
-        ServerMessage.fromJson({
-              'type': 'permission_request',
-              'toolUseId': 'approval-0',
-              'toolName': 'ToolSuggestion',
-              'input': {
-                'toolName': 'GitHub',
-                'toolType': 'plugin',
-                'suggestReason': 'Inspect forks on GitHub.',
-                'installState': 'needs_auth',
-                'appsNeedingAuth': [
-                  {
-                    'id': 'github-app',
-                    'name': 'GitHub',
-                    'installUrl': 'https://example.com/connect',
-                  },
-                ],
-              },
-            })
-            as PermissionRequestMessage;
+    final message = ServerMessage.fromJson({
+      'type': 'permission_request',
+      'toolUseId': 'approval-0',
+      'toolName': 'ToolSuggestion',
+      'input': {
+        'toolName': 'GitHub',
+        'toolType': 'plugin',
+        'suggestReason': 'Inspect forks on GitHub.',
+        'installState': 'needs_auth',
+        'appsNeedingAuth': [
+          {
+            'id': 'github-app',
+            'name': 'GitHub',
+            'installUrl': 'https://example.com/connect',
+          },
+        ],
+      },
+    }) as PermissionRequestMessage;
 
     expect(message.isToolSuggestion, isTrue);
     expect(message.usesAskUserUi, isFalse);
@@ -142,22 +135,20 @@ void main() {
   });
 
   test('parses Codex goal state and serializes goal actions', () {
-    final message =
-        ServerMessage.fromJson({
-              'type': 'goal_state',
-              'sessionId': 's1',
-              'goal': {
-                'threadId': 'thread-1',
-                'objective': 'Ship Goal support',
-                'status': 'usageLimited',
-                'tokenBudget': 80000,
-                'tokensUsed': 12400,
-                'timeUsedSeconds': 1080,
-                'createdAt': 1,
-                'updatedAt': 2,
-              },
-            })
-            as GoalStateMessage;
+    final message = ServerMessage.fromJson({
+      'type': 'goal_state',
+      'sessionId': 's1',
+      'goal': {
+        'threadId': 'thread-1',
+        'objective': 'Ship Goal support',
+        'status': 'usageLimited',
+        'tokenBudget': 80000,
+        'tokensUsed': 12400,
+        'timeUsedSeconds': 1080,
+        'createdAt': 1,
+        'updatedAt': 2,
+      },
+    }) as GoalStateMessage;
 
     expect(message.sessionId, 's1');
     expect(message.goal?.objective, 'Ship Goal support');
@@ -179,14 +170,12 @@ void main() {
   });
 
   test('parses structured Guardian approval notices', () {
-    final message =
-        ServerMessage.fromJson({
-              'type': 'guardian_approval',
-              'risk': 'high',
-              'reason': 'The command changes files outside the workspace.',
-              'authorization': 'high',
-            })
-            as GuardianApprovalMessage;
+    final message = ServerMessage.fromJson({
+      'type': 'guardian_approval',
+      'risk': 'high',
+      'reason': 'The command changes files outside the workspace.',
+      'authorization': 'high',
+    }) as GuardianApprovalMessage;
 
     expect(message.risk, GuardianApprovalRisk.high);
     expect(message.reason, 'The command changes files outside the workspace.');
@@ -326,14 +315,12 @@ void main() {
 
   group('SystemMessage', () {
     test('parses resume request correlation', () {
-      final message =
-          ServerMessage.fromJson({
-                'type': 'system',
-                'subtype': 'session_created',
-                'sessionId': 'bridge-1',
-                'resumeRequestId': 'link-request-1',
-              })
-              as SystemMessage;
+      final message = ServerMessage.fromJson({
+        'type': 'system',
+        'subtype': 'session_created',
+        'sessionId': 'bridge-1',
+        'resumeRequestId': 'link-request-1',
+      }) as SystemMessage;
 
       expect(message.resumeRequestId, 'link-request-1');
     });

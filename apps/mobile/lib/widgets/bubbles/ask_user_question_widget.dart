@@ -691,9 +691,8 @@ class _AskOptionButton extends StatelessWidget {
             border: Border.all(
               color: isSelected
                   ? appColors.askIcon.withValues(alpha: 0.45)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  : Theme.of(context).colorScheme.outlineVariant
+                        .withValues(alpha: 0.5),
               width: isSelected ? 1.5 : 1,
             ),
           ),
@@ -835,9 +834,8 @@ class _AskTextInputRow extends StatelessWidget {
             decoration: InputDecoration(
               hintText: hintText,
               filled: true,
-              fillColor: Theme.of(
-                context,
-              ).colorScheme.surface.withValues(alpha: 0.8),
+              fillColor: Theme.of(context).colorScheme.surface
+                  .withValues(alpha: 0.8),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

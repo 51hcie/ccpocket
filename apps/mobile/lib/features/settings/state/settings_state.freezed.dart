@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'settings_state.dart';
@@ -9,6 +9,7 @@ part of 'settings_state.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
@@ -93,7 +94,7 @@ class _$SettingsStateCopyWithImpl<$Res>
 /// Create a copy of SettingsState
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? themeMode = null,Object? appLocaleId = null,Object? speechLocaleId = null,Object? fcmEnabledMachines = null,Object? fcmPrivacyMachines = null,Object? activeMachineId = freezed,Object? fcmAvailable = null,Object? fcmSyncInProgress = null,Object? fcmStatusKey = freezed,Object? shorebirdTrack = null,Object? indentSize = null,Object? textScale = null,Object? codeFontSize = null,Object? codeFontFamily = null,Object? hideVoiceInput = null,Object? imagePasteShortcut = null,Object? gitDiffInteractionMode = null,Object? gitDiffFocusAutoLandscape = null,Object? showRemoteGitStatusBadge = null,Object? showBridgeNameInSessionList = null,Object? selectedAppIcon = null,Object? appIconSupported = null,Object? terminalApp = null,Object? newSessionTabs = null,Object? usageDisplayMode = null,Object? autoRenameCodexSessions = null,Object? showExtendedCodexEfforts = null,Object? autoRenameClaudeSessions = null,}) {
-  return _then(_self.copyWith(
+  return _then(SettingsState(
 themeMode: null == themeMode ? _self.themeMode : themeMode // ignore: cast_nullable_to_non_nullable
 as ThemeMode,appLocaleId: null == appLocaleId ? _self.appLocaleId : appLocaleId // ignore: cast_nullable_to_non_nullable
 as String,speechLocaleId: null == speechLocaleId ? _self.speechLocaleId : speechLocaleId // ignore: cast_nullable_to_non_nullable
@@ -263,7 +264,7 @@ return $default(_that.themeMode,_that.appLocaleId,_that.speechLocaleId,_that.fcm
 
 
 class _SettingsState extends SettingsState {
-  const _SettingsState({this.themeMode = ThemeMode.system, this.appLocaleId = '', this.speechLocaleId = '', final  Set<String> fcmEnabledMachines = const {}, final  Set<String> fcmPrivacyMachines = const {}, this.activeMachineId, this.fcmAvailable = false, this.fcmSyncInProgress = false, this.fcmStatusKey, this.shorebirdTrack = 'stable', this.indentSize = 2, this.textScale = 1.0, this.codeFontSize = 12.0, this.codeFontFamily = CodeFontFamily.jetBrainsMono, this.hideVoiceInput = false, this.imagePasteShortcut = ImagePasteShortcut.ctrlV, this.gitDiffInteractionMode = GitDiffInteractionMode.quickActions, this.gitDiffFocusAutoLandscape = false, this.showRemoteGitStatusBadge = false, this.showBridgeNameInSessionList = true, this.selectedAppIcon = AppIconVariant.defaultIcon, this.appIconSupported = false, this.terminalApp = TerminalAppConfig.empty, final  List<NewSessionTab> newSessionTabs = defaultNewSessionTabs, this.usageDisplayMode = UsageDisplayMode.remaining, this.autoRenameCodexSessions = true, this.showExtendedCodexEfforts = false, this.autoRenameClaudeSessions = false}): _fcmEnabledMachines = fcmEnabledMachines,_fcmPrivacyMachines = fcmPrivacyMachines,_newSessionTabs = newSessionTabs,super._();
+  const _SettingsState({this.themeMode = ThemeMode.system, this.appLocaleId = '', this.speechLocaleId = '',  Set<String> fcmEnabledMachines = const {},  Set<String> fcmPrivacyMachines = const {}, this.activeMachineId, this.fcmAvailable = false, this.fcmSyncInProgress = false, this.fcmStatusKey, this.shorebirdTrack = 'stable', this.indentSize = 2, this.textScale = 1.0, this.codeFontSize = 12.0, this.codeFontFamily = CodeFontFamily.jetBrainsMono, this.hideVoiceInput = false, this.imagePasteShortcut = ImagePasteShortcut.ctrlV, this.gitDiffInteractionMode = GitDiffInteractionMode.quickActions, this.gitDiffFocusAutoLandscape = false, this.showRemoteGitStatusBadge = false, this.showBridgeNameInSessionList = true, this.selectedAppIcon = AppIconVariant.defaultIcon, this.appIconSupported = false, this.terminalApp = TerminalAppConfig.empty,  List<NewSessionTab> newSessionTabs = defaultNewSessionTabs, this.usageDisplayMode = UsageDisplayMode.remaining, this.autoRenameCodexSessions = true, this.showExtendedCodexEfforts = false, this.autoRenameClaudeSessions = false}): _fcmEnabledMachines = fcmEnabledMachines,_fcmPrivacyMachines = fcmPrivacyMachines,_newSessionTabs = newSessionTabs,super._();
   
 
 /// Theme mode: system, light, or dark.

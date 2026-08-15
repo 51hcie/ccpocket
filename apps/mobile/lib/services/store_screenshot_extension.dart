@@ -459,18 +459,17 @@ class _StoreSessionListRouteState extends State<_StoreSessionListRoute> {
         hasMoreSessions: false,
         currentProjectFilter: null,
         onNewSession: () {},
-        onTapRunning:
-            (
-              _, {
-              projectPath,
-              gitBranch,
-              worktreePath,
-              provider,
-              permissionMode,
-              sandboxMode,
-              approvalPolicy,
-              approvalsReviewer,
-            }) {},
+        onTapRunning: (
+          _, {
+          projectPath,
+          gitBranch,
+          worktreePath,
+          provider,
+          permissionMode,
+          sandboxMode,
+          approvalPolicy,
+          approvalsReviewer,
+        }) {},
         onStopSession: (_) {},
         onResumeSession: (_) {},
         onLongPressRecentSession: (_, _) {},
@@ -531,8 +530,7 @@ class _StoreChatRouteState extends State<_StoreChatRoute> {
         sessionId,
         const QueuedInputItem(
           itemId: 'pending:store-dark-queued',
-          text:
-              'Looks good. Stage the checkout files and draft the commit message.',
+          text: 'Looks good. Stage the checkout files and draft the commit message.',
           createdAt: '2026-05-01T02:00:00.000Z',
           updatedAt: '2026-05-01T02:00:00.000Z',
         ),
@@ -991,18 +989,17 @@ class _StoreNewSessionRouteState extends State<_StoreNewSessionRoute> {
         hasMoreSessions: false,
         currentProjectFilter: null,
         onNewSession: () {},
-        onTapRunning:
-            (
-              _, {
-              projectPath,
-              gitBranch,
-              worktreePath,
-              provider,
-              permissionMode,
-              sandboxMode,
-              approvalPolicy,
-              approvalsReviewer,
-            }) {},
+        onTapRunning: (
+          _, {
+          projectPath,
+          gitBranch,
+          worktreePath,
+          provider,
+          permissionMode,
+          sandboxMode,
+          approvalPolicy,
+          approvalsReviewer,
+        }) {},
         onStopSession: (_) {},
         onResumeSession: (_) {},
         onLongPressRecentSession: (_, _) {},
@@ -1353,18 +1350,17 @@ class _StoreWorkspaceListPane extends StatelessWidget {
                 hasMoreSessions: false,
                 currentProjectFilter: null,
                 onNewSession: () {},
-                onTapRunning:
-                    (
-                      _, {
-                      projectPath,
-                      gitBranch,
-                      worktreePath,
-                      provider,
-                      permissionMode,
-                      sandboxMode,
-                      approvalPolicy,
-                      approvalsReviewer,
-                    }) {},
+                onTapRunning: (
+                  _, {
+                  projectPath,
+                  gitBranch,
+                  worktreePath,
+                  provider,
+                  permissionMode,
+                  sandboxMode,
+                  approvalPolicy,
+                  approvalsReviewer,
+                }) {},
                 onStopSession: (_) {},
                 onResumeSession: (_) {},
                 onLongPressRecentSession: (_, _) {},

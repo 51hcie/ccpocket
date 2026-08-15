@@ -506,9 +506,8 @@ class _GitScreenBodyState extends State<_GitScreenBody> {
         _confirmRevert(
           context,
           title: AppLocalizations.of(context).gitDiscardChangeTitle,
-          message: AppLocalizations.of(
-            context,
-          ).gitDiscardFileUnstagedChangesMessage,
+          message: AppLocalizations.of(context)
+              .gitDiscardFileUnstagedChangesMessage,
           onConfirm: () => cubit.revertFile(fileIdx),
         );
       case 'request_change':
@@ -588,9 +587,8 @@ class _GitScreenBodyState extends State<_GitScreenBody> {
         _confirmRevert(
           context,
           title: AppLocalizations.of(context).gitDiscardChangeTitle,
-          message: AppLocalizations.of(
-            context,
-          ).gitDiscardHunkUnstagedChangesMessage,
+          message: AppLocalizations.of(context)
+              .gitDiscardHunkUnstagedChangesMessage,
           onConfirm: () => cubit.revertHunk(fileIdx, hunkIdx),
         );
       case 'request_change':
@@ -841,9 +839,8 @@ class _GitScreenContent extends StatelessWidget {
           ? (fileIdx) => onConfirmRevert(
               context,
               title: AppLocalizations.of(context).gitDiscardChangeTitle,
-              message: AppLocalizations.of(
-                context,
-              ).gitDiscardFileUnstagedChangesMessage,
+              message: AppLocalizations.of(context)
+                  .gitDiscardFileUnstagedChangesMessage,
               onConfirm: () => cubit.revertFile(fileIdx),
             )
           : null,
@@ -857,9 +854,8 @@ class _GitScreenContent extends StatelessWidget {
           ? (fileIdx, hunkIdx) => onConfirmRevert(
               context,
               title: AppLocalizations.of(context).gitDiscardChangeTitle,
-              message: AppLocalizations.of(
-                context,
-              ).gitDiscardHunkUnstagedChangesMessage,
+              message: AppLocalizations.of(context)
+                  .gitDiscardHunkUnstagedChangesMessage,
               onConfirm: () => cubit.revertHunk(fileIdx, hunkIdx),
             )
           : null,

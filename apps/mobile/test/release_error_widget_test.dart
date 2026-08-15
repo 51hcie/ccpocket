@@ -73,11 +73,9 @@ void main() {
     tester.binding.platformDispatcher.localeTestValue = const Locale('ja');
 
     try {
-      final fallback =
-          buildReleaseErrorWidget(
-                FlutterErrorDetails(exception: StateError('boom')),
-              )
-              as ReleaseErrorWidget;
+      final fallback = buildReleaseErrorWidget(
+        FlutterErrorDetails(exception: StateError('boom')),
+      ) as ReleaseErrorWidget;
 
       expect(fallback.message, 'このコンテンツを表示できませんでした');
     } finally {

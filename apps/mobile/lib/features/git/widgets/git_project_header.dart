@@ -218,9 +218,8 @@ class _CompactCountActionButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           visualDensity: VisualDensity.compact,
           side: BorderSide(
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: 0.6),
+            color: Theme.of(context).colorScheme.outlineVariant
+                .withValues(alpha: 0.6),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

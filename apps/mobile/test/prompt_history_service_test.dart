@@ -74,8 +74,7 @@ void main() {
     test('merges different raw entries by displayed prompt text', () {
       final commandXml = PromptHistoryEntry(
         id: 'ph_xml',
-        text:
-            '<command-message><command-name>\$release-app</command-name></command-message>',
+        text: '<command-message><command-name>\$release-app</command-name></command-message>',
         projectPath: '/repo/a',
         useCount: 11,
         isFavorite: false,

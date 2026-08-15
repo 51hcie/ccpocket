@@ -260,29 +260,24 @@ void main() {
               input: {
                 'questions': [
                   {
-                    'question':
-                        'Which onboarding strategy should I implement for the next release, given that first-time users need setup guidance while returning users want shortcuts?',
+                    'question': 'Which onboarding strategy should I implement for the next release, given that first-time users need setup guidance while returning users want shortcuts?',
                     'header': 'Onboarding',
                     'options': [
                       {
                         'label': 'Guided setup',
-                        'description':
-                            'Connection setup, project selection, permission guidance, first prompt education, and recovery hints shown in sequence before the first chat.',
+                        'description': 'Connection setup, project selection, permission guidance, first prompt education, and recovery hints shown in sequence before the first chat.',
                       },
                       {
                         'label': 'Progressive disclosure',
-                        'description':
-                            'Minimum setup first, then reveal permissions, prompt tips, workspace switching, and recovery actions as users encounter each feature.',
+                        'description': 'Minimum setup first, then reveal permissions, prompt tips, workspace switching, and recovery actions as users encounter each feature.',
                       },
                       {
                         'label': 'Power-user shortcuts',
-                        'description':
-                            'Quick connect, recent projects, direct session start, saved machines, and compact troubleshooting entry points for returning users.',
+                        'description': 'Quick connect, recent projects, direct session start, saved machines, and compact troubleshooting entry points for returning users.',
                       },
                       {
                         'label': 'Diagnostic-first flow',
-                        'description':
-                            'Environment checks and remediation steps for Bridge, network, shell path, and permission issues before creating a session.',
+                        'description': 'Environment checks and remediation steps for Bridge, network, shell path, and permission issues before creating a session.',
                       },
                     ],
                     'multiSelect': false,

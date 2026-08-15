@@ -2076,9 +2076,8 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
       mentionablePaths ?? const <String>[],
     );
     if (projectMentionPaths.isNotEmpty) {
-      final projectMatches = RegExp(
-        r'(?<![A-Za-z0-9_:/.-])@(\S+)',
-      ).allMatches(text);
+      final projectMatches = RegExp(r'(?<![A-Za-z0-9_:/.-])@(\S+)')
+          .allMatches(text);
       for (final match in projectMatches) {
         final rawPath = match.group(1)!;
         final token = '@$rawPath';

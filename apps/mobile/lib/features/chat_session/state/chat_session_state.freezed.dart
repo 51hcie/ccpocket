@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'chat_session_state.dart';
@@ -9,27 +9,13 @@ part of 'chat_session_state.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ChatSessionState {
 
-// Process status
- ProcessStatus get status;// Messages
- List<ChatEntry> get entries;// Approval / AskUserQuestion
- ApprovalState get approval;// Session metadata
- String? get claudeSessionId; String? get projectPath; String? get gitBranch; String get explorerCurrentPath; List<String> get recentPeekedFiles;// Flags
- bool get pastHistoryLoaded; bool get bulkLoading; bool get inPlanMode; bool get collapseToolResults; bool get sessionUnavailable;// Legacy permission mode kept for compatibility with older bridge/app flows.
- PermissionMode get permissionMode;// Canonical session modes
- ExecutionMode get executionMode; CodexApprovalPolicy get codexApprovalPolicy; String get codexApprovalsReviewer; CodexPermissionsMode get codexPermissionsMode; String? get codexModel; ReasoningEffort? get codexModelReasoningEffort; CodexSpeed get codexSpeed; bool get planMode;// Sandbox mode - Freezed default is .on but Cubit constructor overrides
-// based on provider (Claude=off, Codex=on).
- SandboxMode get sandboxMode;// Tool use IDs hidden by tool_use_summary (subagent compression)
- Set<String> get hiddenToolUseIds;// Rewind preview (dry-run result)
- RewindPreviewMessage? get rewindPreview;// Cost tracking
- double get totalCost; Duration? get totalDuration;// Slash commands available in this session
- List<SlashCommand> get slashCommands;// Codex conversation queue (Bridge is the source of truth).
- QueuedInputItem? get queuedInput;// Persisted Codex thread goal (Bridge/app-server is the source of truth).
- CodexGoal? get goal;
+ ProcessStatus get status; List<ChatEntry> get entries; ApprovalState get approval; String? get claudeSessionId; String? get projectPath; String? get gitBranch; String get explorerCurrentPath; List<String> get recentPeekedFiles; bool get pastHistoryLoaded; bool get bulkLoading; bool get inPlanMode; bool get collapseToolResults; bool get sessionUnavailable; PermissionMode get permissionMode; ExecutionMode get executionMode; CodexApprovalPolicy get codexApprovalPolicy; String get codexApprovalsReviewer; CodexPermissionsMode get codexPermissionsMode; String? get codexModel; ReasoningEffort? get codexModelReasoningEffort; CodexSpeed get codexSpeed; bool get planMode; SandboxMode get sandboxMode; Set<String> get hiddenToolUseIds; RewindPreviewMessage? get rewindPreview; double get totalCost; Duration? get totalDuration; List<SlashCommand> get slashCommands; QueuedInputItem? get queuedInput; CodexGoal? get goal;
 /// Create a copy of ChatSessionState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -78,7 +64,7 @@ class _$ChatSessionStateCopyWithImpl<$Res>
 /// Create a copy of ChatSessionState
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? entries = null,Object? approval = null,Object? claudeSessionId = freezed,Object? projectPath = freezed,Object? gitBranch = freezed,Object? explorerCurrentPath = null,Object? recentPeekedFiles = null,Object? pastHistoryLoaded = null,Object? bulkLoading = null,Object? inPlanMode = null,Object? collapseToolResults = null,Object? sessionUnavailable = null,Object? permissionMode = null,Object? executionMode = null,Object? codexApprovalPolicy = null,Object? codexApprovalsReviewer = null,Object? codexPermissionsMode = null,Object? codexModel = freezed,Object? codexModelReasoningEffort = freezed,Object? codexSpeed = null,Object? planMode = null,Object? sandboxMode = null,Object? hiddenToolUseIds = null,Object? rewindPreview = freezed,Object? totalCost = null,Object? totalDuration = freezed,Object? slashCommands = null,Object? queuedInput = freezed,Object? goal = freezed,}) {
-  return _then(_self.copyWith(
+  return _then(ChatSessionState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ProcessStatus,entries: null == entries ? _self.entries : entries // ignore: cast_nullable_to_non_nullable
 as List<ChatEntry>,approval: null == approval ? _self.approval : approval // ignore: cast_nullable_to_non_nullable
@@ -259,23 +245,18 @@ return $default(_that.status,_that.entries,_that.approval,_that.claudeSessionId,
 
 
 class _ChatSessionState implements ChatSessionState {
-  const _ChatSessionState({this.status = ProcessStatus.starting, final  List<ChatEntry> entries = const [], this.approval = const ApprovalState.none(), this.claudeSessionId, this.projectPath, this.gitBranch, this.explorerCurrentPath = '', final  List<String> recentPeekedFiles = const [], this.pastHistoryLoaded = false, this.bulkLoading = false, this.inPlanMode = false, this.collapseToolResults = false, this.sessionUnavailable = false, this.permissionMode = PermissionMode.defaultMode, this.executionMode = ExecutionMode.defaultMode, this.codexApprovalPolicy = CodexApprovalPolicy.onRequest, this.codexApprovalsReviewer = 'user', this.codexPermissionsMode = CodexPermissionsMode.defaultPermissions, this.codexModel, this.codexModelReasoningEffort, this.codexSpeed = CodexSpeed.standard, this.planMode = false, this.sandboxMode = SandboxMode.on, final  Set<String> hiddenToolUseIds = const {}, this.rewindPreview, this.totalCost = 0.0, this.totalDuration, final  List<SlashCommand> slashCommands = const [], this.queuedInput, this.goal}): _entries = entries,_recentPeekedFiles = recentPeekedFiles,_hiddenToolUseIds = hiddenToolUseIds,_slashCommands = slashCommands;
+  const _ChatSessionState({this.status = ProcessStatus.starting,  List<ChatEntry> entries = const [], this.approval = const ApprovalState.none(), this.claudeSessionId, this.projectPath, this.gitBranch, this.explorerCurrentPath = '',  List<String> recentPeekedFiles = const [], this.pastHistoryLoaded = false, this.bulkLoading = false, this.inPlanMode = false, this.collapseToolResults = false, this.sessionUnavailable = false, this.permissionMode = PermissionMode.defaultMode, this.executionMode = ExecutionMode.defaultMode, this.codexApprovalPolicy = CodexApprovalPolicy.onRequest, this.codexApprovalsReviewer = 'user', this.codexPermissionsMode = CodexPermissionsMode.defaultPermissions, this.codexModel, this.codexModelReasoningEffort, this.codexSpeed = CodexSpeed.standard, this.planMode = false, this.sandboxMode = SandboxMode.on,  Set<String> hiddenToolUseIds = const {}, this.rewindPreview, this.totalCost = 0.0, this.totalDuration,  List<SlashCommand> slashCommands = const [], this.queuedInput, this.goal}): _entries = entries,_recentPeekedFiles = recentPeekedFiles,_hiddenToolUseIds = hiddenToolUseIds,_slashCommands = slashCommands;
   
 
-// Process status
 @override@JsonKey() final  ProcessStatus status;
-// Messages
  final  List<ChatEntry> _entries;
-// Messages
 @override@JsonKey() List<ChatEntry> get entries {
   if (_entries is EqualUnmodifiableListView) return _entries;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_entries);
 }
 
-// Approval / AskUserQuestion
 @override@JsonKey() final  ApprovalState approval;
-// Session metadata
 @override final  String? claudeSessionId;
 @override final  String? projectPath;
 @override final  String? gitBranch;
@@ -287,15 +268,12 @@ class _ChatSessionState implements ChatSessionState {
   return EqualUnmodifiableListView(_recentPeekedFiles);
 }
 
-// Flags
 @override@JsonKey() final  bool pastHistoryLoaded;
 @override@JsonKey() final  bool bulkLoading;
 @override@JsonKey() final  bool inPlanMode;
 @override@JsonKey() final  bool collapseToolResults;
 @override@JsonKey() final  bool sessionUnavailable;
-// Legacy permission mode kept for compatibility with older bridge/app flows.
 @override@JsonKey() final  PermissionMode permissionMode;
-// Canonical session modes
 @override@JsonKey() final  ExecutionMode executionMode;
 @override@JsonKey() final  CodexApprovalPolicy codexApprovalPolicy;
 @override@JsonKey() final  String codexApprovalsReviewer;
@@ -304,35 +282,25 @@ class _ChatSessionState implements ChatSessionState {
 @override final  ReasoningEffort? codexModelReasoningEffort;
 @override@JsonKey() final  CodexSpeed codexSpeed;
 @override@JsonKey() final  bool planMode;
-// Sandbox mode - Freezed default is .on but Cubit constructor overrides
-// based on provider (Claude=off, Codex=on).
 @override@JsonKey() final  SandboxMode sandboxMode;
-// Tool use IDs hidden by tool_use_summary (subagent compression)
  final  Set<String> _hiddenToolUseIds;
-// Tool use IDs hidden by tool_use_summary (subagent compression)
 @override@JsonKey() Set<String> get hiddenToolUseIds {
   if (_hiddenToolUseIds is EqualUnmodifiableSetView) return _hiddenToolUseIds;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableSetView(_hiddenToolUseIds);
 }
 
-// Rewind preview (dry-run result)
 @override final  RewindPreviewMessage? rewindPreview;
-// Cost tracking
 @override@JsonKey() final  double totalCost;
 @override final  Duration? totalDuration;
-// Slash commands available in this session
  final  List<SlashCommand> _slashCommands;
-// Slash commands available in this session
 @override@JsonKey() List<SlashCommand> get slashCommands {
   if (_slashCommands is EqualUnmodifiableListView) return _slashCommands;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_slashCommands);
 }
 
-// Codex conversation queue (Bridge is the source of truth).
 @override final  QueuedInputItem? queuedInput;
-// Persisted Codex thread goal (Bridge/app-server is the source of truth).
 @override final  CodexGoal? goal;
 
 /// Create a copy of ChatSessionState
@@ -706,7 +674,7 @@ as PermissionRequestMessage,
 
 
 class ApprovalAskUser implements ApprovalState {
-  const ApprovalAskUser({required this.toolUseId, required final  Map<String, dynamic> input}): _input = input;
+  const ApprovalAskUser({required this.toolUseId, required  Map<String, dynamic> input}): _input = input;
   
 
  final  String toolUseId;

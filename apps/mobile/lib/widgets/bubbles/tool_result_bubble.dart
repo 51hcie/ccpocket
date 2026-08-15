@@ -5,6 +5,7 @@ import '../../features/generated_image_preview/generated_image_preview_mapper.da
 import '../../features/generated_image_preview/widgets/generated_image_chat_group.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
+
 import 'package:auto_route/auto_route.dart';
 
 import '../../router/app_router.dart';
@@ -57,9 +58,8 @@ class ToolResultBubbleState extends State<ToolResultBubble> {
     if (_restoredFromStorage) return;
     _restoredFromStorage = true;
 
-    final saved = PageStorage.maybeOf(
-      context,
-    )?.readState(context, identifier: _storageKey);
+    final saved = PageStorage.maybeOf(context)
+        ?.readState(context, identifier: _storageKey);
     if (saved is String) {
       for (final value in ToolResultExpansion.values) {
         if (value.name == saved) {
@@ -137,9 +137,8 @@ class ToolResultBubbleState extends State<ToolResultBubble> {
       : ToolResultExpansion.collapsed;
 
   void _persistExpansion() {
-    PageStorage.maybeOf(
-      context,
-    )?.writeState(context, _expansion.name, identifier: _storageKey);
+    PageStorage.maybeOf(context)
+        ?.writeState(context, _expansion.name, identifier: _storageKey);
   }
 
   late final ToolCategory _category = categorizeToolName(

@@ -497,9 +497,8 @@ class _FilePeekContentState extends State<_FilePeekContent> {
     final lines = content.split('\n');
     final gutterWidth = '${lines.length}'.length;
 
-    final baseStyle = codeTextSettingsOf(
-      context,
-    ).style(height: 1.5, color: Theme.of(context).colorScheme.onSurface);
+    final baseStyle = codeTextSettingsOf(context)
+        .style(height: 1.5, color: Theme.of(context).colorScheme.onSurface);
 
     final gutterStyle = baseStyle.copyWith(
       color: appColors.subtleText.withValues(alpha: 0.5),

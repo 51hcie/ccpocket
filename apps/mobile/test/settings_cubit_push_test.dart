@@ -249,41 +249,38 @@ void main() {
       bridge.dispose();
     });
 
-    test(
-      'token refresh unregisters old token then re-registers new token',
-      () async {
-        SharedPreferences.setMockInitialValues({
-          'settings_fcm_machines': '["$_testMachineId"]',
-          'machines_v2':
-              '[{"id":"$_testMachineId","host":"$_testHost","port":$_testPort}]',
-        });
-        final prefs = await SharedPreferences.getInstance();
-        final manager = await _createMachineManager(prefs);
-        await manager.init();
-        final bridge = FakeBridgeService()
-          ..emitConnection(BridgeConnectionState.connected, url: _testUrl);
-        final fcm = FakeFcmService(available: true, token: 'old-token');
-        final cubit = SettingsCubit(
-          prefs,
-          bridgeService: bridge,
-          machineManager: manager,
-          fcmService: fcm,
-        );
+    test('token refresh unregisters old token then re-registers new token', () async {
+      SharedPreferences.setMockInitialValues({
+        'settings_fcm_machines': '["$_testMachineId"]',
+        'machines_v2':
+            '[{"id":"$_testMachineId","host":"$_testHost","port":$_testPort}]',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final manager = await _createMachineManager(prefs);
+      await manager.init();
+      final bridge = FakeBridgeService()
+        ..emitConnection(BridgeConnectionState.connected, url: _testUrl);
+      final fcm = FakeFcmService(available: true, token: 'old-token');
+      final cubit = SettingsCubit(
+        prefs,
+        bridgeService: bridge,
+        machineManager: manager,
+        fcmService: fcm,
+      );
 
-        await _flushAsync();
-        fcm.emitTokenRefresh('new-token');
-        await _flushAsync();
+      await _flushAsync();
+      fcm.emitTokenRefresh('new-token');
+      await _flushAsync();
 
-        expect(bridge.unregisterCalls, ['old-token']);
-        expect(bridge.registerCalls.length, 2);
-        expect(bridge.registerCalls.first.token, 'old-token');
-        expect(bridge.registerCalls.last.token, 'new-token');
+      expect(bridge.unregisterCalls, ['old-token']);
+      expect(bridge.registerCalls.length, 2);
+      expect(bridge.registerCalls.first.token, 'old-token');
+      expect(bridge.registerCalls.last.token, 'new-token');
 
-        await cubit.close();
-        await fcm.disposeFake();
-        bridge.dispose();
-      },
-    );
+      await cubit.close();
+      await fcm.disposeFake();
+      bridge.dispose();
+    });
 
     test('toggle is no-op when not connected (no activeMachineId)', () async {
       SharedPreferences.setMockInitialValues({});
@@ -311,8 +308,7 @@ void main() {
     test('legacy migration enables all existing machines', () async {
       SharedPreferences.setMockInitialValues({
         'settings_fcm_enabled': true,
-        'machines_v2':
-            '[{"id":"m1","host":"10.0.0.1","port":8765},{"id":"m2","host":"10.0.0.2","port":8765}]',
+        'machines_v2': '[{"id":"m1","host":"10.0.0.1","port":8765},{"id":"m2","host":"10.0.0.2","port":8765}]',
       });
       final prefs = await SharedPreferences.getInstance();
       final manager = await _createMachineManager(prefs);

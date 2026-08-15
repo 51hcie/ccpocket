@@ -348,9 +348,8 @@ class _ToolUseTileState extends State<ToolUseTile> {
     if (_restoredFromStorage) return;
     _restoredFromStorage = true;
 
-    final saved = PageStorage.maybeOf(
-      context,
-    )?.readState(context, identifier: _storageKey);
+    final saved = PageStorage.maybeOf(context)
+        ?.readState(context, identifier: _storageKey);
     // Backwards-compat: legacy bool values
     if (saved is bool) {
       _expansion = saved
@@ -454,9 +453,8 @@ class _ToolUseTileState extends State<ToolUseTile> {
       _isEditTool ? ToolUseExpansion.expanded : ToolUseExpansion.collapsed;
 
   void _persistExpandedState() {
-    PageStorage.maybeOf(
-      context,
-    )?.writeState(context, _expansion.name, identifier: _storageKey);
+    PageStorage.maybeOf(context)
+        ?.writeState(context, _expansion.name, identifier: _storageKey);
   }
 }
 

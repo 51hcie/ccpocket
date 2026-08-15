@@ -102,8 +102,7 @@ void main() {
         final releases = [
           {
             'tag_name': 'macos/v1.45.0+75',
-            'html_url':
-                'https://github.com/K9i-0/ccpocket/releases/tag/macos/v1.45.0%2B75',
+            'html_url': 'https://github.com/K9i-0/ccpocket/releases/tag/macos/v1.45.0%2B75',
             'assets': [
               {
                 'name': 'wrong-name.dmg',
@@ -168,8 +167,7 @@ final _mockReleases = [
     'assets': [
       {
         'name': 'CC-Pocket-macos-v1.44.0.dmg',
-        'browser_download_url':
-            'https://github.com/K9i-0/ccpocket/releases/download/macos/v1.44.0%2B74/CC-Pocket-macos-v1.44.0.dmg',
+        'browser_download_url': 'https://github.com/K9i-0/ccpocket/releases/download/macos/v1.44.0%2B74/CC-Pocket-macos-v1.44.0.dmg',
       },
     ],
   },
@@ -186,8 +184,7 @@ final _mockReleases = [
     'assets': [
       {
         'name': 'CC-Pocket-macos-v1.43.0.dmg',
-        'browser_download_url':
-            'https://github.com/K9i-0/ccpocket/releases/download/macos/v1.43.0%2B73/CC-Pocket-macos-v1.43.0.dmg',
+        'browser_download_url': 'https://github.com/K9i-0/ccpocket/releases/download/macos/v1.43.0%2B73/CC-Pocket-macos-v1.43.0.dmg',
       },
     ],
   },

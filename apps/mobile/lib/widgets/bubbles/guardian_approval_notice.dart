@@ -95,10 +95,8 @@ class _GuardianApprovalHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final l = AppLocalizations.of(context);
-    final textStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-      color: appColors.subtleText,
-      fontWeight: FontWeight.w600,
-    );
+    final textStyle = Theme.of(context).textTheme.labelMedium
+        ?.copyWith(color: appColors.subtleText, fontWeight: FontWeight.w600);
 
     return Row(
       children: [
@@ -134,9 +132,8 @@ class _GuardianApprovalDetails extends StatelessWidget {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final l = AppLocalizations.of(context);
     final authorization = message.authorization?.trim();
-    final detailStyle = Theme.of(
-      context,
-    ).textTheme.bodySmall?.copyWith(color: appColors.subtleText, height: 1.4);
+    final detailStyle = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: appColors.subtleText, height: 1.4);
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -145,9 +142,8 @@ class _GuardianApprovalDetails extends StatelessWidget {
         children: [
           Divider(
             height: 1,
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: 0.7),
+            color: Theme.of(context).colorScheme.outlineVariant
+                .withValues(alpha: 0.7),
           ),
           const SizedBox(height: 8),
           Text(message.reason, style: detailStyle),

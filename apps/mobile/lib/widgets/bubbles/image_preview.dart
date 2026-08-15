@@ -86,9 +86,9 @@ class _SingleImage extends StatelessWidget {
                         return Container(
                           height: 100,
                           decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHigh,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHigh,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Center(
@@ -148,9 +148,9 @@ class _ImageThumbnail extends StatelessWidget {
                         width: height * 0.75,
                         height: height,
                         decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHigh,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Center(
