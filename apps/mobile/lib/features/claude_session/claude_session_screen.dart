@@ -1278,15 +1278,7 @@ class _ChatScreenBody extends HookWidget {
                         right: 12,
                         bottom: overlayHeight + 12,
                         child: ScrollToBottomButton(
-                          onPressed: () {
-                            if (scroll.controller.hasClients) {
-                              scroll.controller.animateTo(
-                                0.0,
-                                duration: const Duration(milliseconds: 200),
-                                curve: Curves.easeOut,
-                              );
-                            }
-                          },
+                          onPressed: scroll.forceScrollToBottom,
                         ),
                       );
                     },
@@ -1311,6 +1303,7 @@ class _ChatScreenBody extends HookWidget {
                       scrollToUserEntry: scrollToUserEntry,
                       bottomPadding: 8,
                       isCodex: false,
+                      isFollowingOutput: scroll.isFollowingOutput,
                       onFilePeekOpened: context
                           .read<ChatSessionCubit>()
                           .recordPeekedFile,

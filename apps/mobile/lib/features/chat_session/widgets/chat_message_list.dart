@@ -82,6 +82,7 @@ class ChatMessageList extends StatefulWidget {
   final ValueNotifier<int>? collapseToolResults;
   final double bottomPadding;
   final bool isCodex;
+  final bool isFollowingOutput;
   final ValueChanged<String>? onFilePeekOpened;
 
   /// Project path for file peek (reading files from Bridge).
@@ -104,6 +105,7 @@ class ChatMessageList extends StatefulWidget {
     this.bottomPadding = 8,
     this.projectPath,
     this.isCodex = false,
+    this.isFollowingOutput = true,
     this.onFilePeekOpened,
   });
 
@@ -186,7 +188,6 @@ class _ChatMessageListState extends State<ChatMessageList> {
       (cubit) => cubit.state.isStreaming,
     );
     final totalCount = allEntries.length + (hasStreaming ? 1 : 0);
-    final streamingCubit = context.read<StreamingStateCubit>();
     final derivedData = _deriveData(chatState, allEntries);
     final effectiveHiddenToolUseIds = {
       ...hiddenToolUseIds,
@@ -208,7 +209,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
         controller: widget.scrollController,
         reverse: true,
         physics: MaintainReadingPositionPhysics(
-          shouldMaintain: () => streamingCubit.state.isStreaming,
+          shouldMaintain: () => !widget.isFollowingOutput,
         ),
         padding: EdgeInsets.only(top: 36, bottom: widget.bottomPadding),
         itemCount: totalCount,

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('MaintainReadingPositionPhysics', () {
-    test('compensates for growth while streaming away from the bottom', () {
+    test('compensates for new output while reading away from the bottom', () {
       final physics = MaintainReadingPositionPhysics(
         shouldMaintain: () => true,
       );
@@ -19,9 +19,9 @@ void main() {
       expect(adjusted, 360);
     });
 
-    test('continues following output near the bottom', () {
+    test('does not compensate while output following is enabled', () {
       final physics = MaintainReadingPositionPhysics(
-        shouldMaintain: () => true,
+        shouldMaintain: () => false,
       );
 
       final adjusted = physics.adjustPositionForNewDimensions(
@@ -34,20 +34,54 @@ void main() {
       expect(adjusted, 80);
     });
 
-    test('does not compensate outside streaming', () {
+    test('compensates when finalized output becomes shorter', () {
       final physics = MaintainReadingPositionPhysics(
-        shouldMaintain: () => false,
+        shouldMaintain: () => true,
       );
 
       final adjusted = physics.adjustPositionForNewDimensions(
-        oldPosition: _metrics(pixels: 240, maxScrollExtent: 1000),
-        newPosition: _metrics(pixels: 240, maxScrollExtent: 1120),
+        oldPosition: _metrics(pixels: 360, maxScrollExtent: 1120),
+        newPosition: _metrics(pixels: 360, maxScrollExtent: 1000),
         isScrolling: false,
         velocity: 0,
       );
 
       expect(adjusted, 240);
     });
+
+    test('does not double-correct shrinkage at the scroll boundary', () {
+      final physics = MaintainReadingPositionPhysics(
+        shouldMaintain: () => true,
+        parent: const RangeMaintainingScrollPhysics(),
+      );
+
+      final adjusted = physics.adjustPositionForNewDimensions(
+        oldPosition: _metrics(pixels: 1120, maxScrollExtent: 1120),
+        newPosition: _metrics(pixels: 1120, maxScrollExtent: 1000),
+        isScrolling: false,
+        velocity: 0,
+      );
+
+      expect(adjusted, 1000);
+    });
+
+    test(
+      'does not compensate when reading-position maintenance is disabled',
+      () {
+        final physics = MaintainReadingPositionPhysics(
+          shouldMaintain: () => false,
+        );
+
+        final adjusted = physics.adjustPositionForNewDimensions(
+          oldPosition: _metrics(pixels: 240, maxScrollExtent: 1000),
+          newPosition: _metrics(pixels: 240, maxScrollExtent: 1120),
+          isScrolling: false,
+          velocity: 0,
+        );
+
+        expect(adjusted, 240);
+      },
+    );
 
     test('does not fight an active user drag', () {
       final physics = MaintainReadingPositionPhysics(

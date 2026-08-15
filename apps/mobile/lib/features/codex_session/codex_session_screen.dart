@@ -1401,15 +1401,7 @@ class _CodexChatBody extends HookWidget {
                         right: 12,
                         bottom: overlayHeight + 12,
                         child: ScrollToBottomButton(
-                          onPressed: () {
-                            if (scroll.controller.hasClients) {
-                              scroll.controller.animateTo(
-                                0.0,
-                                duration: const Duration(milliseconds: 200),
-                                curve: Curves.easeOut,
-                              );
-                            }
-                          },
+                          onPressed: scroll.forceScrollToBottom,
                         ),
                       );
                     },
@@ -1435,6 +1427,7 @@ class _CodexChatBody extends HookWidget {
                       collapseToolResults: collapseToolResults,
                       bottomPadding: 8,
                       isCodex: true,
+                      isFollowingOutput: scroll.isFollowingOutput,
                       onFilePeekOpened: context
                           .read<ChatSessionCubit>()
                           .recordPeekedFile,

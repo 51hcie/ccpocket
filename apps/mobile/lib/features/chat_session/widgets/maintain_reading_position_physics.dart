@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart' show ValueGetter, clampDouble;
 import 'package:flutter/widgets.dart';
 
-/// Keeps the content currently being read visually fixed while output grows
-/// at the bottom of a `reverse: true` chat list.
+/// Keeps the content currently being read visually fixed while new output
+/// grows at the bottom of a `reverse: true` chat list.
 ///
 /// The correction happens during layout, before a frame is painted, so the
 /// viewport does not flicker between the unadjusted and corrected positions.
@@ -14,8 +14,6 @@ class MaintainReadingPositionPhysics extends ScrollPhysics {
 
   final ValueGetter<bool> shouldMaintain;
 
-  /// Matches the threshold used by the chat's scroll-to-bottom affordance.
-  static const double scrolledUpThreshold = 100;
   static const double extentChangeTolerance = 1;
 
   @override
@@ -41,13 +39,12 @@ class MaintainReadingPositionPhysics extends ScrollPhysics {
     );
 
     if (isScrolling || !shouldMaintain()) return adjusted;
-    if (oldPosition.pixels <= scrolledUpThreshold) return adjusted;
 
     final delta = newPosition.maxScrollExtent - oldPosition.maxScrollExtent;
-    if (delta <= extentChangeTolerance) return adjusted;
+    if (delta.abs() <= extentChangeTolerance) return adjusted;
 
     return clampDouble(
-      adjusted + delta,
+      newPosition.pixels + delta,
       newPosition.minScrollExtent,
       newPosition.maxScrollExtent,
     );
