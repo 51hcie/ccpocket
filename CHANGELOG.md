@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.114.1] - 2026-08-17
+
+### Fixed
+- Preserve the visible chat reading position when the software keyboard opens, animates, or closes.
+
 ## [1.114.0] - 2026-08-15
 
 ### Changed
