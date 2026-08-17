@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/feature_flags.dart';
 import '../../hooks/use_app_resume_callback.dart';
-import '../../hooks/use_keyboard_scroll_adjustment.dart';
 import '../../hooks/use_scroll_tracking.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
@@ -611,7 +610,6 @@ class _CodexChatBody extends HookWidget {
     final isBackgroundRef = useRef(isBackground);
     isBackgroundRef.value = isBackground;
     final scroll = useScrollTracking(sessionId);
-    useKeyboardScrollAdjustment(scroll.controller);
 
     // Chat input controller
     final chatInputController = useMemoized(ComposerTextEditingController.new);
