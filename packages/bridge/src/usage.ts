@@ -25,6 +25,7 @@ export interface CodexRateLimitWindow {
 }
 
 export interface CodexRateLimits {
+  limit_id?: string | null;
   primary?: CodexRateLimitWindow | null;
   secondary?: CodexRateLimitWindow | null;
 }
@@ -40,6 +41,15 @@ interface CodexTokenCountEvent {
 
 const FIVE_HOUR_WINDOW_MINUTES = 5 * 60;
 const SEVEN_DAY_WINDOW_MINUTES = 7 * 24 * 60;
+
+/**
+ * Distinguish the account-wide Codex limit from model-specific limits.
+ * Older Codex versions did not include limit_id, so keep accepting those
+ * records for backwards compatibility.
+ */
+export function isGlobalCodexRateLimit(rateLimits: CodexRateLimits): boolean {
+  return rateLimits.limit_id == null || rateLimits.limit_id === "codex";
+}
 
 /**
  * Map Codex rate-limit windows by duration rather than their primary/secondary
@@ -211,7 +221,8 @@ async function findLatestTokenCount(filePath: string): Promise<CodexTokenCountEv
         if (
           event.type === "event_msg" &&
           event.payload?.type === "token_count" &&
-          event.payload?.rate_limits
+          event.payload?.rate_limits &&
+          isGlobalCodexRateLimit(event.payload.rate_limits)
         ) {
           return event;
         }

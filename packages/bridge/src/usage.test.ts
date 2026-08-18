@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapCodexRateLimits } from "./usage.js";
+import { isGlobalCodexRateLimit, mapCodexRateLimits } from "./usage.js";
 
 const fiveHourWindow = {
   used_percent: 35,
@@ -50,5 +50,21 @@ describe("mapCodexRateLimits", () => {
 
     expect(result.fiveHour?.utilization).toBe(35);
     expect(result.sevenDay?.utilization).toBe(80);
+  });
+});
+
+describe("isGlobalCodexRateLimit", () => {
+  it("accepts the account-wide Codex limit", () => {
+    expect(isGlobalCodexRateLimit({ limit_id: "codex" })).toBe(true);
+  });
+
+  it("accepts legacy rate limits without an identifier", () => {
+    expect(isGlobalCodexRateLimit({})).toBe(true);
+  });
+
+  it("rejects model-specific Codex limits", () => {
+    expect(isGlobalCodexRateLimit({ limit_id: "codex_bengalfox" })).toBe(
+      false,
+    );
   });
 });
