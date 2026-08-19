@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.114.2] - 2026-08-19
+
+### Changed
+- Build releases with Flutter 3.47.0, Dart 3.13.0, and Shorebird 1.6.118.
+- Update Flutter dependencies and generated code for Dart 3.13 compatibility.
+- Raise the macOS deployment target to 12.0 and use Android NDK 29 for current native plugin requirements.
+
 ## [1.114.1] - 2026-08-17
 
 ### Fixed
