@@ -25,8 +25,11 @@ jobs:
 
       - name: Install Linux desktop build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev libsqlite3-0 libsqlite3-dev xvfb
+          sudo timeout 10m apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 update
+          sudo env DEBIAN_FRONTEND=noninteractive timeout 10m \
+            apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=60 install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev \
+            libsqlite3-0 libsqlite3-dev xvfb
 
       - name: Disable precompiled Rust artifacts for Linux CI
         run: |
