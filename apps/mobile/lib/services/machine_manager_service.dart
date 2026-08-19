@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/logger.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -13,19 +14,17 @@ import '../models/machine.dart';
 import '../utils/network_endpoint.dart';
 import 'bridge_endpoint_probe.dart';
 
-typedef BridgeWsUrlResolver =
-    Future<String> Function(
-      Machine machine, {
-      String? password,
-      Future<String?> Function()? promptForPassword,
-    });
+typedef BridgeWsUrlResolver = Future<String> Function(
+  Machine machine, {
+  String? password,
+  Future<String?> Function()? promptForPassword,
+});
 
-typedef BridgeHttpBaseUrlResolver =
-    Future<String> Function(
-      Machine machine, {
-      String? password,
-      Future<String?> Function()? promptForPassword,
-    });
+typedef BridgeHttpBaseUrlResolver = Future<String> Function(
+  Machine machine, {
+  String? password,
+  Future<String?> Function()? promptForPassword,
+});
 
 /// Manages machine configurations, health status, and version info.
 ///

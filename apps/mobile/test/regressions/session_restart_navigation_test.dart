@@ -30,8 +30,7 @@ void main() {
       expect(
         shouldSkipNavigation,
         isTrue,
-        reason:
-            'session_created with sourceSessionId should be skipped by SessionListScreen',
+        reason: 'session_created with sourceSessionId should be skipped by SessionListScreen',
       );
     });
 
@@ -65,8 +64,7 @@ void main() {
         expect(
           shouldSkipNavigation,
           isFalse,
-          reason:
-              'Normal session_created should trigger navigation from SessionListScreen',
+          reason: 'Normal session_created should trigger navigation from SessionListScreen',
         );
       },
     );

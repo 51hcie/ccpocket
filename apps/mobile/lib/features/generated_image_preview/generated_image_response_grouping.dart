@@ -48,9 +48,9 @@ List<GeneratedImageResponseGroup> groupGeneratedImageResponses(
       flush();
     }
 
-    if (entry case ServerChatEntry(
-      message: final ToolResultMessage message,
-    ) when message.toolName == 'ImageGeneration' && message.images.isNotEmpty) {
+    if (entry case ServerChatEntry(message: final ToolResultMessage message)
+        when message.toolName == 'ImageGeneration' &&
+            message.images.isNotEmpty) {
       pendingIndices.add(index);
       pendingMessages.add(message);
     }
@@ -64,9 +64,8 @@ List<GeneratedImageResponseGroup> groupGeneratedImageResponses(
 Set<String> completedGeneratedImageToolUseIds(List<ChatEntry> entries) {
   return {
     for (final entry in entries)
-      if (entry case ServerChatEntry(
-        message: final ToolResultMessage message,
-      ) when message.toolName == 'ImageGeneration')
+      if (entry case ServerChatEntry(message: final ToolResultMessage message)
+          when message.toolName == 'ImageGeneration')
         message.toolUseId,
   };
 }

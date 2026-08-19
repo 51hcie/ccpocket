@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'git_view_state.dart';
@@ -9,6 +9,7 @@ part of 'git_view_state.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
@@ -80,7 +81,7 @@ class _$GitViewStateCopyWithImpl<$Res>
 /// Create a copy of GitViewState
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? files = null,Object? collapsedFileIndices = null,Object? loading = null,Object? error = freezed,Object? errorCode = freezed,Object? loadingImageIndices = null,Object? viewMode = null,Object? lineWrapEnabled = null,Object? staging = null,Object? commitsAhead = null,Object? commitsBehind = null,Object? hasUpstream = null,Object? fetching = null,Object? pulling = null,Object? pushing = null,Object? currentBranch = freezed,Object? isWorktree = null,}) {
-  return _then(_self.copyWith(
+  return _then(GitViewState(
 files: null == files ? _self.files : files // ignore: cast_nullable_to_non_nullable
 as List<DiffFile>,collapsedFileIndices: null == collapsedFileIndices ? _self.collapsedFileIndices : collapsedFileIndices // ignore: cast_nullable_to_non_nullable
 as Set<int>,loading: null == loading ? _self.loading : loading // ignore: cast_nullable_to_non_nullable
@@ -239,7 +240,7 @@ return $default(_that.files,_that.collapsedFileIndices,_that.loading,_that.error
 
 
 class _GitViewState implements GitViewState {
-  const _GitViewState({final  List<DiffFile> files = const [], final  Set<int> collapsedFileIndices = const {}, this.loading = false, this.error, this.errorCode, final  Set<int> loadingImageIndices = const {}, this.viewMode = GitViewMode.unstaged, this.lineWrapEnabled = true, this.staging = false, this.commitsAhead = 0, this.commitsBehind = 0, this.hasUpstream = false, this.fetching = false, this.pulling = false, this.pushing = false, this.currentBranch, this.isWorktree = false}): _files = files,_collapsedFileIndices = collapsedFileIndices,_loadingImageIndices = loadingImageIndices;
+  const _GitViewState({ List<DiffFile> files = const [],  Set<int> collapsedFileIndices = const {}, this.loading = false, this.error, this.errorCode,  Set<int> loadingImageIndices = const {}, this.viewMode = GitViewMode.unstaged, this.lineWrapEnabled = true, this.staging = false, this.commitsAhead = 0, this.commitsBehind = 0, this.hasUpstream = false, this.fetching = false, this.pulling = false, this.pushing = false, this.currentBranch, this.isWorktree = false}): _files = files,_collapsedFileIndices = collapsedFileIndices,_loadingImageIndices = loadingImageIndices;
   
 
 /// Parsed diff files.

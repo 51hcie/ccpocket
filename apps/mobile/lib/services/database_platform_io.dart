@@ -4,12 +4,11 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-typedef DatabaseOpenFunction =
-    Future<Database> Function({
-      required int version,
-      required OnDatabaseCreateFn onCreate,
-      required OnDatabaseVersionChangeFn onUpgrade,
-    });
+typedef DatabaseOpenFunction = Future<Database> Function({
+  required int version,
+  required OnDatabaseCreateFn onCreate,
+  required OnDatabaseVersionChangeFn onUpgrade,
+});
 
 class PlatformDatabaseOpenConfig {
   const PlatformDatabaseOpenConfig({required this.path, required this.open});

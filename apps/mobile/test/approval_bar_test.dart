@@ -146,8 +146,7 @@ void main() {
             toolName: 'McpElicitation',
             input: {
               'serverName': 'dart-mcp',
-              'message':
-                  'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
+              'message': 'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
               '_meta': {
                 'tool_description':
                     'Launches a Flutter application and returns its DTD URI.',

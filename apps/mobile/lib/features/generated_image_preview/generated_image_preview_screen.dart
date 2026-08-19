@@ -128,9 +128,8 @@ class _GeneratedImagePreviewScreenState
   }
 
   void _showShareFailure(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   KeyEventResult _handleKeyEvent(FocusNode _, KeyEvent event) {

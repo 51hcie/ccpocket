@@ -257,9 +257,8 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
         widget.pendingSessionCreated?.removeListener(_onPendingSessionCreated);
         final errorText = msg.message;
         context.router.maybePop();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorText)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorText)));
       }
     });
   }
@@ -727,9 +726,8 @@ class _ChatScreenBody extends HookWidget {
         } catch (_) {}
         final sub = bridge.messagesForSession(sessionId).listen((msg) {
           if (isBackgroundRef.value) return;
-          if (msg case ToolResultMessage(
-            :final toolName,
-          ) when _fileListRefreshToolNames.contains(toolName)) {
+          if (msg case ToolResultMessage(:final toolName)
+              when _fileListRefreshToolNames.contains(toolName)) {
             bridge.requestFileList(effectiveProjectPath);
           } else if (msg case ResultMessage(:final fileEdits)) {
             if ((fileEdits ?? 0) > 0) {
@@ -941,9 +939,9 @@ class _ChatScreenBody extends HookWidget {
                           icon: Icon(
                             Icons.folder_outlined,
                             size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -1003,9 +1001,9 @@ class _ChatScreenBody extends HookWidget {
                             child: Icon(
                               Icons.difference,
                               size: 18,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                           padding: EdgeInsets.zero,
@@ -1030,9 +1028,9 @@ class _ChatScreenBody extends HookWidget {
                           icon: Icon(
                             Icons.history,
                             size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -1650,9 +1648,8 @@ Future<void> _openInTerminal(BuildContext context, String? projectPath) async {
 
   if (!launched && context.mounted) {
     final l = AppLocalizations.of(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l.terminalAppNotInstalled)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l.terminalAppNotInstalled)));
   }
 }
 

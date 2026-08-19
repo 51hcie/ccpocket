@@ -47,9 +47,8 @@ class SessionNameTitle extends StatelessWidget {
               fontSize: 14,
               color: name != null && name.isNotEmpty
                   ? Theme.of(context).colorScheme.primary
-                  : Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  : Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.5),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

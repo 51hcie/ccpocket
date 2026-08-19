@@ -58,16 +58,14 @@ class UserMessageHistorySheet extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'Message History',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
                   Text(
                     '${messages.length} message${messages.length == 1 ? '' : 's'}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: appColors.subtleText,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: appColors.subtleText),
                   ),
                 ],
               ),
@@ -90,16 +88,14 @@ class UserMessageHistorySheet extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         'No messages yet',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: appColors.subtleText,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: appColors.subtleText),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Messages will appear here after Claude processes them',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: appColors.subtleText,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: appColors.subtleText),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -188,9 +184,8 @@ class _MessageTile extends StatelessWidget {
       ),
       subtitle: Text(
         timeStr,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: appColors.subtleText),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: appColors.subtleText),
       ),
       trailing: canRewind
           ? IconButton(

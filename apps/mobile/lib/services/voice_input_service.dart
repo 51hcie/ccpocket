@@ -34,9 +34,9 @@ class VoiceInputService {
       onResult: (SpeechRecognitionResult result) {
         onResult(result.recognizedWords, result.finalResult);
       },
-      localeId: localeId,
       listenOptions: SpeechListenOptions(
         cancelOnError: true,
+        localeId: localeId,
         partialResults: true,
       ),
     );

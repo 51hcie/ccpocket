@@ -1224,9 +1224,9 @@ class PromptHistoryService {
       DateTime.tryParse(value ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   static String _millisToIso(int? millis) =>
-      DateTime.fromMillisecondsSinceEpoch(
-        millis ?? 0,
-      ).toUtc().toIso8601String();
+      DateTime.fromMillisecondsSinceEpoch(millis ?? 0)
+          .toUtc()
+          .toIso8601String();
 
   static String _redactBridgeUrl(String url) {
     final uri = Uri.tryParse(url);

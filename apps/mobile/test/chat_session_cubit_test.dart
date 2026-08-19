@@ -283,9 +283,9 @@ void main() {
 
       expect(cubit.state.codexApprovalPolicy, CodexApprovalPolicy.onRequest);
       expect(cubit.state.codexApprovalsReviewer, 'auto_review');
-      final payload =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final payload = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(payload['approvalPolicy'], 'on-request');
       expect(payload['approvalsReviewer'], 'auto_review');
     });
@@ -359,9 +359,9 @@ void main() {
       expect(entry.clientMessageId, isNotNull);
 
       expect(mockBridge.sentMessages, hasLength(1));
-      final payload =
-          jsonDecode(mockBridge.sentMessages.single.toJson())
-              as Map<String, dynamic>;
+      final payload = jsonDecode(
+        mockBridge.sentMessages.single.toJson(),
+      ) as Map<String, dynamic>;
       expect(payload['clientMessageId'], entry.clientMessageId);
       expect(payload.containsKey('baseSeq'), isFalse);
     });
@@ -505,9 +505,9 @@ void main() {
       expect(entry.status, MessageStatus.queued);
       expect(entry.clientMessageId, isNotNull);
 
-      final payload =
-          jsonDecode(mockBridge.sentMessages.single.toJson())
-              as Map<String, dynamic>;
+      final payload = jsonDecode(
+        mockBridge.sentMessages.single.toJson(),
+      ) as Map<String, dynamic>;
       expect(payload['clientMessageId'], entry.clientMessageId);
       expect(payload['baseSeq'], 9);
     });
@@ -532,9 +532,9 @@ void main() {
         );
         expect(mockBridge.sentMessages, hasLength(1));
 
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final payload = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         expect(payload['type'], 'input');
         expect(payload['text'], 'Offline Codex input');
         expect(payload['baseSeq'], 7);
@@ -588,9 +588,9 @@ void main() {
           isTrue,
         );
 
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final payload = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         mockBridge.emitMessage(
           InputAckMessage(
             sessionId: 's1',
@@ -620,9 +620,9 @@ void main() {
         await Future.microtask(() {});
 
         cubit.sendMessage('Fast online Codex input');
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final payload = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         mockBridge.emitMessage(
           InputAckMessage(
             sessionId: 's1',
@@ -640,85 +640,79 @@ void main() {
       },
     );
 
-    test(
-      'codex first input sent while starting is shown when ack arrives before delay',
-      () async {
-        final cubit = createCubit('s1', provider: Provider.codex);
-        addTearDown(cubit.close);
-        await Future.microtask(() {});
+    test('codex first input sent while starting is shown when ack arrives before delay', () async {
+      final cubit = createCubit('s1', provider: Provider.codex);
+      addTearDown(cubit.close);
+      await Future.microtask(() {});
 
-        expect(cubit.state.status, ProcessStatus.starting);
+      expect(cubit.state.status, ProcessStatus.starting);
 
-        cubit.sendMessage('First Codex input while starting');
+      cubit.sendMessage('First Codex input while starting');
 
-        expect(cubit.state.entries.whereType<UserChatEntry>(), isEmpty);
-        expect(cubit.state.queuedInput, isNull);
+      expect(cubit.state.entries.whereType<UserChatEntry>(), isEmpty);
+      expect(cubit.state.queuedInput, isNull);
 
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
-        mockBridge.emitMessage(
-          InputAckMessage(
-            sessionId: 's1',
-            clientMessageId: payload['clientMessageId'] as String,
-            queued: false,
-          ),
+      final payload = jsonDecode(
+        mockBridge.sentMessages.single.toJson(),
+      ) as Map<String, dynamic>;
+      mockBridge.emitMessage(
+        InputAckMessage(
           sessionId: 's1',
-        );
-        await Future.microtask(() {});
-        await Future<void>.delayed(const Duration(milliseconds: 650));
+          clientMessageId: payload['clientMessageId'] as String,
+          queued: false,
+        ),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
+      await Future<void>.delayed(const Duration(milliseconds: 650));
 
-        final users = cubit.state.entries.whereType<UserChatEntry>().toList();
-        expect(users, hasLength(1));
-        expect(users.single.text, 'First Codex input while starting');
-        expect(users.single.status, MessageStatus.sent);
-        expect(cubit.state.queuedInput, isNull);
-      },
-    );
+      final users = cubit.state.entries.whereType<UserChatEntry>().toList();
+      expect(users, hasLength(1));
+      expect(users.single.text, 'First Codex input while starting');
+      expect(users.single.status, MessageStatus.sent);
+      expect(cubit.state.queuedInput, isNull);
+    });
 
-    test(
-      'codex restored user input delta does not duplicate delivery pending entry',
-      () async {
-        final cubit = createCubit('s1', provider: Provider.codex);
-        addTearDown(cubit.close);
-        mockBridge.emitMessage(
-          const StatusMessage(status: ProcessStatus.idle),
-          sessionId: 's1',
-        );
-        await Future.microtask(() {});
+    test('codex restored user input delta does not duplicate delivery pending entry', () async {
+      final cubit = createCubit('s1', provider: Provider.codex);
+      addTearDown(cubit.close);
+      mockBridge.emitMessage(
+        const StatusMessage(status: ProcessStatus.idle),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
 
-        cubit.sendMessage('Restored pending input');
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
-        final clientMessageId = payload['clientMessageId'] as String;
+      cubit.sendMessage('Restored pending input');
+      final payload = jsonDecode(
+        mockBridge.sentMessages.single.toJson(),
+      ) as Map<String, dynamic>;
+      final clientMessageId = payload['clientMessageId'] as String;
 
-        await Future<void>.delayed(const Duration(milliseconds: 650));
-        mockBridge.emitMessage(
-          InputAckMessage(sessionId: 's1', clientMessageId: clientMessageId),
-          sessionId: 's1',
-        );
-        await Future.microtask(() {});
+      await Future<void>.delayed(const Duration(milliseconds: 650));
+      mockBridge.emitMessage(
+        InputAckMessage(sessionId: 's1', clientMessageId: clientMessageId),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
 
-        expect(cubit.state.queuedInput, isNull);
-        expect(cubit.state.entries.whereType<UserChatEntry>(), hasLength(1));
+      expect(cubit.state.queuedInput, isNull);
+      expect(cubit.state.entries.whereType<UserChatEntry>(), hasLength(1));
 
-        mockBridge.emitMessage(
-          UserInputMessage(
-            text: 'Restored pending input',
-            clientMessageId: clientMessageId,
-            timestamp: '2026-04-28T12:00:00.000Z',
-          ),
-          sessionId: 's1',
-        );
-        await Future.microtask(() {});
+      mockBridge.emitMessage(
+        UserInputMessage(
+          text: 'Restored pending input',
+          clientMessageId: clientMessageId,
+          timestamp: '2026-04-28T12:00:00.000Z',
+        ),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
 
-        final users = cubit.state.entries.whereType<UserChatEntry>().toList();
-        expect(users, hasLength(1));
-        expect(users.single.text, 'Restored pending input');
-        expect(users.single.status, MessageStatus.sent);
-      },
-    );
+      final users = cubit.state.entries.whereType<UserChatEntry>().toList();
+      expect(users, hasLength(1));
+      expect(users.single.text, 'Restored pending input');
+      expect(users.single.status, MessageStatus.sent);
+    });
 
     test(
       'codex user_input with UUID and no local entry is displayed',
@@ -782,9 +776,9 @@ void main() {
           sessionId: 's1',
         );
         cubit.sendMessage('History matched input');
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final payload = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         final clientMessageId = payload['clientMessageId'] as String;
         mockBridge.emitMessage(
           AssistantServerMessage(
@@ -1263,9 +1257,9 @@ void main() {
           isTrue,
         );
 
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final payload = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         mockBridge.emitMessage(
           InputAckMessage(
             sessionId: 's1',
@@ -1296,9 +1290,9 @@ void main() {
         await Future.microtask(() {});
 
         cubit.sendMessage('Recreate before delivery delay');
-        final payload =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final payload = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         await cubit.close();
 
         final restored = createCubit('s1', provider: Provider.codex);
@@ -1399,9 +1393,9 @@ void main() {
         );
 
         expect(mockBridge.sentMessages, hasLength(1));
-        final json =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final json = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         expect(json['skills'], [
           {'name': 'skill-creator', 'path': '/tmp/skill-creator/SKILL.md'},
         ]);
@@ -1434,9 +1428,9 @@ void main() {
         );
 
         expect(mockBridge.sentMessages, hasLength(1));
-        final json =
-            jsonDecode(mockBridge.sentMessages.single.toJson())
-                as Map<String, dynamic>;
+        final json = jsonDecode(
+          mockBridge.sentMessages.single.toJson(),
+        ) as Map<String, dynamic>;
         expect(json['mentions'], [
           {'name': 'apps/mobile/', 'path': '/tmp/project/apps/mobile/'},
           {
@@ -1879,8 +1873,7 @@ void main() {
 
         mockBridge.emitMessage(
           const ErrorMessage(
-            message:
-                'Auto mode is unavailable in this environment. Keeping the current permission mode.',
+            message: 'Auto mode is unavailable in this environment. Keeping the current permission mode.',
             errorCode: 'auto_mode_unavailable',
           ),
           sessionId: 's1',
@@ -2136,53 +2129,50 @@ void main() {
       expect(cubit.state.entries.first, isA<UserChatEntry>());
     });
 
-    test(
-      'queued messages are promoted to sent one-by-one when assistant responses arrive',
-      () async {
-        final cubit = createCubit('s1');
-        addTearDown(cubit.close);
-        await Future.microtask(() {});
+    test('queued messages are promoted to sent one-by-one when assistant responses arrive', () async {
+      final cubit = createCubit('s1');
+      addTearDown(cubit.close);
+      await Future.microtask(() {});
 
-        cubit.sendMessage('Message A');
-        cubit.sendMessage('Message B');
+      cubit.sendMessage('Message A');
+      cubit.sendMessage('Message B');
 
-        mockBridge.emitMessage(
-          const InputAckMessage(sessionId: 's1', queued: true),
-          sessionId: 's1',
-        );
-        await Future.microtask(() {});
-        mockBridge.emitMessage(
-          const InputAckMessage(sessionId: 's1', queued: true),
-          sessionId: 's1',
-        );
-        await Future.microtask(() {});
+      mockBridge.emitMessage(
+        const InputAckMessage(sessionId: 's1', queued: true),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
+      mockBridge.emitMessage(
+        const InputAckMessage(sessionId: 's1', queued: true),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
 
-        var users = cubit.state.entries.whereType<UserChatEntry>().toList();
-        expect(users.map((e) => e.status).toList(), [
-          MessageStatus.queued,
-          MessageStatus.queued,
-        ]);
+      var users = cubit.state.entries.whereType<UserChatEntry>().toList();
+      expect(users.map((e) => e.status).toList(), [
+        MessageStatus.queued,
+        MessageStatus.queued,
+      ]);
 
-        mockBridge.emitMessage(
-          AssistantServerMessage(
-            message: AssistantMessage(
-              id: 'a1',
-              role: 'assistant',
-              content: [TextContent(text: 'reply for A')],
-              model: 'claude',
-            ),
+      mockBridge.emitMessage(
+        AssistantServerMessage(
+          message: AssistantMessage(
+            id: 'a1',
+            role: 'assistant',
+            content: [TextContent(text: 'reply for A')],
+            model: 'claude',
           ),
-          sessionId: 's1',
-        );
-        await Future.microtask(() {});
+        ),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
 
-        users = cubit.state.entries.whereType<UserChatEntry>().toList();
-        expect(users.map((e) => e.status).toList(), [
-          MessageStatus.sent,
-          MessageStatus.queued,
-        ]);
-      },
-    );
+      users = cubit.state.entries.whereType<UserChatEntry>().toList();
+      expect(users.map((e) => e.status).toList(), [
+        MessageStatus.sent,
+        MessageStatus.queued,
+      ]);
+    });
 
     test('input_ack(sent) advances sending messages one-by-one', () async {
       final cubit = createCubit('s1');
@@ -2327,24 +2317,24 @@ void main() {
         );
 
         cubit.updateQueuedInput(item, 'Edited');
-        var payload =
-            jsonDecode(mockBridge.sentMessages.last.toJson())
-                as Map<String, dynamic>;
+        var payload = jsonDecode(
+          mockBridge.sentMessages.last.toJson(),
+        ) as Map<String, dynamic>;
         expect(payload['type'], 'update_queued_input');
         expect(payload['itemId'], 'q1');
         expect(payload['text'], 'Edited');
 
         cubit.steerQueuedInput(item);
-        payload =
-            jsonDecode(mockBridge.sentMessages.last.toJson())
-                as Map<String, dynamic>;
+        payload = jsonDecode(
+          mockBridge.sentMessages.last.toJson(),
+        ) as Map<String, dynamic>;
         expect(payload['type'], 'steer_queued_input');
         expect(payload['itemId'], 'q1');
 
         cubit.cancelQueuedInput(item);
-        payload =
-            jsonDecode(mockBridge.sentMessages.last.toJson())
-                as Map<String, dynamic>;
+        payload = jsonDecode(
+          mockBridge.sentMessages.last.toJson(),
+        ) as Map<String, dynamic>;
         expect(payload['type'], 'cancel_queued_input');
         expect(payload['itemId'], 'q1');
       },

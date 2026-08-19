@@ -75,9 +75,9 @@ void main() {
       cubit.loadBranches();
 
       expect(cubit.state.loading, isTrue);
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_branches');
 
       mockBridge.emitBranches(
@@ -150,9 +150,9 @@ void main() {
       cubit.createBranch('feat/new', checkout: true);
 
       expect(cubit.state.creating, isTrue);
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_create_branch');
       expect(json['name'], 'feat/new');
       expect(json['checkout'], isTrue);
@@ -187,9 +187,9 @@ void main() {
       cubit.checkout('feat/login');
 
       expect(cubit.state.loading, isTrue);
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_checkout_branch');
       expect(json['branch'], 'feat/login');
 

@@ -80,9 +80,8 @@ class RewindActionSheet extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   l.rewind,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -100,9 +99,8 @@ class RewindActionSheet extends StatelessWidget {
                 userMessage.text.length > 120
                     ? '${userMessage.text.substring(0, 120)}...'
                     : userMessage.text,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: appColors.subtleText),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: appColors.subtleText),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -192,9 +190,8 @@ class _RewindPreviewInfo extends StatelessWidget {
             Expanded(
               child: Text(
                 preview.error ?? l.rewindCannotRewindFiles,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.error),
               ),
             ),
           ],

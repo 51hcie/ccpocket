@@ -38,8 +38,7 @@ String? _errorHint(String? errorCode, AppLocalizations l) {
     'path_not_allowed' => 'Update BRIDGE_ALLOWED_DIRS on the Bridge server',
     'git_not_available' => l.gitUnavailableHint,
     'bridge_update_required' => 'npm update -g @ccpocket/bridge',
-    'auto_mode_unavailable' =>
-      'Use Default mode here, or switch to a Claude environment that supports Auto mode',
+    'auto_mode_unavailable' => 'Use Default mode here, or switch to a Claude environment that supports Auto mode',
     _ => null,
   };
 }

@@ -37,9 +37,8 @@ class GuidePageReady extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             l.guideReadyHint,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: cs.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
         ],

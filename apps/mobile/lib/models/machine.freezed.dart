@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'machine.dart';
@@ -9,6 +9,7 @@ part of 'machine.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 
@@ -66,7 +67,7 @@ class _$BridgeVersionInfoCopyWithImpl<$Res>
 /// Create a copy of BridgeVersionInfo
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? version = null,Object? nodeVersion = freezed,Object? platform = freezed,Object? arch = freezed,Object? gitCommit = freezed,Object? gitBranch = freezed,}) {
-  return _then(_self.copyWith(
+  return _then(BridgeVersionInfo(
 version: null == version ? _self.version : version // ignore: cast_nullable_to_non_nullable
 as String,nodeVersion: freezed == nodeVersion ? _self.nodeVersion : nodeVersion // ignore: cast_nullable_to_non_nullable
 as String?,platform: freezed == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
@@ -303,8 +304,7 @@ mixin _$Machine {
  bool get hasResolvedTransport;/// Whether API key is stored in secure storage
  bool get hasApiKey;/// Last successful connection time
  DateTime? get lastConnected;/// Whether this machine is pinned/favorited (shows at top)
- bool get isFavorite;// ---- SSH Configuration ----
-/// Whether SSH remote startup is enabled
+ bool get isFavorite;/// Whether SSH remote startup is enabled
  bool get sshEnabled;/// SSH username
  String? get sshUsername;/// SSH port
  int get sshPort;/// SSH authentication type
@@ -365,7 +365,7 @@ class _$MachineCopyWithImpl<$Res>
 /// Create a copy of Machine
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = freezed,Object? host = null,Object? port = null,Object? useSsl = null,Object? connectionMode = null,Object? hasResolvedTransport = null,Object? hasApiKey = null,Object? lastConnected = freezed,Object? isFavorite = null,Object? sshEnabled = null,Object? sshUsername = freezed,Object? sshPort = null,Object? sshAuthType = null,Object? sshJumpHost = freezed,Object? sshJumpPort = null,Object? sshJumpUsername = freezed,Object? sshJumpAuthType = null,Object? hasCredentials = null,Object? hasJumpCredentials = null,}) {
-  return _then(_self.copyWith(
+  return _then(Machine(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String?,host: null == host ? _self.host : host // ignore: cast_nullable_to_non_nullable
@@ -550,7 +550,6 @@ class _Machine extends Machine {
 @override final  DateTime? lastConnected;
 /// Whether this machine is pinned/favorited (shows at top)
 @override@JsonKey() final  bool isFavorite;
-// ---- SSH Configuration ----
 /// Whether SSH remote startup is enabled
 @override@JsonKey() final  bool sshEnabled;
 /// SSH username
@@ -704,7 +703,7 @@ class _$MachineWithStatusCopyWithImpl<$Res>
 /// Create a copy of MachineWithStatus
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? machine = null,Object? status = null,Object? lastChecked = freezed,Object? lastError = freezed,Object? versionInfo = freezed,}) {
-  return _then(_self.copyWith(
+  return _then(MachineWithStatus(
 machine: null == machine ? _self.machine : machine // ignore: cast_nullable_to_non_nullable
 as Machine,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as MachineStatus,lastChecked: freezed == lastChecked ? _self.lastChecked : lastChecked // ignore: cast_nullable_to_non_nullable

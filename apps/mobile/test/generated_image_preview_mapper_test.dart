@@ -142,41 +142,44 @@ void main() {
     expect(item.thumbnailCacheKey, item.cacheKey);
   });
 
-  test('changes the disk cache key when content-addressed image id changes', () {
-    const firstMessage = ToolResultMessage(
-      toolUseId: 'image-generation-content-addressed',
-      toolName: 'ImageGeneration',
-      content: 'Generated 1 image',
-      images: [
-        ImageRef(
-          id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          url: '/images/first',
-          mimeType: 'image/png',
-        ),
-      ],
-    );
-    const changedMessage = ToolResultMessage(
-      toolUseId: 'image-generation-content-addressed',
-      toolName: 'ImageGeneration',
-      content: 'Generated 1 image',
-      images: [
-        ImageRef(
-          id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-          url: '/images/second',
-          mimeType: 'image/png',
-        ),
-      ],
-    );
+  test(
+    'changes the disk cache key when content-addressed image id changes',
+    () {
+      const firstMessage = ToolResultMessage(
+        toolUseId: 'image-generation-content-addressed',
+        toolName: 'ImageGeneration',
+        content: 'Generated 1 image',
+        images: [
+          ImageRef(
+            id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            url: '/images/first',
+            mimeType: 'image/png',
+          ),
+        ],
+      );
+      const changedMessage = ToolResultMessage(
+        toolUseId: 'image-generation-content-addressed',
+        toolName: 'ImageGeneration',
+        content: 'Generated 1 image',
+        images: [
+          ImageRef(
+            id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            url: '/images/second',
+            mimeType: 'image/png',
+          ),
+        ],
+      );
 
-    final first = generatedImageItemsFromToolResults([
-      firstMessage,
-    ], httpBaseUrl: 'http://localhost:8765').single;
-    final changed = generatedImageItemsFromToolResults([
-      changedMessage,
-    ], httpBaseUrl: 'http://localhost:8765').single;
+      final first = generatedImageItemsFromToolResults([
+        firstMessage,
+      ], httpBaseUrl: 'http://localhost:8765').single;
+      final changed = generatedImageItemsFromToolResults([
+        changedMessage,
+      ], httpBaseUrl: 'http://localhost:8765').single;
 
-    expect(first.cacheKey, isNot(changed.cacheKey));
-  });
+      expect(first.cacheKey, isNot(changed.cacheKey));
+    },
+  );
 
   test('reuses decoded data images from the supplied bounded cache', () {
     final cache = <GeneratedImageItemCacheKey, GeneratedImagePreviewItem>{};

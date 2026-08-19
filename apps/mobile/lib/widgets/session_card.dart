@@ -345,14 +345,14 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainer,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainer,
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.outlineVariant,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outlineVariant,
                                       width: 0.5,
                                     ),
                                   ),
@@ -361,9 +361,9 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -718,9 +718,8 @@ class _ToolApprovalArea extends StatelessWidget {
             text: presentation.summary,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.8),
             ),
             maxLines: 2,
           ),
@@ -730,9 +729,8 @@ class _ToolApprovalArea extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -758,9 +756,8 @@ class _ToolApprovalArea extends StatelessWidget {
                       line,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.85),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1144,9 +1141,8 @@ class _CodexPlanApprovalArea extends StatelessWidget {
                       ),
                       foregroundColor: Theme.of(context).colorScheme.error,
                       side: BorderSide(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.error.withValues(alpha: 0.5),
+                        color: Theme.of(context).colorScheme.error
+                            .withValues(alpha: 0.5),
                       ),
                     ),
                     child: FittedBox(
@@ -2049,9 +2045,8 @@ class _QuestionPageView extends StatelessWidget {
               '${currentPage + 1} of $totalPages',
               style: TextStyle(
                 fontSize: 11,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                color: Theme.of(context).colorScheme.onSurfaceVariant
+                    .withValues(alpha: 0.6),
               ),
             ),
           ],

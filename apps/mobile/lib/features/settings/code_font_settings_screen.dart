@@ -71,9 +71,8 @@ class _CodePreviewCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
           child: Text(
             l.codeFontPreview,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelLarge
+                ?.copyWith(color: cs.onSurfaceVariant),
           ),
         ),
         DecoratedBox(
@@ -183,9 +182,8 @@ class _CodeFontSizeControl extends StatelessWidget {
                       '${size}pt',
                       key: const ValueKey('code_font_size_value_label'),
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                   IconButton(

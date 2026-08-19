@@ -507,23 +507,20 @@ void main() {
       bridge.dispose();
     });
 
-    test(
-      'resolveSessionLink waits for a connection without queueing a stale request',
-      () async {
-        final bridge = BridgeService();
-        final outgoing = <ClientMessage>[];
-        bridge.onOutgoingMessage = outgoing.add;
+    test('resolveSessionLink waits for a connection without queueing a stale request', () async {
+      final bridge = BridgeService();
+      final outgoing = <ClientMessage>[];
+      bridge.onOutgoingMessage = outgoing.add;
 
-        final result = await bridge.resolveSessionLink(
-          'claude-uuid',
-          timeout: const Duration(milliseconds: 20),
-        );
+      final result = await bridge.resolveSessionLink(
+        'claude-uuid',
+        timeout: const Duration(milliseconds: 20),
+      );
 
-        expect(result.support, SessionLinkResolveSupport.unavailable);
-        expect(outgoing, isEmpty);
-        bridge.dispose();
-      },
-    );
+      expect(result.support, SessionLinkResolveSupport.unavailable);
+      expect(outgoing, isEmpty);
+      bridge.dispose();
+    });
 
     test('session list preserves visible delivery pending input', () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

@@ -33,8 +33,7 @@ const kTerminalAppPresets = <TerminalAppPreset>[
   TerminalAppPreset(
     id: 'blink',
     name: 'Blink Shell',
-    urlTemplate:
-        "blinkshell://run?key=ssh&cmd=ssh {{user}}@{{host}} -t 'cd {{project_path}} && \$SHELL'",
+    urlTemplate: "blinkshell://run?key=ssh&cmd=ssh {{user}}@{{host}} -t 'cd {{project_path}} && \$SHELL'",
   ),
   TerminalAppPreset(
     id: 'termius',

@@ -317,18 +317,15 @@ void main() {
       },
     );
 
-    test(
-      'non-project response keeps project show more available when more pages exist',
-      () async {
-        mockBridge.emitSessions([
-          _session(id: 's1', projectPath: '/a/proj1'),
-        ], hasMore: true);
-        await Future.microtask(() {});
+    test('non-project response keeps project show more available when more pages exist', () async {
+      mockBridge.emitSessions([
+        _session(id: 's1', projectPath: '/a/proj1'),
+      ], hasMore: true);
+      await Future.microtask(() {});
 
-        expect(cubit.state.hasMore, isTrue);
-        expect(cubit.state.exhaustedProjectPaths, isEmpty);
-      },
-    );
+      expect(cubit.state.hasMore, isTrue);
+      expect(cubit.state.exhaustedProjectPaths, isEmpty);
+    });
 
     test('sessions update accumulates project paths', () async {
       mockBridge.emitSessions([

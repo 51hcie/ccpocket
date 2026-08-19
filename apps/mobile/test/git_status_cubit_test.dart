@@ -55,9 +55,9 @@ void main() {
       final entry = cubit.state.entryFor('s1');
       expect(entry?.loading, isTrue);
       expect(entry?.showBadge, isFalse);
-      final json =
-          jsonDecode(bridge.sentMessages.single.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        bridge.sentMessages.single.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_status');
       expect(json['projectPath'], '/repo');
       expect(json['sessionId'], 's1');
@@ -106,9 +106,9 @@ void main() {
 
       cubit.refresh(sessionId: 's1', projectPath: '/repo');
 
-      final json =
-          jsonDecode(bridge.sentMessages.single.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        bridge.sentMessages.single.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['includeRemote'], isTrue);
 
       bridge.emitStatus(

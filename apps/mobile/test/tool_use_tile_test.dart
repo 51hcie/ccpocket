@@ -257,8 +257,7 @@ void main() {
           const ToolUseTile(
             name: 'Read',
             input: {
-              'file_path':
-                  '/Users/project/apps/mobile/lib/widgets/bubbles/assistant_bubble.dart',
+              'file_path': '/Users/project/apps/mobile/lib/widgets/bubbles/assistant_bubble.dart',
             },
           ),
         ),

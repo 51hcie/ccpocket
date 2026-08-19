@@ -126,12 +126,10 @@ void main() {
     });
 
     test('defaults optional file list metadata for older bridges', () {
-      final msg =
-          ServerMessage.fromJson({
-                'type': 'file_list',
-                'files': ['README.md'],
-              })
-              as FileListMessage;
+      final msg = ServerMessage.fromJson({
+        'type': 'file_list',
+        'files': ['README.md'],
+      }) as FileListMessage;
 
       expect(msg.totalFiles, isNull);
       expect(msg.truncated, isFalse);

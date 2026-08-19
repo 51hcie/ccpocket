@@ -91,9 +91,8 @@ String _generatedImageCacheKey(
   String mimeType,
 ) {
   final normalizedImageId = message.images[imageIndex].id.toLowerCase();
-  final isContentAddressed = RegExp(
-    r'^[0-9a-f]{64}$',
-  ).hasMatch(normalizedImageId);
+  final isContentAddressed = RegExp(r'^[0-9a-f]{64}$')
+      .hasMatch(normalizedImageId);
   final identity = isContentAddressed
       ? 'generated-image-content-v1\n$normalizedImageId\n$mimeType'
       : 'generated-image-v1\n'

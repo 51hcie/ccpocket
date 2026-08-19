@@ -53,8 +53,7 @@ void main() {
         wrap(
           const ToolUseSummaryBubble(
             message: ToolUseSummaryMessage(
-              summary:
-                  'Read package.json, analyzed 15 source files, fixed 3 TypeScript errors, updated 2 test files, and committed changes',
+              summary: 'Read package.json, analyzed 15 source files, fixed 3 TypeScript errors, updated 2 test files, and committed changes',
               precedingToolUseIds: ['tu-1', 'tu-2', 'tu-3', 'tu-4', 'tu-5'],
             ),
           ),

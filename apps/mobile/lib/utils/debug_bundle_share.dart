@@ -147,9 +147,8 @@ String buildAgentInvestigationPrompt(DebugBundleMessage bundle) {
   if (savedBundlePath.isEmpty && traceFilePath.isEmpty) {
     lines.add('fallback_bundle_json:');
     lines.add(
-      const JsonEncoder.withIndent(
-        '  ',
-      ).convert(_buildDebugBundlePayload(bundle)),
+      const JsonEncoder.withIndent('  ')
+          .convert(_buildDebugBundlePayload(bundle)),
     );
   }
 

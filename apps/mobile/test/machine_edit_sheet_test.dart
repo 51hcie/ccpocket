@@ -140,15 +140,14 @@ void main() {
     ) async {
       await pumpSheet(
         tester,
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       final dropdown = tester
@@ -165,15 +164,14 @@ void main() {
         tester,
         machine: const Machine(id: '', host: 'bridge.local'),
         onSaveAndConnect: (machine, apiKey) {},
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       expect(find.text('Add Machine'), findsOneWidget);
@@ -186,15 +184,14 @@ void main() {
       await pumpSheet(
         tester,
         machine: const Machine(id: 'm8', host: 'bridge.example.com'),
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       await tester.tap(find.widgetWithText(TextField, 'Name'));
@@ -223,15 +220,14 @@ void main() {
         ),
         existingSshPassword: 'target-pw',
         keyboardInset: 320,
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       final animatedPadding = tester.widget<AnimatedPadding>(
@@ -256,15 +252,14 @@ void main() {
           useSsl: true,
           connectionMode: BridgeConnectionMode.secureOnly,
         ),
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       final dropdown = tester
@@ -405,15 +400,14 @@ void main() {
           sshUsername: 'target-user',
         ),
         existingSshPassword: 'target-pw',
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       expect(find.text('Use SSH jump host'), findsOneWidget);
@@ -512,15 +506,14 @@ void main() {
         existingSshPassword: 'target-pw',
         existingSshJumpPassword: 'jump-pw',
         onTestConnectionCall: (value) => call = value,
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       await tester.tap(find.text('Test Connection'));
@@ -705,15 +698,14 @@ void main() {
         ),
         existingSshPrivateKey: 'saved-private-key',
         existingSshJumpPrivateKey: 'saved-jump-private-key',
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {},
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {},
       );
 
       expect(find.text('マシンを編集'), findsOneWidget);

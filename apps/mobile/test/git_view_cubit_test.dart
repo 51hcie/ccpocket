@@ -449,9 +449,9 @@ void main() {
       cubit.stageFile(1); // file_b.dart
       expect(cubit.state.staging, isTrue);
 
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_stage');
       expect(json['files'], ['file_b.dart']);
     });
@@ -473,9 +473,9 @@ void main() {
       cubit.stageAll();
       expect(cubit.state.staging, isTrue);
 
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_stage');
       expect((json['files'] as List).cast<String>().toSet(), {
         'file_a.dart',
@@ -551,9 +551,9 @@ void main() {
       cubit.unstageAll();
       expect(cubit.state.staging, isTrue);
 
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_unstage');
       expect((json['files'] as List).cast<String>().toSet(), {
         'file_a.dart',
@@ -579,9 +579,9 @@ void main() {
       cubit.revertAll();
       expect(cubit.state.staging, isTrue);
 
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_revert_file');
       expect((json['files'] as List).cast<String>().toSet(), {
         'file_a.dart',
@@ -627,9 +627,9 @@ void main() {
       await Future.microtask(() {});
 
       cubit.unstageHunk(0, 0);
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_unstage_hunks');
       expect(json['hunks'], [
         {'file': 'file_a.dart', 'hunkIndex': 0},
@@ -651,9 +651,9 @@ void main() {
       await Future.microtask(() {});
 
       cubit.revertHunk(1, 0);
-      final json =
-          jsonDecode(mockBridge.sentMessages.last.toJson())
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        mockBridge.sentMessages.last.toJson(),
+      ) as Map<String, dynamic>;
       expect(json['type'], 'git_revert_hunks');
       expect(json['hunks'], [
         {'file': 'file_b.dart', 'hunkIndex': 0},

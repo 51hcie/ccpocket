@@ -293,8 +293,7 @@ void main() {
             role: 'assistant',
             content: [
               const TextContent(
-                text:
-                    'Plan update: Initial draft\n1. [in progress] Gather requirements',
+                text: 'Plan update: Initial draft\n1. [in progress] Gather requirements',
               ),
             ],
             model: 'codex',
@@ -1164,38 +1163,35 @@ void main() {
   });
 
   group('PermissionRequestMessage for McpElicitation questions', () {
-    test(
-      'question-based MCP elicitation sets pendingPermission instead of askToolUseId',
-      () {
-        final update = handler.handle(
-          const PermissionRequestMessage(
-            toolUseId: 'tu-mcp-ask',
-            toolName: 'McpElicitation',
-            input: {
-              'questions': [
-                {
-                  'header': 'Approve app tool call?',
-                  'question': 'Allow this request?',
-                  'options': [
-                    {'label': 'Allow', 'description': ''},
-                    {'label': 'Allow for this session', 'description': ''},
-                    {'label': 'Always allow', 'description': ''},
-                    {'label': 'Cancel', 'description': ''},
-                  ],
-                },
-              ],
-            },
-          ),
-          isBackground: false,
-        );
+    test('question-based MCP elicitation sets pendingPermission instead of askToolUseId', () {
+      final update = handler.handle(
+        const PermissionRequestMessage(
+          toolUseId: 'tu-mcp-ask',
+          toolName: 'McpElicitation',
+          input: {
+            'questions': [
+              {
+                'header': 'Approve app tool call?',
+                'question': 'Allow this request?',
+                'options': [
+                  {'label': 'Allow', 'description': ''},
+                  {'label': 'Allow for this session', 'description': ''},
+                  {'label': 'Always allow', 'description': ''},
+                  {'label': 'Cancel', 'description': ''},
+                ],
+              },
+            ],
+          },
+        ),
+        isBackground: false,
+      );
 
-        expect(update.askToolUseId, isNull);
-        expect(update.askInput, isNull);
-        expect(update.pendingPermission, isNotNull);
-        expect(update.pendingPermission?.toolUseId, 'tu-mcp-ask');
-        expect(update.pendingToolUseId, 'tu-mcp-ask');
-      },
-    );
+      expect(update.askToolUseId, isNull);
+      expect(update.askInput, isNull);
+      expect(update.pendingPermission, isNotNull);
+      expect(update.pendingPermission?.toolUseId, 'tu-mcp-ask');
+      expect(update.pendingToolUseId, 'tu-mcp-ask');
+    });
   });
 
   group('PermissionRequestMessage.summary', () {
@@ -1207,8 +1203,7 @@ void main() {
           'questions': [
             {
               'header': 'Approve app tool call?',
-              'question':
-                  'The dart-mcp MCP server wants to run the tool "dart_format".',
+              'question': 'The dart-mcp MCP server wants to run the tool "dart_format".',
               'options': [
                 {'label': 'Approve Once', 'description': ''},
                 {'label': 'Approve this Session', 'description': ''},
@@ -1429,8 +1424,7 @@ void main() {
         toolName: 'McpElicitation',
         input: {
           'serverName': 'dart-mcp',
-          'message':
-              'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
+          'message': 'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
           '_meta': {
             'tool_description':
                 'Launches a Flutter application and returns its DTD URI.',

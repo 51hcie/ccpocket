@@ -80,9 +80,8 @@ class ConnectForm extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.primary
+                      .withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -139,9 +138,9 @@ class ConnectForm extends StatelessWidget {
               child: FilledButton.icon(
                 key: const ValueKey('scan_qr_button'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHigh,
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHigh,
                   foregroundColor: Theme.of(context).colorScheme.onSurface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),

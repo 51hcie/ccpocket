@@ -86,93 +86,87 @@ void main() {
   final enabled =
       Platform.environment['CCPOCKET_SSH_BRIDGE_TUNNEL_SMOKE'] == '1';
 
-  group(
-    'SSH Bridge tunnel smoke',
-    skip: enabled ? null : 'smoke env not set',
-    () {
-      test(
-        'target bridge is unreachable directly but reachable through jump tunnel',
-        () async {
-          final targetHost =
-              Platform.environment['CCPOCKET_BRIDGE_TARGET_HOST'] ??
-              'target-sshd';
-          final targetPort = int.parse(
-            Platform.environment['CCPOCKET_BRIDGE_TARGET_PORT'] ?? '8765',
-          );
-          final jumpHost =
-              Platform.environment['CCPOCKET_SSH_JUMP_HOST'] ?? '127.0.0.1';
-          final jumpPort = int.parse(
-            Platform.environment['CCPOCKET_SSH_JUMP_PORT'] ?? '22220',
-          );
-          final username =
-              Platform.environment['CCPOCKET_SSH_USERNAME'] ?? 'ccpocket';
-          final password =
-              Platform.environment['CCPOCKET_SSH_PASSWORD'] ?? 'ccpocket';
+  group('SSH Bridge tunnel smoke', skip: enabled ? null : 'smoke env not set', () {
+    test(
+      'target bridge is unreachable directly but reachable through jump tunnel',
+      () async {
+        final targetHost =
+            Platform.environment['CCPOCKET_BRIDGE_TARGET_HOST'] ??
+            'target-sshd';
+        final targetPort = int.parse(
+          Platform.environment['CCPOCKET_BRIDGE_TARGET_PORT'] ?? '8765',
+        );
+        final jumpHost =
+            Platform.environment['CCPOCKET_SSH_JUMP_HOST'] ?? '127.0.0.1';
+        final jumpPort = int.parse(
+          Platform.environment['CCPOCKET_SSH_JUMP_PORT'] ?? '22220',
+        );
+        final username =
+            Platform.environment['CCPOCKET_SSH_USERNAME'] ?? 'ccpocket';
+        final password =
+            Platform.environment['CCPOCKET_SSH_PASSWORD'] ?? 'ccpocket';
 
-          await expectLater(
-            http
-                .get(Uri.parse('http://$targetHost:$targetPort/health'))
-                .timeout(const Duration(seconds: 2)),
-            throwsA(anything),
-          );
+        await expectLater(
+          http
+              .get(Uri.parse('http://$targetHost:$targetPort/health'))
+              .timeout(const Duration(seconds: 2)),
+          throwsA(anything),
+        );
 
-          SharedPreferences.setMockInitialValues({});
-          final prefs = await SharedPreferences.getInstance();
-          final manager = MachineManagerService(prefs, _FakeSecureStorage());
-          final tunnelService = SshBridgeTunnelService(
-            manager,
-            connectionTimeout: const Duration(seconds: 5),
-            debugLog: _printSshDebugOnFailure,
-          );
-          addTearDown(tunnelService.closeAll);
-          manager.configureBridgeTunnelResolvers(
-            wsUrlResolver: tunnelService.buildWsUrl,
-            httpBaseUrlResolver: tunnelService.buildHttpBaseUrl,
-          );
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final manager = MachineManagerService(prefs, _FakeSecureStorage());
+        final tunnelService = SshBridgeTunnelService(
+          manager,
+          connectionTimeout: const Duration(seconds: 5),
+          debugLog: _printSshDebugOnFailure,
+        );
+        addTearDown(tunnelService.closeAll);
+        manager.configureBridgeTunnelResolvers(
+          wsUrlResolver: tunnelService.buildWsUrl,
+          httpBaseUrlResolver: tunnelService.buildHttpBaseUrl,
+        );
 
-          await manager.addMachine(
-            Machine(
-              id: 'm1',
-              host: targetHost,
-              port: targetPort,
-              sshEnabled: true,
-              sshUsername: username,
-              sshJumpHost: jumpHost,
-              sshJumpPort: jumpPort,
-            ),
-            sshPassword: password,
-          );
+        await manager.addMachine(
+          Machine(
+            id: 'm1',
+            host: targetHost,
+            port: targetPort,
+            sshEnabled: true,
+            sshUsername: username,
+            sshJumpHost: jumpHost,
+            sshJumpPort: jumpPort,
+          ),
+          sshPassword: password,
+        );
 
-          expect(await manager.checkHealth('m1'), MachineStatus.online);
+        expect(await manager.checkHealth('m1'), MachineStatus.online);
 
-          final wsUrl = await manager.buildWsUrl('m1');
-          expect(wsUrl, startsWith('ws://127.0.0.1:'));
-          final httpBaseUrl = wsUrl.replaceFirst('ws://', 'http://');
+        final wsUrl = await manager.buildWsUrl('m1');
+        expect(wsUrl, startsWith('ws://127.0.0.1:'));
+        final httpBaseUrl = wsUrl.replaceFirst('ws://', 'http://');
 
-          final health = await _getWithRetry(Uri.parse('$httpBaseUrl/health'));
-          expect(health.body, 'ok');
+        final health = await _getWithRetry(Uri.parse('$httpBaseUrl/health'));
+        expect(health.body, 'ok');
 
-          final version = await _getWithRetry(
-            Uri.parse('$httpBaseUrl/version'),
-          );
-          expect(
-            jsonDecode(version.body),
-            containsPair('version', '0.0.0-smoke'),
-          );
+        final version = await _getWithRetry(Uri.parse('$httpBaseUrl/version'));
+        expect(
+          jsonDecode(version.body),
+          containsPair('version', '0.0.0-smoke'),
+        );
 
-          final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
-          addTearDown(channel.sink.close);
+        final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+        addTearDown(channel.sink.close);
 
-          await channel.ready.timeout(const Duration(seconds: 5));
-          final message = await channel.stream.first.timeout(
-            const Duration(seconds: 5),
-          );
-          expect(
-            jsonDecode(message as String),
-            containsPair('type', 'bridge_smoke'),
-          );
-        },
-      );
-    },
-  );
+        await channel.ready.timeout(const Duration(seconds: 5));
+        final message = await channel.stream.first.timeout(
+          const Duration(seconds: 5),
+        );
+        expect(
+          jsonDecode(message as String),
+          containsPair('type', 'bridge_smoke'),
+        );
+      },
+    );
+  });
 }

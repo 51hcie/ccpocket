@@ -1017,10 +1017,9 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   }
 
   void _rememberAdditionalWritableRoot(String path) {
-    final nextHistory = _uniquePaths([
-      path,
-      ..._additionalWritableRootHistory,
-    ]).take(_maxAdditionalWritableRootHistory).toList();
+    final nextHistory = _uniquePaths([path, ..._additionalWritableRootHistory])
+        .take(_maxAdditionalWritableRootHistory)
+        .toList();
     setState(() => _additionalWritableRootHistory = nextHistory);
     unawaited(_saveAdditionalWritableRootHistory(nextHistory));
   }
@@ -2848,8 +2847,7 @@ class _WorktreeToggleTile extends StatelessWidget {
                     ),
                   ),
                   Tooltip(
-                    message:
-                        'Creates an isolated git working tree for this session.',
+                    message: 'Creates an isolated git working tree for this session.',
                     child: Icon(
                       Icons.info_outline,
                       size: 16,

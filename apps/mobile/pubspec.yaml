@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.114.1+213
 
 environment:
-  sdk: ^3.12.2
+  sdk: ^3.13.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -57,7 +57,7 @@ dependencies:
   provider: ^6.1.5
   flutter_hooks: ^0.21.3+1
   freezed_annotation: ^3.1.0
-  json_annotation: ^4.9.0
+  json_annotation: ^4.12.0
   share_plus: ^12.0.1
   image_picker: ^1.1.2
   path: ^1.9.1
@@ -109,7 +109,9 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   altive_lints: ^4.0.0
-  freezed: ^3.1.0
+  # Dart 3.13 forbids `final` on regular parameters; Freezed 4 generates
+  # compatible constructors (rrousselGit/freezed#1352).
+  freezed: ^4.0.0-dev.3
   flutter_launcher_icons: ^0.13.1
   build_runner: ^2.5.4
   bloc_test: ^10.0.0
@@ -125,7 +127,7 @@ dev_dependencies:
 flutter:
   config:
     # speech_to_text's SwiftPM manifest still targets macOS 10.14, while the
-    # plugin uses APIs that require 10.15+. CocoaPods respects the app's 11.0
+    # plugin uses APIs that require 10.15+. CocoaPods respects the app's 12.0
     # deployment target, so keep SPM off for this project for now.
     enable-swift-package-manager: false
   generate: true

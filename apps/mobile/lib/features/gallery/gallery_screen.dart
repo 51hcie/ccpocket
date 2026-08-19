@@ -78,9 +78,8 @@ class GalleryScreen extends HookWidget {
             Text(
               images.isEmpty
                   ? AppLocalizations.of(context).gallery
-                  : AppLocalizations.of(
-                      context,
-                    ).galleryWithCount(images.length),
+                  : AppLocalizations.of(context)
+                        .galleryWithCount(images.length),
             ),
           ),
           actions: chrome.padActions([

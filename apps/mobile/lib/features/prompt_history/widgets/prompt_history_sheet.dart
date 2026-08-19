@@ -38,18 +38,16 @@ class PromptHistorySheet extends StatelessWidget {
           currentProjectPath: currentProjectPath,
           currentBridgeId: currentBridgeId,
         );
-        Future.wait([
-          service.getDefaultFilters(),
-          service.getFiltersExpanded(),
-        ]).then((values) {
-          if (!cubit.isClosed) {
-            cubit.restorePreferences(
-              filters: values[0] as PromptHistoryFilters,
-              filtersExpanded: values[1] as bool,
-              syncFirst: true,
-            );
-          }
-        });
+        Future.wait([service.getDefaultFilters(), service.getFiltersExpanded()])
+            .then((values) {
+              if (!cubit.isClosed) {
+                cubit.restorePreferences(
+                  filters: values[0] as PromptHistoryFilters,
+                  filtersExpanded: values[1] as bool,
+                  syncFirst: true,
+                );
+              }
+            });
         return cubit;
       },
       child: _PromptHistorySheetBody(
