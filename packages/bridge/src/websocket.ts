@@ -7400,14 +7400,17 @@ export class BridgeWebSocketServer {
   }
 
   private getActiveCodexProcess(): CodexProcess | null {
-    const summary = this.sessionManager
-      .list()
-      .find((session) => session.provider === "codex");
-    if (!summary) return null;
-    const session = this.sessionManager.get(summary.id);
-    return session?.provider === "codex"
-      ? (session.process as CodexProcess)
-      : null;
+    // SessionManager retains idle sessions after their process exits.
+    // Skip those entries so auxiliary RPCs can use a healthy process or
+    // create a temporary standalone app-server.
+    for (const summary of this.sessionManager.list()) {
+      if (summary.provider !== "codex") continue;
+      const session = this.sessionManager.get(summary.id);
+      if (session?.provider !== "codex") continue;
+      const process = session.process as CodexProcess;
+      if (process.isRunning) return process;
+    }
+    return null;
   }
 
   private withCodexAutoReviewPolicy(

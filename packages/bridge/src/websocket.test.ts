@@ -112,6 +112,7 @@ vi.mock("./session.js", () => ({
       const id = `s-${++this.seq}`;
       const process = {
         status: "idle",
+        isRunning: true,
         sessionId: codexOptions && typeof codexOptions === "object" && "threadId" in codexOptions
           ? (codexOptions as { threadId?: string }).threadId
           : options?.sessionId,
@@ -378,6 +379,7 @@ vi.mock("./session.js", () => ({
       this.sessions.delete(id);
       const newId = `s-${++this.seq}`;
       const process = {
+        isRunning: true,
         isWaitingForInput: true,
         setPermissionMode: vi.fn(async () => {}),
         approvalPolicy: "never",
@@ -7690,6 +7692,31 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     bridge.close();
   });
 
+  it("skips stopped codex processes when selecting an active process", () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const sessionManager = (bridge as any).sessionManager;
+    const deadId = sessionManager.create(
+      "/tmp/project-codex-dead",
+      undefined,
+      undefined,
+      undefined,
+      "codex",
+    );
+    const healthyId = sessionManager.create(
+      "/tmp/project-codex-healthy",
+      undefined,
+      undefined,
+      undefined,
+      "codex",
+    );
+    sessionManager.get(deadId).process.isRunning = false;
+    const healthyProcess = sessionManager.get(healthyId).process;
+
+    expect((bridge as any).getActiveCodexProcess()).toBe(healthyProcess);
+
+    bridge.close();
+  });
+
   it("uses active codex thread/list for codex recent sessions", async () => {
     const bridge = new BridgeWebSocketServer({ server: httpServer });
     const ws = {
@@ -7790,9 +7817,18 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     bridge.close();
   });
 
-  it("uses standalone codex app-server for codex recent sessions when no active session exists", async () => {
+  it("uses standalone codex app-server when all codex processes have stopped", async () => {
     const bridge = new BridgeWebSocketServer({ server: httpServer });
     const stop = vi.fn();
+    const sessionManager = (bridge as any).sessionManager;
+    const deadId = sessionManager.create(
+      "/tmp/project-codex",
+      undefined,
+      undefined,
+      undefined,
+      "codex",
+    );
+    sessionManager.get(deadId).process.isRunning = false;
 
     (bridge as any).createStandaloneCodexProcess = vi.fn(async () => ({
       listThreads: vi.fn(async () => ({
