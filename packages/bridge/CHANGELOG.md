@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.70.2] - 2026-08-19
+
+### Fixed
+- Skip stopped Codex processes for auxiliary RPCs so history, model, and recent-session requests can recover through a healthy or temporary app-server.
+
 ## [1.70.1] - 2026-08-19
 
 ### Fixed
