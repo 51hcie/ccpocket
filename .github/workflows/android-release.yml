@@ -32,8 +32,10 @@ jobs:
           java-version: '17'
       - name: Install Android NDK
         run: |
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager "ndk;29.0.13846066"
+          SDKMANAGER="${ANDROID_HOME:?}/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "ndk;29.0.13846066"
       - uses: gradle/gradle-build-action@ac2d340dc04d9e1113182899e983b5400c17cda1 # v3.5.0
       # Android signing: decode keystore from base64 secret
       - name: Setup Android signing
