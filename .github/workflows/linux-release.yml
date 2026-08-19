@@ -93,7 +93,6 @@ jobs:
           echo "archive_name=$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Extract changelog section
-        if: startsWith(github.ref, 'refs/tags/')
         id: changelog
         run: |
           SEMVER="${{ steps.version.outputs.semver }}"
@@ -105,21 +104,25 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_NOTES: ${{ steps.changelog.outputs.notes }}
         run: |
+          if [[ "$GITHUB_REF" == refs/tags/linux/v* ]]; then
+            RELEASE_TAG="$GITHUB_REF_NAME"
+          else
+            RELEASE_TAG="linux/v${{ steps.version.outputs.version }}"
+          fi
           printf '%s\n' "$RELEASE_NOTES" > /tmp/release_notes.md
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release edit "$GITHUB_REF_NAME" \
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
               --title "Linux ${{ steps.version.outputs.version }}" \
               --notes-file /tmp/release_notes.md
-            gh release upload "$GITHUB_REF_NAME" \
+            gh release upload "$RELEASE_TAG" \
               "${{ steps.package.outputs.archive_path }}" \
               --clobber
           else
-            gh release create "$GITHUB_REF_NAME" \
+            gh release create "$RELEASE_TAG" \
               "${{ steps.package.outputs.archive_path }}" \
               --title "Linux ${{ steps.version.outputs.version }}" \
               --notes-file /tmp/release_notes.md
