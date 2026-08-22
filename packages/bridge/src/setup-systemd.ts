@@ -100,6 +100,7 @@ export function setupSystemd(opts: SetupOptions): void {
   const publicWsUrl =
     opts.publicWsUrl ?? process.env.BRIDGE_PUBLIC_WS_URL ?? "";
   const disableMdns = opts.disableMdns || process.env.BRIDGE_DISABLE_MDNS;
+  const allowClaudeOAuth = process.env.BRIDGE_ALLOW_CLAUDE_OAUTH === "1";
   const codexAssistModel = process.env.BRIDGE_CODEX_ASSIST_MODEL?.trim() ?? "";
   const codexAssistReasoningEffort =
     process.env.BRIDGE_CODEX_ASSIST_REASONING_EFFORT?.trim() ?? "";
@@ -157,6 +158,9 @@ Environment=BRIDGE_HOST=${host}`;
   }
   if (disableMdns) {
     envLines += "\nEnvironment=BRIDGE_DISABLE_MDNS=1";
+  }
+  if (allowClaudeOAuth) {
+    envLines += "\nEnvironment=BRIDGE_ALLOW_CLAUDE_OAUTH=1";
   }
   if (codexAssistModel) {
     envLines += `\nEnvironment=BRIDGE_CODEX_ASSIST_MODEL=${codexAssistModel}`;

@@ -1410,7 +1410,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guideBridgeDescription =>
-      'PC で Bridge Server を起動します。Claude を使う場合は ANTHROPIC_API_KEY も設定してください。';
+      'PC で Bridge Server を起動します。Claude にはAPIキー、またはサブスクリプション認証の明示的な有効化が必要です。';
 
   @override
   String get guideBridgePrerequisites => '必要なもの';
@@ -1419,7 +1419,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guideBridgePrereq1 => 'Node.js がインストールされた Mac / PC';
 
   @override
-  String get guideBridgePrereq2 => 'Claude を使う場合は ANTHROPIC_API_KEY を設定';
+  String get guideBridgePrereq2 =>
+      'Claudeには ANTHROPIC_API_KEY または BRIDGE_ALLOW_CLAUDE_OAUTH=1 を設定';
 
   @override
   String get guideBridgePrereq3 => 'Codex を使う場合は Codex の認証を完了';
@@ -2239,14 +2240,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authErrorAlternativeLabel => 'シェルから実行する場合';
 
   @override
-  String get apiKeyRequiredTitle => 'APIキーが必要です';
+  String get claudeOAuthOptInTitle => 'サブスクリプション認証には明示的な有効化が必要です';
 
   @override
-  String get apiKeyRequiredBody =>
-      'Anthropic の現行 Claude Agent SDK ドキュメントでは、サードパーティ製品で Claude のサブスクリプションログインを使うことは許可されていません。APIキーをご利用ください。';
+  String get claudeOAuthOptInBody =>
+      'Anthropicはホストされた未改変のClaude Codeへのユーザー自身のログインを認める一方、Agent SDKガイドでは第三者製品にAPIキーを案内しています。そのためCC Pocketではサブスクリプション認証をデフォルトで無効にしています。';
 
   @override
-  String get apiKeyRequiredHint => 'APIキーの取得:';
+  String get claudeOAuthOptInHint =>
+      '詳細を確認し、Bridgeマシンで設定して再起動してください。不確実性を避ける場合はAPIキーを利用できます:';
 
   @override
   String get authHelpTitle => '認証トラブルシューティング';

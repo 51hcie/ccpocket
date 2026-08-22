@@ -1470,7 +1470,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideBridgeDescription =>
-      'Start the Bridge Server on your PC. If you want to use Claude, set ANTHROPIC_API_KEY too.';
+      'Start the Bridge Server on your PC. Claude requires an API key, or explicit opt-in for subscription authentication.';
 
   @override
   String get guideBridgePrerequisites => 'Prerequisites';
@@ -1479,7 +1479,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guideBridgePrereq1 => 'Mac / PC with Node.js installed';
 
   @override
-  String get guideBridgePrereq2 => 'If you use Claude, set ANTHROPIC_API_KEY';
+  String get guideBridgePrereq2 =>
+      'For Claude, set ANTHROPIC_API_KEY or BRIDGE_ALLOW_CLAUDE_OAUTH=1';
 
   @override
   String get guideBridgePrereq3 =>
@@ -2316,14 +2317,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrorAlternativeLabel => 'Shell alternative';
 
   @override
-  String get apiKeyRequiredTitle => 'API key required';
+  String get claudeOAuthOptInTitle =>
+      'Subscription authentication requires opt-in';
 
   @override
-  String get apiKeyRequiredBody =>
-      'Anthropic\'s current Claude Agent SDK docs do not permit third-party products to use Claude subscription login. Please use an API key instead.';
+  String get claudeOAuthOptInBody =>
+      'Anthropic permits users to sign in to unmodified Claude Code on hosted platforms, but its Agent SDK guide still directs third-party products to API keys. CC Pocket therefore keeps subscription authentication off by default.';
 
   @override
-  String get apiKeyRequiredHint => 'Get your API key at:';
+  String get claudeOAuthOptInHint =>
+      'Review the details, set the option on the Bridge machine, and restart it. To avoid policy uncertainty, use an API key instead:';
 
   @override
   String get authHelpTitle => 'Auth Troubleshooting';

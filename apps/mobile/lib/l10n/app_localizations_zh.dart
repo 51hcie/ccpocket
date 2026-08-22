@@ -1394,7 +1394,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get guideBridgeDescription =>
-      '先在你的电脑上启动 Bridge 服务。如果你要使用 Claude，也请先设置 ANTHROPIC_API_KEY。';
+      '先在你的电脑上启动 Bridge 服务。Claude 需要 API 密钥，或明确启用订阅认证。';
 
   @override
   String get guideBridgePrerequisites => '前置条件';
@@ -1403,7 +1403,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideBridgePrereq1 => '已安装 Node.js 的 Mac / PC';
 
   @override
-  String get guideBridgePrereq2 => '如果使用 Claude，请设置 ANTHROPIC_API_KEY';
+  String get guideBridgePrereq2 =>
+      'Claude 需要设置 ANTHROPIC_API_KEY 或 BRIDGE_ALLOW_CLAUDE_OAUTH=1';
 
   @override
   String get guideBridgePrereq3 => '如果使用 Codex，请先完成 Codex 认证';
@@ -2214,14 +2215,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authErrorAlternativeLabel => 'Shell 方式';
 
   @override
-  String get apiKeyRequiredTitle => '需要 API 密钥';
+  String get claudeOAuthOptInTitle => '订阅认证需要明确启用';
 
   @override
-  String get apiKeyRequiredBody =>
-      'Anthropic 当前的 Claude Agent SDK 文档不允许第三方产品使用 Claude 订阅登录。请改用 API 密钥。';
+  String get claudeOAuthOptInBody =>
+      'Anthropic 允许用户登录托管平台上未经修改的 Claude Code，但 Agent SDK 指南仍要求第三方产品使用 API 密钥。因此 CC Pocket 默认关闭订阅认证。';
 
   @override
-  String get apiKeyRequiredHint => '在此获取 API 密钥：';
+  String get claudeOAuthOptInHint =>
+      '请阅读详情，在 Bridge 机器上设置该选项并重启。若要避免政策不确定性，请改用 API 密钥：';
 
   @override
   String get authHelpTitle => '认证故障排查';

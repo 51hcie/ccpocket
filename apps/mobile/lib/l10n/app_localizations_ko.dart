@@ -1427,7 +1427,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get guideBridgeDescription =>
-      'PC에서 Bridge 서버를 시작하세요. Claude를 사용하려면 ANTHROPIC_API_KEY도 설정하세요.';
+      'PC에서 Bridge 서버를 시작하세요. Claude에는 API 키 또는 구독 인증의 명시적 활성화가 필요합니다.';
 
   @override
   String get guideBridgePrerequisites => '필수 조건';
@@ -1436,7 +1436,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get guideBridgePrereq1 => 'Node.js가 설치된 Mac / PC';
 
   @override
-  String get guideBridgePrereq2 => 'Claude를 사용한다면 ANTHROPIC_API_KEY 설정';
+  String get guideBridgePrereq2 =>
+      'Claude에는 ANTHROPIC_API_KEY 또는 BRIDGE_ALLOW_CLAUDE_OAUTH=1 설정';
 
   @override
   String get guideBridgePrereq3 => 'Codex를 사용한다면 Codex 인증 완료';
@@ -2253,14 +2254,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authErrorAlternativeLabel => '셸 대안';
 
   @override
-  String get apiKeyRequiredTitle => 'API 키 필요';
+  String get claudeOAuthOptInTitle => '구독 인증에는 명시적 활성화가 필요합니다';
 
   @override
-  String get apiKeyRequiredBody =>
-      'Anthropic의 현재 Claude Agent SDK 문서는 타사 제품의 Claude 구독 로그인을 허용하지 않습니다. 대신 API 키를 사용하세요.';
+  String get claudeOAuthOptInBody =>
+      'Anthropic은 호스팅된 수정되지 않은 Claude Code에 사용자가 로그인하는 것을 허용하지만 Agent SDK 가이드는 여전히 타사 제품에 API 키를 안내합니다. 따라서 CC Pocket은 구독 인증을 기본적으로 비활성화합니다.';
 
   @override
-  String get apiKeyRequiredHint => 'API 키 받기:';
+  String get claudeOAuthOptInHint =>
+      '세부 정보를 확인하고 Bridge 컴퓨터에서 옵션을 설정한 뒤 다시 시작하세요. 정책 불확실성을 피하려면 API 키를 사용하세요:';
 
   @override
   String get authHelpTitle => '인증 문제 해결';

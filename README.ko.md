@@ -84,8 +84,9 @@ npx @ccpocket/bridge@latest setup
 
 ## 참고
 
-- Claude 세션에는 `@ccpocket/bridge` `1.25.0` 이상과 `ANTHROPIC_API_KEY`가 필요합니다.
-  새 Bridge 설치에서는 Claude subscription login의 `/login`을 지원하지 않습니다.
+- Claude 세션은 기본적으로 `ANTHROPIC_API_KEY`를 사용합니다. 공식 문서가 이 구조에
+  어떻게 적용되는지 명확하지 않으므로 구독 인증은 Bridge에서
+  `BRIDGE_ALLOW_CLAUDE_OAUTH=1`로 명시적으로 활성화해야 합니다.
   자세한 내용은 [Claude 인증 문제 해결](docs/auth-troubleshooting.ko.md)을 확인하세요.
 - CC Pocket은 셀프 호스팅과 최소한의 데이터 수집을 전제로 설계되었습니다. Supporter 구매는
   같은 Apple ID / Google 계정 안에서 복원할 수 있지만, 스토어 간에는 공유되지 않습니다.

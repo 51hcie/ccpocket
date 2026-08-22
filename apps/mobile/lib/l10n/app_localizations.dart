@@ -2691,7 +2691,7 @@ abstract class AppLocalizations {
   /// No description provided for @guideBridgeDescription.
   ///
   /// In ja, this message translates to:
-  /// **'PC で Bridge Server を起動します。Claude を使う場合は ANTHROPIC_API_KEY も設定してください。'**
+  /// **'PC で Bridge Server を起動します。Claude にはAPIキー、またはサブスクリプション認証の明示的な有効化が必要です。'**
   String get guideBridgeDescription;
 
   /// No description provided for @guideBridgePrerequisites.
@@ -2709,7 +2709,7 @@ abstract class AppLocalizations {
   /// No description provided for @guideBridgePrereq2.
   ///
   /// In ja, this message translates to:
-  /// **'Claude を使う場合は ANTHROPIC_API_KEY を設定'**
+  /// **'Claudeには ANTHROPIC_API_KEY または BRIDGE_ALLOW_CLAUDE_OAUTH=1 を設定'**
   String get guideBridgePrereq2;
 
   /// No description provided for @guideBridgePrereq3.
@@ -4230,23 +4230,23 @@ abstract class AppLocalizations {
   /// **'シェルから実行する場合'**
   String get authErrorAlternativeLabel;
 
-  /// No description provided for @apiKeyRequiredTitle.
+  /// No description provided for @claudeOAuthOptInTitle.
   ///
   /// In ja, this message translates to:
-  /// **'APIキーが必要です'**
-  String get apiKeyRequiredTitle;
+  /// **'サブスクリプション認証には明示的な有効化が必要です'**
+  String get claudeOAuthOptInTitle;
 
-  /// No description provided for @apiKeyRequiredBody.
+  /// No description provided for @claudeOAuthOptInBody.
   ///
   /// In ja, this message translates to:
-  /// **'Anthropic の現行 Claude Agent SDK ドキュメントでは、サードパーティ製品で Claude のサブスクリプションログインを使うことは許可されていません。APIキーをご利用ください。'**
-  String get apiKeyRequiredBody;
+  /// **'Anthropicはホストされた未改変のClaude Codeへのユーザー自身のログインを認める一方、Agent SDKガイドでは第三者製品にAPIキーを案内しています。そのためCC Pocketではサブスクリプション認証をデフォルトで無効にしています。'**
+  String get claudeOAuthOptInBody;
 
-  /// No description provided for @apiKeyRequiredHint.
+  /// No description provided for @claudeOAuthOptInHint.
   ///
   /// In ja, this message translates to:
-  /// **'APIキーの取得:'**
-  String get apiKeyRequiredHint;
+  /// **'詳細を確認し、Bridgeマシンで設定して再起動してください。不確実性を避ける場合はAPIキーを利用できます:'**
+  String get claudeOAuthOptInHint;
 
   /// No description provided for @authHelpTitle.
   ///

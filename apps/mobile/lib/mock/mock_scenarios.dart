@@ -68,6 +68,7 @@ final List<MockScenario> mockScenarios = [
   _subagentSummary,
   _errorScenario,
   _authErrorScenario,
+  _claudeOAuthOptInScenario,
   _assistantAuthErrorScenario,
   _fullConversation,
   _longHistory,
@@ -2485,6 +2486,29 @@ final _authErrorScenario = MockScenario(
             'OAuth token refresh failed: invalid_grant\n\n'
             'Run "claude auth login" on the Bridge machine to re-authenticate.',
         errorCode: 'auth_login_required',
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 1000),
+      message: const StatusMessage(status: ProcessStatus.idle),
+    ),
+  ],
+);
+
+final _claudeOAuthOptInScenario = MockScenario(
+  name: 'Claude Subscription Opt-In',
+  icon: Icons.policy_outlined,
+  description: 'Explicit Bridge opt-in guidance for subscription auth',
+  steps: [
+    MockStep(
+      delay: const Duration(milliseconds: 300),
+      message: const StatusMessage(status: ProcessStatus.running),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 800),
+      message: const ErrorMessage(
+        message: 'Claude subscription authentication requires explicit opt-in',
+        errorCode: 'claude_oauth_opt_in_required',
       ),
     ),
     MockStep(

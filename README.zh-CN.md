@@ -85,8 +85,8 @@ npx @ccpocket/bridge@latest setup
 
 ## 说明
 
-- Claude 会话需要 `@ccpocket/bridge` `1.25.0` 或更高版本，以及 `ANTHROPIC_API_KEY`。
-  新的 Bridge 安装不支持通过 `/login` 使用 Claude subscription login。
+- Claude 会话默认使用 `ANTHROPIC_API_KEY`。由于官方文档对此架构的适用范围尚不明确，
+  订阅认证需要在 Bridge 上通过 `BRIDGE_ALLOW_CLAUDE_OAUTH=1` 明确启用。
   详情请见 [Claude 认证排查](docs/auth-troubleshooting.zh-CN.md)。
 - CC Pocket 围绕自托管和最少数据收集设计。Supporter 购买可以在同一个
   Apple ID / Google 账号内恢复，但不会在不同商店之间同步。

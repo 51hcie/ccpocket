@@ -108,8 +108,9 @@ see the [Bridge package README](packages/bridge/README.md#configuration).
 
 ## Notes
 
-- Claude sessions require `@ccpocket/bridge` `1.25.0` or newer and an `ANTHROPIC_API_KEY`.
-  Claude subscription login via `/login` is not supported for new Bridge installs.
+- Claude sessions use `ANTHROPIC_API_KEY` by default. Subscription authentication
+  requires explicit Bridge opt-in with `BRIDGE_ALLOW_CLAUDE_OAUTH=1` because
+  Anthropic's current official guidance has an unclear scope for this architecture.
   See [Claude authentication troubleshooting](docs/auth-troubleshooting.md).
 - CC Pocket is designed around self-hosting and minimal data collection. Supporter purchases
   restore within the same Apple ID or Google account, but do not sync across stores.

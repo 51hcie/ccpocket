@@ -35,7 +35,9 @@ void main() {
   });
 
   group('ErrorBubble auth UI', () {
-    testWidgets('shows API key guidance for auth_api_error', (tester) async {
+    testWidgets('shows generic authentication guidance for auth_api_error', (
+      tester,
+    ) async {
       const message = ErrorMessage(
         message: 'Failed to authenticate. API Error: 401 terminated',
         errorCode: 'auth_api_error',
@@ -48,21 +50,44 @@ void main() {
         ),
       );
 
-      expect(find.text('APIキーが必要です'), findsOneWidget);
+      expect(find.text('Authentication Error'), findsOneWidget);
+      expect(find.text(message.message), findsOneWidget);
       expect(
-        find.text(
-          'Anthropic の現行 Claude Agent SDK ドキュメントでは、'
-          'サードパーティ製品で Claude のサブスクリプションログインを'
-          '使うことは許可されていません。APIキーをご利用ください。',
-        ),
+        find.text('Set ANTHROPIC_API_KEY on the Bridge machine'),
         findsOneWidget,
       );
-      expect(find.text('APIキーの取得:'), findsOneWidget);
-      expect(find.text('ANTHROPIC_API_KEY=sk-ant-...'), findsOneWidget);
-      expect(find.text('console.anthropic.com/settings/keys'), findsOneWidget);
       expect(find.text('手順を見る'), findsNothing);
       expect(find.text('claude'), findsNothing);
       expect(find.text('/login'), findsNothing);
+    });
+
+    testWidgets('shows subscription opt-in guidance for dedicated error', (
+      tester,
+    ) async {
+      const message = ErrorMessage(
+        message: 'Claude subscription authentication requires explicit opt-in',
+        errorCode: 'claude_oauth_opt_in_required',
+      );
+
+      await tester.pumpWidget(
+        _wrapErrorBubble(
+          locale: const Locale('ja'),
+          child: const ErrorBubble(message: message),
+        ),
+      );
+
+      expect(find.text('サブスクリプション認証には明示的な有効化が必要です'), findsOneWidget);
+      expect(
+        find.text(
+          'Anthropicはホストされた未改変のClaude Codeへのユーザー自身のログインを認める一方、'
+          'Agent SDKガイドでは第三者製品にAPIキーを案内しています。'
+          'そのためCC Pocketではサブスクリプション認証をデフォルトで無効にしています。',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('BRIDGE_ALLOW_CLAUDE_OAUTH=1'), findsOneWidget);
+      expect(find.text('console.anthropic.com/settings/keys'), findsOneWidget);
+      expect(find.byKey(const ValueKey('auth_help_button')), findsOneWidget);
     });
 
     testWidgets('keeps non-auth error layout unchanged', (tester) async {

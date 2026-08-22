@@ -118,22 +118,30 @@ export async function checkCliProviders(): Promise<
       const out = execQuiet("claude --version");
       installed = true;
       version = out.trim().split("\n")[0];
-      // Check auth
-      try {
-        const authOut = execQuiet("claude auth status");
-        // If exit code 0, authenticated
-        if (authOut.toLowerCase().includes("not logged in") || authOut.toLowerCase().includes("unauthenticated")) {
+      if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
+        authenticated = true;
+        authMessage = "API credential configured";
+      } else {
+        try {
+          const authOut = execQuiet("claude auth status");
+          if (authOut.toLowerCase().includes("not logged in") || authOut.toLowerCase().includes("unauthenticated")) {
+            authenticated = false;
+            authMessage = "Not authenticated";
+            remediation = "Run: claude auth login";
+          } else if (process.env.BRIDGE_ALLOW_CLAUDE_OAUTH === "1") {
+            authenticated = true;
+            authMessage = "Subscription login explicitly enabled";
+          } else {
+            authenticated = false;
+            authMessage = "Subscription login detected; explicit opt-in required";
+            remediation = "Set BRIDGE_ALLOW_CLAUDE_OAUTH=1 and restart Bridge, or configure ANTHROPIC_API_KEY";
+          }
+        } catch {
+          // auth command failed — treat as unauthenticated
           authenticated = false;
           authMessage = "Not authenticated";
           remediation = "Run: claude auth login";
-        } else {
-          authenticated = true;
         }
-      } catch {
-        // auth command failed — treat as unauthenticated
-        authenticated = false;
-        authMessage = "Not authenticated";
-        remediation = "Run: claude auth login";
       }
     } catch {
       remediation = "Install Claude Code: https://docs.anthropic.com/en/docs/claude-code/getting-started";

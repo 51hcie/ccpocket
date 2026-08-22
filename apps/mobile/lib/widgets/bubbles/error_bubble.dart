@@ -15,6 +15,7 @@ String? _errorTitle(String? errorCode, AppLocalizations l) {
     'auth_login_required' ||
     'auth_token_expired' ||
     'auth_api_error' => 'Authentication Error',
+    'claude_oauth_opt_in_required' => 'Claude Subscription Opt-In Required',
     'codex_auth_required' => 'Codex Authentication Error',
     'codex_cli_not_found' => 'Codex CLI Not Installed',
     'path_not_allowed' => 'Path Not Allowed',
@@ -32,6 +33,8 @@ String? _errorHint(String? errorCode, AppLocalizations l) {
     'auth_login_required' ||
     'auth_token_expired' => 'Run "claude auth login" on the Bridge machine',
     'auth_api_error' => 'Set ANTHROPIC_API_KEY on the Bridge machine',
+    'claude_oauth_opt_in_required' =>
+      'Set BRIDGE_ALLOW_CLAUDE_OAUTH=1 and restart Bridge',
     'codex_auth_required' => 'Check OPENAI_API_KEY on the Bridge machine',
     'codex_cli_not_found' =>
       'Install Codex CLI on the Bridge machine, then restart Bridge',
@@ -47,6 +50,7 @@ String? _errorHint(String? errorCode, AppLocalizations l) {
 String? _copyableCommand(String? errorCode) {
   return switch (errorCode) {
     'auth_login_required' || 'auth_token_expired' => 'claude auth login',
+    'claude_oauth_opt_in_required' => 'BRIDGE_ALLOW_CLAUDE_OAUTH=1',
     'bridge_update_required' => 'npm update -g @ccpocket/bridge',
     'codex_cli_not_found' =>
       'curl -fsSL https://chatgpt.com/codex/install.sh | sh',
@@ -59,8 +63,8 @@ bool _isClaudeAuthError(String? errorCode) {
       errorCode == 'auth_token_expired';
 }
 
-bool _isApiKeyRequired(String? errorCode) {
-  return errorCode == 'auth_api_error';
+bool _isClaudeOAuthOptInRequired(String? errorCode) {
+  return errorCode == 'claude_oauth_opt_in_required';
 }
 
 /// Whether the errorCode represents a non-critical warning (amber style).
@@ -68,6 +72,7 @@ bool _isWarning(String? errorCode) {
   return errorCode == 'git_not_available' ||
       errorCode == 'bridge_update_required' ||
       errorCode == 'auto_mode_unavailable' ||
+      errorCode == 'claude_oauth_opt_in_required' ||
       errorCode == 'codex_warning';
 }
 
@@ -121,8 +126,8 @@ class ErrorBubble extends StatelessWidget {
                     alternativeCommand: 'claude auth login',
                     helpLabel: l.authHelpButton,
                   )
-                : _isApiKeyRequired(resolvedErrorCode)
-                ? _ApiKeyRequiredCard(textColor: textColor)
+                : _isClaudeOAuthOptInRequired(resolvedErrorCode)
+                ? _ClaudeOAuthOptInCard(textColor: textColor)
                 : _buildStructured(context, title, hint, textColor, isWarn)
           : _buildSimple(textColor),
     );
@@ -346,10 +351,10 @@ class _ClaudeAuthErrorCard extends StatelessWidget {
   }
 }
 
-class _ApiKeyRequiredCard extends StatelessWidget {
+class _ClaudeOAuthOptInCard extends StatelessWidget {
   final Color textColor;
 
-  const _ApiKeyRequiredCard({required this.textColor});
+  const _ClaudeOAuthOptInCard({required this.textColor});
 
   @override
   Widget build(BuildContext context) {
@@ -363,7 +368,7 @@ class _ApiKeyRequiredCard extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                l.apiKeyRequiredTitle,
+                l.claudeOAuthOptInTitle,
                 style: TextStyle(
                   color: textColor,
                   fontSize: 13,
@@ -375,7 +380,7 @@ class _ApiKeyRequiredCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          l.apiKeyRequiredBody,
+          l.claudeOAuthOptInBody,
           style: TextStyle(
             color: textColor.withValues(alpha: 0.92),
             fontSize: 12,
@@ -391,7 +396,7 @@ class _ApiKeyRequiredCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
-            'ANTHROPIC_API_KEY=sk-ant-...',
+            'BRIDGE_ALLOW_CLAUDE_OAUTH=1',
             style: TextStyle(
               color: textColor,
               fontSize: 12,
@@ -401,7 +406,7 @@ class _ApiKeyRequiredCard extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          l.apiKeyRequiredHint,
+          l.claudeOAuthOptInHint,
           style: TextStyle(
             color: textColor.withValues(alpha: 0.7),
             fontSize: 11,
@@ -432,6 +437,15 @@ class _ApiKeyRequiredCard extends StatelessWidget {
               decorationColor: textColor.withValues(alpha: 0.5),
             ),
           ),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          key: const ValueKey('auth_help_button'),
+          onPressed: () {
+            context.router.navigate(const AuthHelpRoute());
+          },
+          icon: const Icon(Icons.help_outline, size: 16),
+          label: Text(l.authHelpButton),
         ),
       ],
     );

@@ -43,11 +43,13 @@ Setup options:
       --uninstall       Remove the registered service
       setup persists --port, --host, --api-key, --public-ws-url,
       --no-mdns, Codex app-server options, BRIDGE_ALLOWED_DIRS, and
-      BRIDGE_CODEX_ASSIST_MODEL / BRIDGE_CODEX_ASSIST_REASONING_EFFORT
+      BRIDGE_ALLOW_CLAUDE_OAUTH, BRIDGE_CODEX_ASSIST_MODEL, and
+      BRIDGE_CODEX_ASSIST_REASONING_EFFORT
 
 Configuration can also be provided with BRIDGE_PORT, BRIDGE_HOST,
 BRIDGE_API_KEY, BRIDGE_ALLOWED_DIRS, BRIDGE_PUBLIC_WS_URL, and
-BRIDGE_DISABLE_MDNS. Codex app-server configuration can be provided with
+BRIDGE_DISABLE_MDNS. Claude subscription authentication can be explicitly
+enabled with BRIDGE_ALLOW_CLAUDE_OAUTH=1. Codex app-server configuration can be provided with
 BRIDGE_CODEX_APP_SERVER_MODE and BRIDGE_CODEX_SHARED_APP_SERVER_URL.
 Codex assist calls can be configured with BRIDGE_CODEX_ASSIST_MODEL and
 BRIDGE_CODEX_ASSIST_REASONING_EFFORT.`);

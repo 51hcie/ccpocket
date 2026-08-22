@@ -51,6 +51,7 @@ export function setupLaunchd(opts: SetupOptions): void {
   const publicWsUrl =
     opts.publicWsUrl ?? process.env.BRIDGE_PUBLIC_WS_URL ?? "";
   const disableMdns = opts.disableMdns || process.env.BRIDGE_DISABLE_MDNS;
+  const allowClaudeOAuth = process.env.BRIDGE_ALLOW_CLAUDE_OAUTH === "1";
   const codexAssistModel = process.env.BRIDGE_CODEX_ASSIST_MODEL?.trim() ?? "";
   const codexAssistReasoningEffort =
     process.env.BRIDGE_CODEX_ASSIST_REASONING_EFFORT?.trim() ?? "";
@@ -113,6 +114,12 @@ export function setupLaunchd(opts: SetupOptions): void {
   if (disableMdns) {
     envBlock += `
         <key>BRIDGE_DISABLE_MDNS</key>
+        <string>1</string>`;
+  }
+
+  if (allowClaudeOAuth) {
+    envBlock += `
+        <key>BRIDGE_ALLOW_CLAUDE_OAUTH</key>
         <string>1</string>`;
   }
 

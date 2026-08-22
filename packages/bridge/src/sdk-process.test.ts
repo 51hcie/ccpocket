@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import {
   parseRule,
   matchesSessionRule,
@@ -10,73 +10,21 @@ import {
   buildThinkingOptions,
   isFileEditToolName,
   sdkMessageToServerMessage,
-  buildAuthError,
+  hasExplicitClaudeCredential,
+  isClaudeOAuthOptInEnabled,
+  listAvailableClaudeModels,
   SdkProcess,
 } from "./sdk-process.js";
 import type { ServerMessage } from "./parser.js";
 
-// ---- buildAuthError ----
+const { mockSdkQuery } = vi.hoisted(() => ({
+  mockSdkQuery: vi.fn(),
+}));
 
-describe("buildAuthError", () => {
-  it("returns errorCode 'auth_login_required' for no_credentials", () => {
-    const result = buildAuthError("no_credentials");
-    expect(result.authenticated).toBe(false);
-    expect(result.errorCode).toBe("auth_login_required");
-  });
-
-  it("returns errorCode 'auth_login_required' for no_access_token", () => {
-    const result = buildAuthError("no_access_token");
-    expect(result.authenticated).toBe(false);
-    expect(result.errorCode).toBe("auth_login_required");
-  });
-
-  it("returns errorCode 'auth_token_expired' for token_expired", () => {
-    const result = buildAuthError("token_expired");
-    expect(result.authenticated).toBe(false);
-    expect(result.errorCode).toBe("auth_token_expired");
-  });
-
-  it("returns errorCode 'auth_api_error' for general failure", () => {
-    const result = buildAuthError("general", "some API error");
-    expect(result.authenticated).toBe(false);
-    expect(result.errorCode).toBe("auth_api_error");
-  });
-
-  it("includes remedy instruction with 'claude auth login' for no_credentials", () => {
-    const result = buildAuthError("no_credentials");
-    expect(result.message).toContain("claude auth login");
-  });
-
-  it("includes remedy instruction with 'claude auth login' for token_expired", () => {
-    const result = buildAuthError("token_expired");
-    expect(result.message).toContain("claude auth login");
-  });
-
-  it("includes remedy instruction with 'claude auth login' for general failure", () => {
-    const result = buildAuthError("general", "401 Unauthorized");
-    expect(result.message).toContain("claude auth login");
-  });
-
-  it("includes the detail in message for general failure", () => {
-    const result = buildAuthError("general", "401 Unauthorized");
-    expect(result.message).toContain("401 Unauthorized");
-  });
-
-  it("message is self-explanatory (contains problem description) for no_credentials", () => {
-    const result = buildAuthError("no_credentials");
-    expect(result.message).toContain("not logged in");
-  });
-
-  it("message is self-explanatory (contains problem description) for token_expired", () => {
-    const result = buildAuthError("token_expired");
-    expect(result.message).toContain("expired");
-  });
-
-  it("message mentions where to run the fix (Bridge machine)", () => {
-    const result = buildAuthError("no_credentials");
-    expect(result.message).toContain("Bridge");
-  });
-});
+vi.mock("@anthropic-ai/claude-agent-sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@anthropic-ai/claude-agent-sdk")>()),
+  query: mockSdkQuery,
+}));
 
 // ---- ACCEPT_EDITS_AUTO_APPROVE ----
 
@@ -803,6 +751,236 @@ describe("SdkProcess input dispatch", () => {
       ]),
     ).toEqual({ queued: true, shouldInterrupt: true });
     expect(resolve).not.toHaveBeenCalled();
+  });
+});
+
+describe("SdkProcess Claude authentication", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_AUTH_TOKEN", "");
+    vi.stubEnv("BRIDGE_ALLOW_CLAUDE_OAUTH", "");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("requires the exact OAuth opt-in value", () => {
+    expect(isClaudeOAuthOptInEnabled({ BRIDGE_ALLOW_CLAUDE_OAUTH: "1" })).toBe(true);
+    expect(isClaudeOAuthOptInEnabled({ BRIDGE_ALLOW_CLAUDE_OAUTH: "true" })).toBe(false);
+    expect(isClaudeOAuthOptInEnabled({ BRIDGE_ALLOW_CLAUDE_OAUTH: "0" })).toBe(false);
+    expect(isClaudeOAuthOptInEnabled({})).toBe(false);
+  });
+
+  it("detects explicit Claude API credentials", () => {
+    expect(hasExplicitClaudeCredential({ ANTHROPIC_API_KEY: "sk-ant-test" })).toBe(true);
+    expect(hasExplicitClaudeCredential({ ANTHROPIC_AUTH_TOKEN: "token" })).toBe(true);
+    expect(hasExplicitClaudeCredential({ ANTHROPIC_API_KEY: "" })).toBe(false);
+    expect(hasExplicitClaudeCredential({})).toBe(false);
+  });
+
+  it("blocks startup without an API credential or OAuth opt-in", async () => {
+    const proc = new SdkProcess();
+    const messages: ServerMessage[] = [];
+    const exits: Array<number | null> = [];
+    proc.on("message", (message) => messages.push(message));
+    proc.on("exit", (code) => exits.push(code));
+
+    proc.start(process.cwd(), { initialInput: "must be discarded" });
+    await vi.waitFor(() => expect(exits).toEqual([1]));
+
+    expect(mockSdkQuery).not.toHaveBeenCalled();
+    expect(proc.isRunning).toBe(false);
+    expect(proc.status).toBe("idle");
+    expect(proc.hasInputQueue).toBe(false);
+    expect(messages).toContainEqual(expect.objectContaining({
+      type: "error",
+      errorCode: "claude_oauth_opt_in_required",
+      message: expect.stringContaining("BRIDGE_ALLOW_CLAUDE_OAUTH=1"),
+    }));
+  });
+
+  it("does not query models without an API credential or OAuth opt-in", async () => {
+    await expect(listAvailableClaudeModels()).rejects.toThrow(
+      "BRIDGE_ALLOW_CLAUDE_OAUTH=1",
+    );
+    expect(mockSdkQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects model listing when the SDK unexpectedly selects OAuth", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    const close = vi.fn();
+    mockSdkQuery.mockReturnValueOnce({
+      async *[Symbol.asyncIterator]() {
+        yield {
+          type: "system",
+          subtype: "init",
+          apiKeySource: "oauth",
+        };
+      },
+      close,
+      initializationResult: vi.fn().mockResolvedValue({
+        account: { apiKeySource: "oauth" },
+        models: [
+          { value: "claude-sonnet-4-6", displayName: "Sonnet 4.6" },
+        ],
+      }),
+    });
+
+    await expect(listAvailableClaudeModels()).rejects.toThrow(
+      "BRIDGE_ALLOW_CLAUDE_OAUTH=1",
+    );
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("lists models from OAuth only after explicit opt-in", async () => {
+    vi.stubEnv("BRIDGE_ALLOW_CLAUDE_OAUTH", "1");
+    const close = vi.fn();
+    mockSdkQuery.mockReturnValueOnce({
+      async *[Symbol.asyncIterator]() {
+        yield {
+          type: "system",
+          subtype: "init",
+          apiKeySource: "oauth",
+        };
+      },
+      close,
+      initializationResult: vi.fn().mockResolvedValue({
+        account: { apiKeySource: "oauth" },
+        models: [
+          { value: "claude-sonnet-4-6", displayName: "Sonnet 4.6" },
+        ],
+      }),
+    });
+
+    await expect(listAvailableClaudeModels()).resolves.toEqual([
+      expect.objectContaining({
+        model: "claude-sonnet-4-6",
+        displayName: "Sonnet 4.6",
+      }),
+    ]);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("accepts an OAuth-authenticated SDK init message", async () => {
+    vi.stubEnv("BRIDGE_ALLOW_CLAUDE_OAUTH", "1");
+    const proc = new SdkProcess();
+    const messages: ServerMessage[] = [];
+    const exits: Array<number | null> = [];
+    proc.on("message", (message) => messages.push(message));
+    proc.on("exit", (code) => exits.push(code));
+
+    const initMessage = {
+      type: "system",
+      subtype: "init",
+      session_id: "oauth-session",
+      model: "claude-sonnet-4-6",
+      apiKeySource: "oauth",
+    };
+    const close = vi.fn();
+    mockSdkQuery.mockReturnValueOnce({
+      async *[Symbol.asyncIterator]() {
+        yield initMessage;
+      },
+      close,
+      supportedCommands: vi.fn().mockResolvedValue([]),
+    });
+
+    proc.start(process.cwd());
+    await vi.waitFor(() => expect(exits).toEqual([0]));
+
+    expect(proc.sessionId).toBe("oauth-session");
+    expect(proc.model).toBe("claude-sonnet-4-6");
+    expect(messages).toContainEqual(expect.objectContaining({
+      type: "system",
+      subtype: "init",
+      sessionId: "oauth-session",
+    }));
+    expect(messages).not.toContainEqual(expect.objectContaining({
+      type: "error",
+    }));
+    expect(exits).toEqual([0]);
+  });
+
+  it("rejects an unexpected OAuth init when only an API key was configured", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    const proc = new SdkProcess();
+    const messages: ServerMessage[] = [];
+    const exits: Array<number | null> = [];
+    const close = vi.fn();
+    proc.on("message", (message) => messages.push(message));
+    proc.on("exit", (code) => exits.push(code));
+    mockSdkQuery.mockReturnValueOnce({
+      async *[Symbol.asyncIterator]() {
+        yield {
+          type: "system",
+          subtype: "init",
+          session_id: "unexpected-oauth-session",
+          apiKeySource: "oauth",
+        };
+      },
+      close,
+      supportedCommands: vi.fn().mockResolvedValue([]),
+    });
+
+    proc.start(process.cwd());
+    await vi.waitFor(() => expect(exits).toEqual([1]));
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(messages).toContainEqual(expect.objectContaining({
+      type: "error",
+      errorCode: "claude_oauth_opt_in_required",
+    }));
+    expect(messages).not.toContainEqual(expect.objectContaining({
+      type: "system",
+      subtype: "init",
+    }));
+  });
+
+  it("cleans up the SDK query when authentication fails", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    const proc = new SdkProcess();
+    const messages: ServerMessage[] = [];
+    const exits: Array<number | null> = [];
+    const close = vi.fn();
+    proc.on("message", (message) => messages.push(message));
+    proc.on("exit", (code) => exits.push(code));
+    mockSdkQuery.mockReturnValueOnce({
+      async *[Symbol.asyncIterator]() {
+        throw new Error("authentication failed");
+      },
+      close,
+      supportedCommands: vi.fn().mockResolvedValue([]),
+    });
+
+    proc.start(process.cwd());
+    await vi.waitFor(() => expect(exits).toEqual([1]));
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(proc.isRunning).toBe(false);
+    expect(proc.status).toBe("idle");
+    expect(messages).toContainEqual(expect.objectContaining({
+      type: "error",
+      message: "SDK error: authentication failed",
+    }));
+  });
+
+  it("cleans up the init timer when the SDK query fails to start", () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    const proc = new SdkProcess();
+    const exits: Array<number | null> = [];
+    proc.on("exit", (code) => exits.push(code));
+    mockSdkQuery.mockImplementationOnce(() => {
+      throw new Error("query setup failed");
+    });
+
+    expect(() => proc.start(process.cwd())).toThrow("query setup failed");
+
+    expect(proc.isRunning).toBe(false);
+    expect(proc.status).toBe("idle");
+    expect((proc as any).initTimeoutId).toBeNull();
+    expect(exits).toEqual([]);
   });
 });
 

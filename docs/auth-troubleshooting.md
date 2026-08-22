@@ -2,8 +2,41 @@
 
 [日本語版](auth-troubleshooting.ja.md) | [简体中文版](auth-troubleshooting.zh-CN.md) | [한국어](auth-troubleshooting.ko.md)
 
-CC Pocket uses the Claude Code login state stored on your Bridge machine.
-If authentication fails, sign in to Claude Code again on that machine.
+CC Pocket uses `ANTHROPIC_API_KEY` by default. Subscription authentication is
+disabled unless the Bridge operator explicitly sets
+`BRIDGE_ALLOW_CLAUDE_OAUTH=1` and restarts Bridge.
+
+## Why Subscription Authentication Requires Opt-In
+
+Anthropic's [Legal and compliance](https://code.claude.com/docs/en/legal-and-compliance)
+page says its Commercial Terms do not prevent a platform from hosting the
+unmodified Claude Code binary when each end user signs in with their own
+subscription or other credentials, subject to the conditions listed there.
+CC Pocket similarly runs the official Claude Agent SDK on the user's Bridge
+machine and delegates authentication to the host's Claude Code environment.
+CC Pocket does not copy, store, or refresh Claude OAuth credentials itself.
+
+The host-side Claude Code pattern is also used by similar remote tools such as
+[OpenClaw](https://github.com/openclaw/openclaw/blob/main/docs/concepts/oauth.md),
+[Happy](https://github.com/slopus/happy), and
+[Termopus](https://github.com/Termopus/termopus), although their exact
+implementations differ.
+
+However, Anthropic's [Agent SDK overview](https://code.claude.com/docs/en/agent-sdk)
+also directs unapproved third-party products to API keys instead of Claude.ai
+login or subscription rate limits. The scope of these statements is not clear
+for CC Pocket's architecture, and Anthropic may restrict this authentication
+method in the future.
+
+To avoid this uncertainty, configure `ANTHROPIC_API_KEY`. If you understand the
+risk and choose subscription authentication, run Bridge with:
+
+```bash
+BRIDGE_ALLOW_CLAUDE_OAUTH=1 npx @ccpocket/bridge@latest
+```
+
+If subscription authentication then fails, sign in to Claude Code again on the
+Bridge machine and restart Bridge.
 
 ## If You Are Not Near Your Bridge Machine
 

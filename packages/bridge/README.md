@@ -12,9 +12,10 @@ npx @ccpocket/bridge@latest
 
 A QR code will appear in your terminal. Scan it with the ccpocket mobile app to connect.
 
-> Warning
-> Versions older than `1.25.0` are deprecated and should not be used for new installs because current Anthropic Claude Agent SDK docs do not permit third-party products to use Claude subscription login.
-> Upgrade to `>=1.25.0` and use `ANTHROPIC_API_KEY` instead of OAuth.
+Claude sessions use `ANTHROPIC_API_KEY` by default. Subscription authentication
+through the Bridge machine's Claude Code login is available only after explicit
+opt-in with `BRIDGE_ALLOW_CLAUDE_OAUTH=1`; see
+[Claude Subscription Authentication](#claude-subscription-authentication-explicit-opt-in).
 
 ## Installation
 
@@ -47,6 +48,7 @@ ccpocket-bridge --version
 | `BRIDGE_DEMO_MODE` | (none) | Demo mode: hide Tailscale IPs and API key from QR code / logs |
 | `BRIDGE_RECORDING` | (none) | Enable session recording for debugging (enabled when set) |
 | `BRIDGE_DISABLE_MDNS` | (none) | Disable mDNS auto-discovery advertisement (macOS disables it automatically) |
+| `BRIDGE_ALLOW_CLAUDE_OAUTH` | (none) | Set exactly to `1` to explicitly enable experimental Claude subscription authentication |
 | `BRIDGE_PROMPT_HISTORY_FILE` | `$HOME/.ccpocket/prompt-history-v2.json` | Custom prompt history store path |
 | `BRIDGE_RECENT_SESSIONS_PROFILE` | (none) | Log recent-session index timing when set to `1` or `true` |
 | `BRIDGE_FILE_LIST_MAX_ENTRIES` | `5000` | Maximum file and directory entries returned to a client; non-positive or invalid values use the default |
@@ -55,7 +57,7 @@ ccpocket-bridge --version
 | `BRIDGE_DELTA_BATCH_MAX_CHARS` | `4096` | Maximum Unicode characters per batched streaming payload; non-positive or invalid values use the default |
 | `DIFF_IMAGE_AUTO_DISPLAY_KB` | `1024` (1 MB) | Auto-display diff images up to this size, in KB |
 | `DIFF_IMAGE_MAX_SIZE_MB` | `5` (5 MB) | Maximum diff image size available for on-demand loading, in MB |
-| `ANTHROPIC_API_KEY` | (none) | Claude Agent SDK API key used for Claude sessions |
+| `ANTHROPIC_API_KEY` | (none) | Claude Agent SDK API key; recommended for predictable third-party product usage |
 | `ANTHROPIC_AUTH_TOKEN` | (none) | Advanced Claude SDK auth token; prefer `ANTHROPIC_API_KEY` |
 | `OPENAI_API_KEY` | (none) | Codex API key; Codex can also use `~/.codex/auth.json` |
 | `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` | (none) | Proxy for outgoing fetch requests (`http://`, `https://`, `socks4://`, `socks5://`) |
@@ -67,6 +69,39 @@ supported. When `BRIDGE_PROMPT_HISTORY_FILE` is not set and `BRIDGE_PORT` is not
 
 Push relay uses Firebase Anonymous Auth automatically; no FCM environment
 variables are required.
+
+## Claude Subscription Authentication (Explicit Opt-In)
+
+Anthropic's [Legal and compliance](https://code.claude.com/docs/en/legal-and-compliance)
+page says its Commercial Terms do not prevent a platform from hosting the
+unmodified Claude Code binary when each end user signs in with their own
+subscription or other credentials, subject to the conditions listed there.
+CC Pocket similarly runs Anthropic's official Agent SDK on the user's Bridge
+machine and delegates credential loading to the host's Claude Code environment.
+CC Pocket does not copy, store, or refresh Claude OAuth credentials itself.
+
+Running Claude Code on a user's computer and controlling it remotely is also a
+common pattern among tools such as [OpenClaw](https://github.com/openclaw/openclaw/blob/main/docs/concepts/oauth.md),
+[Happy](https://github.com/slopus/happy), and
+[Termopus](https://github.com/Termopus/termopus), although their exact
+implementations differ from CC Pocket.
+
+However, Anthropic's [Agent SDK overview](https://code.claude.com/docs/en/agent-sdk)
+also says that, unless previously approved, third-party products should use API
+keys rather than offer Claude.ai login or subscription rate limits. The scope of
+these two statements is not clear for CC Pocket's architecture, so subscription
+authentication may be restricted or stop working in the future.
+
+To avoid that uncertainty, use `ANTHROPIC_API_KEY`. If you understand the risk
+and want to use the Bridge machine's Claude Code subscription login, enable it
+explicitly and restart Bridge:
+
+```bash
+BRIDGE_ALLOW_CLAUDE_OAUTH=1 npx @ccpocket/bridge@latest
+```
+
+Only the exact value `1` enables this behavior. Service setup preserves the
+setting when it is present in the setup environment.
 
 ```bash
 # Example: custom port with API key
@@ -116,6 +151,7 @@ that affect startup:
 - `BRIDGE_ALLOWED_DIRS`
 - `BRIDGE_PUBLIC_WS_URL` / `--public-ws-url`
 - `BRIDGE_DISABLE_MDNS` / `--no-mdns`
+- `BRIDGE_ALLOW_CLAUDE_OAUTH`
 - `BRIDGE_CODEX_APP_SERVER_MODE` / `--codex-app-server-mode`
 - `BRIDGE_CODEX_SHARED_APP_SERVER_URL` / `--codex-shared-app-server-url`
 - `BRIDGE_CODEX_ASSIST_MODEL`
@@ -127,6 +163,12 @@ Example:
 BRIDGE_ALLOWED_DIRS="$HOME,/scratch/$USER" \
 BRIDGE_API_KEY=my-secret \
 npx @ccpocket/bridge@latest setup
+```
+
+To persist the explicit subscription-authentication opt-in:
+
+```bash
+BRIDGE_ALLOW_CLAUDE_OAUTH=1 npx @ccpocket/bridge@latest setup
 ```
 
 Custom gateway users can persist assist overrides in the same way:

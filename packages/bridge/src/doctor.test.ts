@@ -66,6 +66,16 @@ describe("doctor checks", () => {
   });
 
   describe("checkCliProviders", () => {
+    beforeEach(() => {
+      vi.stubEnv("BRIDGE_ALLOW_CLAUDE_OAUTH", "1");
+      vi.stubEnv("ANTHROPIC_API_KEY", "");
+      vi.stubEnv("ANTHROPIC_AUTH_TOKEN", "");
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
     it("passes when both CLIs are installed and authenticated", async () => {
       mockExecSync.mockImplementation((cmd: string) => {
         if (cmd === "claude --version") return "1.0.23";
@@ -95,6 +105,24 @@ describe("doctor checks", () => {
       const result = await checkCliProviders();
       expect(result.status).toBe("pass");
       expect(result.message).toBe("1 of 2 available");
+    });
+
+    it("passes with an explicit Anthropic API key without subscription opt-in", async () => {
+      vi.stubEnv("BRIDGE_ALLOW_CLAUDE_OAUTH", "");
+      vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+      mockExecSync.mockImplementation((cmd: string) => {
+        if (cmd === "claude --version") return "1.0.23";
+        throw new Error("command not found");
+      });
+
+      const result = await checkCliProviders();
+      const claude = result.providers.find(
+        (provider: ProviderResult) => provider.name === "Claude Code CLI",
+      );
+
+      expect(result.status).toBe("pass");
+      expect(claude?.authenticated).toBe(true);
+      expect(claude?.authMessage).toBe("API credential configured");
     });
 
     it("passes when only Codex is installed", async () => {
@@ -134,6 +162,27 @@ describe("doctor checks", () => {
       const claude = result.providers.find((p: ProviderResult) => p.name === "Claude Code CLI");
       expect(claude?.installed).toBe(true);
       expect(claude?.authenticated).toBe(false);
+    });
+
+    it("warns when subscription login is detected without explicit opt-in", async () => {
+      vi.stubEnv("BRIDGE_ALLOW_CLAUDE_OAUTH", "");
+      vi.stubEnv("ANTHROPIC_API_KEY", "");
+      vi.stubEnv("ANTHROPIC_AUTH_TOKEN", "");
+      mockExecSync.mockImplementation((cmd: string) => {
+        if (cmd === "claude --version") return "1.0.23";
+        if (cmd === "claude auth status") return "Logged in";
+        throw new Error("command not found");
+      });
+
+      const result = await checkCliProviders();
+      const claude = result.providers.find(
+        (provider: ProviderResult) => provider.name === "Claude Code CLI",
+      );
+
+      expect(result.status).toBe("warn");
+      expect(claude?.authenticated).toBe(false);
+      expect(claude?.authMessage).toContain("explicit opt-in required");
+      expect(claude?.remediation).toContain("BRIDGE_ALLOW_CLAUDE_OAUTH=1");
     });
   });
 
