@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.115.1] - 2026-08-22
+
+### Fixed
+- Keep the visible message stable while streaming output, refreshing history, resizing overlays, and switching between long chat sessions without unexpected jumps toward the top.
+
 ## [1.115.0] - 2026-08-22
 
 ### Added
