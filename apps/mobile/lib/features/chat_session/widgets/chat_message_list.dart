@@ -2,7 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show RenderBox, ScrollDirection;
+import 'package:flutter/rendering.dart'
+    show
+        RenderBox,
+        RenderSliverMultiBoxAdaptor,
+        RenderViewportBase,
+        ScrollDirection,
+        applyGrowthDirectionToAxisDirection;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 
@@ -21,6 +27,7 @@ import '../state/chat_session_cubit.dart';
 import '../state/chat_session_state.dart';
 import '../state/streaming_state.dart';
 import '../state/streaming_state_cubit.dart';
+import 'anchor_maintaining_auto_scroll_controller.dart';
 import 'maintain_reading_position_physics.dart';
 
 @visibleForTesting
@@ -147,11 +154,16 @@ class _ChatMessageListState extends State<ChatMessageList> {
   void initState() {
     super.initState();
     widget.scrollToUserEntry?.addListener(_onScrollToUserEntry);
+    _attachLayoutAnchorCorrection();
   }
 
   @override
   void didUpdateWidget(covariant ChatMessageList oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.scrollController != widget.scrollController) {
+      _detachLayoutAnchorCorrection(oldWidget.scrollController);
+      _attachLayoutAnchorCorrection();
+    }
     if (oldWidget.scrollToUserEntry != widget.scrollToUserEntry) {
       oldWidget.scrollToUserEntry?.removeListener(_onScrollToUserEntry);
       widget.scrollToUserEntry?.addListener(_onScrollToUserEntry);
@@ -160,8 +172,22 @@ class _ChatMessageListState extends State<ChatMessageList> {
 
   @override
   void dispose() {
+    _detachLayoutAnchorCorrection(widget.scrollController);
     widget.scrollToUserEntry?.removeListener(_onScrollToUserEntry);
     super.dispose();
+  }
+
+  void _attachLayoutAnchorCorrection() {
+    final controller = widget.scrollController;
+    if (controller is AnchorMaintainingAutoScrollController) {
+      controller.layoutAnchorCorrection = _pendingAnchorCorrection;
+    }
+  }
+
+  void _detachLayoutAnchorCorrection(AutoScrollController controller) {
+    if (controller is AnchorMaintainingAutoScrollController) {
+      controller.layoutAnchorCorrection = null;
+    }
   }
 
   void _onScrollToUserEntry() {
@@ -227,7 +253,10 @@ class _ChatMessageListState extends State<ChatMessageList> {
       final distance = ((top + bottom) / 2 - viewportCenter).abs();
       if (distance < bestDistance) {
         bestDistance = distance;
-        best = _VisibleAnchor(key: tagState.widget.key, top: top);
+        best = _VisibleAnchor(
+          key: tagState.widget.key,
+          bottom: _sliverChildBottomInViewport(renderObject) ?? bottom,
+        );
       }
     }
     if (best == null) return;
@@ -252,10 +281,31 @@ class _ChatMessageListState extends State<ChatMessageList> {
       return;
     }
 
-    final viewport =
-        _viewportKey.currentContext?.findRenderObject() as RenderBox?;
-    if (viewport == null || !viewport.attached || !viewport.hasSize) return;
+    final correction = _anchorCorrection(anchor);
+    if (correction == null) return;
+    if (correction.abs() <= 0.5) return;
 
+    final position = widget.scrollController.position;
+    final target = (position.pixels + correction).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    widget.scrollController.jumpTo(target);
+  }
+
+  double? _pendingAnchorCorrection() {
+    if (!mounted ||
+        !widget.isReadingHistory ||
+        !widget.scrollController.hasClients ||
+        widget.scrollController.isAutoScrolling ||
+        widget.scrollController.position.isScrollingNotifier.value) {
+      return null;
+    }
+    final anchor = _pendingAnchor;
+    return anchor == null ? null : _anchorCorrection(anchor);
+  }
+
+  double? _anchorCorrection(_VisibleAnchor anchor) {
     AutoScrollTagState? matchingState;
     for (final state in widget.scrollController.tagMap.values) {
       if (state.mounted && state.widget.key == anchor.key) {
@@ -267,21 +317,53 @@ class _ChatMessageListState extends State<ChatMessageList> {
     if (renderObject is! RenderBox ||
         !renderObject.attached ||
         !renderObject.hasSize) {
-      return;
+      return null;
     }
 
-    final newTop = renderObject
-        .localToGlobal(Offset.zero, ancestor: viewport)
-        .dy;
-    final correction = anchor.top - newTop;
-    if (correction.abs() <= 0.5) return;
+    final newBottom = _sliverChildBottomInViewport(renderObject);
+    return newBottom == null ? null : anchor.bottom - newBottom;
+  }
 
-    final position = widget.scrollController.position;
-    final target = (position.pixels + correction).clamp(
-      position.minScrollExtent,
-      position.maxScrollExtent,
-    );
-    widget.scrollController.jumpTo(target);
+  /// Measures the item's trailing edge without reading a descendant's size.
+  ///
+  /// This is called from the viewport's layout pass. A reverse vertical sliver
+  /// can derive the item's bottom from its layout offset alone, which is safe
+  /// at that point; walking the regular RenderBox transform would access child
+  /// sizes outside their permitted layout scope.
+  double? _sliverChildBottomInViewport(RenderBox renderObject) {
+    RenderObject child = renderObject;
+    while (child.parent != null &&
+        child.parent is! RenderSliverMultiBoxAdaptor) {
+      child = child.parent!;
+    }
+    final sliver = child.parent;
+    if (child is! RenderBox || sliver is! RenderSliverMultiBoxAdaptor) {
+      return null;
+    }
+    final geometry = sliver.geometry;
+    if (geometry == null ||
+        applyGrowthDirectionToAxisDirection(
+              sliver.constraints.axisDirection,
+              sliver.constraints.growthDirection,
+            ) !=
+            AxisDirection.up) {
+      return null;
+    }
+
+    final transform = Matrix4.identity();
+    RenderObject current = sliver;
+    while (current is! RenderViewportBase) {
+      final parent = current.parent;
+      if (parent == null) return null;
+      parent.applyPaintTransform(current, transform);
+      current = parent;
+    }
+    final bottomWithinSliver =
+        geometry.paintExtent - sliver.childMainAxisPosition(child);
+    return MatrixUtils.transformPoint(
+      transform,
+      Offset(0, bottomWithinSliver),
+    ).dy;
   }
 
   // ---------------------------------------------------------------------------
@@ -610,9 +692,9 @@ class _ChatMessageListState extends State<ChatMessageList> {
 
 class _VisibleAnchor {
   final Key? key;
-  final double top;
+  final double bottom;
 
-  const _VisibleAnchor({required this.key, required this.top});
+  const _VisibleAnchor({required this.key, required this.bottom});
 }
 
 class _ChatListDerivedData {

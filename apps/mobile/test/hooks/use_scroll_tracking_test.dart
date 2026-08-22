@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ccpocket/features/chat_session/widgets/anchor_maintaining_auto_scroll_controller.dart';
 import 'package:ccpocket/hooks/use_scroll_tracking.dart';
 
 void main() {
@@ -115,6 +116,48 @@ void main() {
       expect(result.controller.offset, closeTo(240, 0.1));
       expect(result.isReadingHistory, isTrue);
       expect(result.showScrollToLatest, isTrue);
+    });
+
+    testWidgets('restores an offset corrected during layout', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      late ScrollTrackingResult result;
+      var sessionId = 'layout-correction-source';
+      var itemCount = 100;
+
+      Widget app() => _ScrollHarness(
+        sessionId: sessionId,
+        itemCount: itemCount,
+        onResult: (value) => result = value,
+      );
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(240);
+      await tester.pump();
+
+      final controller =
+          result.controller as AnchorMaintainingAutoScrollController;
+      var needsCorrection = true;
+      controller.layoutAnchorCorrection = () {
+        if (!needsCorrection) return 0;
+        needsCorrection = false;
+        return 50;
+      };
+      tester.view.physicalSize = const Size(800, 500);
+      itemCount = 120;
+      await tester.pumpWidget(app());
+      await tester.pump();
+      controller.layoutAnchorCorrection = null;
+      expect(result.controller.offset, closeTo(290, 0.1));
+
+      sessionId = 'layout-correction-other';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      sessionId = 'layout-correction-source';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+
+      expect(result.controller.offset, closeTo(290, 0.1));
     });
 
     testWidgets('does not lose a saved offset while lazy content is short', (

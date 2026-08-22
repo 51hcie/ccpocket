@@ -3,6 +3,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:scroll_to_index/scroll_to_index.dart';
 
+import '../features/chat_session/widgets/anchor_maintaining_auto_scroll_controller.dart';
+
 /// Cross-session scroll position persistence.
 final Map<String, double> _scrollOffsets = {};
 
@@ -39,7 +41,7 @@ typedef ScrollTrackingResult = ({
 /// persists offsets across sessions and exposes an explicit way to return to
 /// latest; it does not infer intent from scroll direction or content extent.
 ScrollTrackingResult useScrollTracking(String sessionId) {
-  final controller = useMemoized(AutoScrollController.new);
+  final controller = useMemoized(AnchorMaintainingAutoScrollController.new);
   useEffect(() => controller.dispose, const []);
 
   final isReadingHistory = useState(false);
@@ -153,10 +155,22 @@ ScrollTrackingResult useScrollTracking(String sessionId) {
     }
 
     onScrollMetricsChangedRef.value = metricsCallback;
+    void persistAnchorCorrection(double offset) {
+      if (cancelled || applyingRestore || restorePending) return;
+      _scrollOffsets[sessionId] = offset;
+    }
+
+    controller.onLayoutAnchorCorrected = persistAnchorCorrection;
     scheduleRestore();
 
     return () {
       cancelled = true;
+      if (identical(
+        controller.onLayoutAnchorCorrected,
+        persistAnchorCorrection,
+      )) {
+        controller.onLayoutAnchorCorrected = null;
+      }
       if (identical(onScrollMetricsChangedRef.value, metricsCallback)) {
         onScrollMetricsChangedRef.value = () {};
       }

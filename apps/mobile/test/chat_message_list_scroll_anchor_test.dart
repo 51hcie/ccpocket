@@ -7,6 +7,7 @@ import 'package:scroll_to_index/scroll_to_index.dart';
 
 import 'package:ccpocket/features/chat_session/state/chat_session_cubit.dart';
 import 'package:ccpocket/features/chat_session/state/streaming_state_cubit.dart';
+import 'package:ccpocket/features/chat_session/widgets/anchor_maintaining_auto_scroll_controller.dart';
 import 'package:ccpocket/features/chat_session/widgets/chat_message_list.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/models/messages.dart';
@@ -15,9 +16,10 @@ import 'package:ccpocket/theme/app_theme.dart';
 import 'package:ccpocket/widgets/message_bubble.dart';
 
 void main() {
-  testWidgets('streaming growth preserves the visible message being read', (
+  testWidgets('streaming keeps the visible message fixed in the first frame', (
     tester,
   ) async {
+    addTearDown(tester.view.resetViewInsets);
     final bridge = _ScrollTestBridge();
     final streamingCubit = StreamingStateCubit();
     final chatCubit = ChatSessionCubit(
@@ -25,7 +27,7 @@ void main() {
       bridge: bridge,
       streamingCubit: streamingCubit,
     );
-    final controller = AutoScrollController();
+    final controller = AnchorMaintainingAutoScrollController();
     addTearDown(controller.dispose);
     addTearDown(chatCubit.close);
     addTearDown(streamingCubit.close);
@@ -84,9 +86,12 @@ void main() {
     final target = find.text('message 35');
     expect(target, findsOneWidget);
 
+    final beforeStreamingStart = tester.getTopLeft(target).dy;
     streamingCubit.appendText('short');
     await tester.pump();
+    expect(tester.getTopLeft(target).dy, closeTo(beforeStreamingStart, 1));
     await tester.pump();
+    expect(tester.getTopLeft(target).dy, closeTo(beforeStreamingStart, 1));
     final streamingEntry = find.byWidgetPredicate(
       (widget) =>
           widget is ChatEntryWidget && widget.entry is StreamingChatEntry,
@@ -100,7 +105,6 @@ void main() {
       List.generate(8, (index) => '\n\nstreaming line $index').join(),
     );
     await tester.pump();
-    await tester.pump();
 
     expect(
       tester.getSize(streamingEntry).height,
@@ -109,6 +113,14 @@ void main() {
     expect(tester.getTopLeft(target).dy, closeTo(before, 1));
     expect(controller.offset, greaterThanOrEqualTo(offsetBefore));
     expect(controller.offset, lessThan(controller.position.maxScrollExtent));
+    await tester.pump();
+    expect(tester.getTopLeft(target).dy, closeTo(before, 1));
+
+    final beforeCombinedResize = tester.getTopLeft(target).dy;
+    streamingCubit.appendText('\n\nmore content during keyboard resize');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 120);
+    await tester.pump();
+    expect(tester.getTopLeft(target).dy, closeTo(beforeCombinedResize, 1));
     expect(tester.takeException(), isNull);
   });
 }
