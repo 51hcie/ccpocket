@@ -1,361 +1,392 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ccpocket/features/chat_session/widgets/maintain_reading_position_physics.dart';
 import 'package:ccpocket/hooks/use_scroll_tracking.dart';
-import 'package:ccpocket/l10n/app_localizations.dart';
 
 void main() {
-  group('nextAutoFollowState', () {
-    test('pauses as soon as the user scrolls away from the bottom', () {
-      expect(
-        nextAutoFollowState(
-          isFollowing: true,
-          distanceFromBottom: 8,
-          direction: ScrollDirection.reverse,
-        ),
-        isFalse,
-      );
+  group('scroll state thresholds', () {
+    test('reading intent changes immediately after leaving latest', () {
+      expect(isReadingHistoryAt(0), isFalse);
+      expect(isReadingHistoryAt(1), isFalse);
+      expect(isReadingHistoryAt(2), isTrue);
     });
 
-    test('stays paused while layout growth changes the offset', () {
-      expect(
-        nextAutoFollowState(
-          isFollowing: false,
-          distanceFromBottom: 240,
-          direction: ScrollDirection.idle,
-        ),
-        isFalse,
-      );
+    test('return button uses an independent, less sensitive threshold', () {
+      expect(shouldShowScrollToLatestAt(100), isFalse);
+      expect(shouldShowScrollToLatestAt(101), isTrue);
     });
 
-    test('resumes when the user scrolls back near the bottom', () {
-      expect(
-        nextAutoFollowState(
-          isFollowing: false,
-          distanceFromBottom: 16,
-          direction: ScrollDirection.forward,
-        ),
-        isTrue,
-      );
-    });
-
-    test('always follows at the exact bottom', () {
-      expect(
-        nextAutoFollowState(
-          isFollowing: false,
-          distanceFromBottom: 0,
-          direction: ScrollDirection.idle,
-        ),
-        isTrue,
-      );
+    test('automatic tool collapse is disabled while reading history', () {
+      expect(shouldAutoCollapseToolResults(false), isTrue);
+      expect(shouldAutoCollapseToolResults(true), isFalse);
     });
   });
 
   group('useScrollTracking', () {
-    testWidgets('returns a ScrollController and initial state', (tester) async {
+    testWidgets('starts at latest', (tester) async {
       late ScrollTrackingResult result;
-
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: HookBuilder(
-            builder: (context) {
-              result = useScrollTracking('session-1');
-              // Use reverse: true — offset 0 = bottom of chat
-              return ListView.builder(
-                controller: result.controller,
-                reverse: true,
-                itemCount: 100,
-                itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i')),
-              );
-            },
-          ),
+        _ScrollHarness(
+          sessionId: 'starts-at-latest',
+          onResult: (value) => result = value,
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(result.controller, isA<ScrollController>());
-      // Initially at offset 0 with reverse list → at bottom → not scrolled up
+      expect(result.controller.offset, 0);
+      expect(result.isReadingHistory, isFalse);
+      expect(result.showScrollToLatest, isFalse);
+      expect(result.isReadingHistoryNow(), isFalse);
     });
 
-    testWidgets('isScrolledUp becomes false when at bottom', (tester) async {
-      late ScrollTrackingResult result;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: HookBuilder(
-            builder: (context) {
-              result = useScrollTracking('session-2');
-              // Use reverse: true — offset 0 = bottom of chat
-              return ListView.builder(
-                controller: result.controller,
-                reverse: true,
-                itemCount: 200,
-                itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i')),
-              );
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // With reverse list, offset 0 = bottom → isScrolledUp should be false
-      expect(result.isScrolledUp, isFalse);
-    });
-
-    testWidgets('keeps following within the near-bottom threshold', (
+    testWidgets('tracks reading separately from return-button visibility', (
       tester,
     ) async {
       late ScrollTrackingResult result;
-
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: HookBuilder(
-            builder: (context) {
-              result = useScrollTracking('session-4');
-              // Use reverse: true — offset 0 = bottom of chat
-              return ListView.builder(
-                controller: result.controller,
-                reverse: true,
-                itemCount: 200,
-                itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i')),
-              );
-            },
-          ),
+        _ScrollHarness(
+          sessionId: 'independent-thresholds',
+          onResult: (value) => result = value,
         ),
       );
       await tester.pumpAndSettle();
 
-      // Near bottom (within the 24px threshold) → still following.
       result.controller.jumpTo(16);
-      await tester.pumpAndSettle();
-      expect(result.isScrolledUp, isFalse);
+      await tester.pump();
+      expect(result.isReadingHistory, isTrue);
+      expect(result.showScrollToLatest, isFalse);
+
+      result.controller.jumpTo(160);
+      await tester.pump();
+      expect(result.isReadingHistory, isTrue);
+      expect(result.showScrollToLatest, isTrue);
+      expect(result.isReadingHistoryNow(), isTrue);
     });
 
-    testWidgets('does not auto-scroll after following has paused', (
+    testWidgets('goToLatest clears reading state and reaches offset zero', (
       tester,
     ) async {
       late ScrollTrackingResult result;
-
       await tester.pumpWidget(
-        MaterialApp(
-          home: HookBuilder(
-            builder: (context) {
-              result = useScrollTracking('session-paused');
-              return ListView.builder(
-                controller: result.controller,
-                reverse: true,
-                itemCount: 100,
-                itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i')),
-              );
-            },
-          ),
+        _ScrollHarness(
+          sessionId: 'go-to-latest',
+          onResult: (value) => result = value,
         ),
       );
       await tester.pumpAndSettle();
-
-      result.controller.jumpTo(200);
+      result.controller.jumpTo(240);
       await tester.pump();
-      expect(result.isFollowingOutput, isFalse);
 
-      result.scrollToBottom();
-      await tester.pumpAndSettle();
-      expect(result.controller.offset, 200);
-    });
-
-    testWidgets('resumes following after returning to the bottom', (
-      tester,
-    ) async {
-      late ScrollTrackingResult result;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: HookBuilder(
-            builder: (context) {
-              result = useScrollTracking('session-resumed');
-              return ListView.builder(
-                controller: result.controller,
-                reverse: true,
-                itemCount: 100,
-                itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i')),
-              );
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      result.controller.jumpTo(200);
+      result.goToLatest();
       await tester.pump();
-      result.forceScrollToBottom();
+      expect(result.isReadingHistory, isFalse);
+      expect(result.showScrollToLatest, isFalse);
       await tester.pumpAndSettle();
 
-      expect(result.isFollowingOutput, isTrue);
-      expect(result.isScrolledUp, isFalse);
       expect(result.controller.offset, 0);
+      expect(result.isReadingHistoryNow(), isFalse);
     });
 
-    testWidgets('starts following when switching to an unsaved session', (
+    testWidgets('restores the saved offset when returning to a session', (
       tester,
     ) async {
       late ScrollTrackingResult result;
-      var sessionId = 'session-switch-source';
+      var sessionId = 'restore-source';
 
-      Widget buildApp() {
-        return MaterialApp(
-          home: HookBuilder(
-            builder: (context) {
-              result = useScrollTracking(sessionId);
-              return ListView.builder(
-                controller: result.controller,
-                reverse: true,
-                itemCount: 100,
-                itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i')),
-              );
-            },
-          ),
-        );
+      Widget app() => _ScrollHarness(
+        sessionId: sessionId,
+        onResult: (value) => result = value,
+      );
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(240);
+      await tester.pump();
+
+      sessionId = 'restore-other';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(result.controller.offset, 0);
+
+      sessionId = 'restore-source';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(result.controller.offset, closeTo(240, 0.1));
+      expect(result.isReadingHistory, isTrue);
+      expect(result.showScrollToLatest, isTrue);
+    });
+
+    testWidgets('does not lose a saved offset while lazy content is short', (
+      tester,
+    ) async {
+      late ScrollTrackingResult result;
+      var sessionId = 'delayed-extent-source';
+      var itemCount = 200;
+
+      Widget app() => _ScrollHarness(
+        sessionId: sessionId,
+        itemCount: itemCount,
+        onResult: (value) => result = value,
+      );
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(3000);
+      await tester.pump();
+
+      sessionId = 'delayed-extent-other';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(2000);
+      await tester.pump();
+
+      sessionId = 'delayed-extent-source';
+      itemCount = 20;
+      await tester.pumpWidget(app());
+      await tester.pump();
+      expect(result.controller.offset, lessThan(3000));
+
+      // Simulate history arriving well after the initial frames.
+      for (var i = 0; i < 25; i++) {
+        await tester.pump();
       }
 
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
-      result.controller.jumpTo(200);
-      await tester.pump();
-      expect(result.isFollowingOutput, isFalse);
-
-      sessionId = 'session-switch-new';
-      await tester.pumpWidget(buildApp());
+      itemCount = 200;
+      await tester.pumpWidget(app());
       await tester.pumpAndSettle();
 
-      expect(result.isFollowingOutput, isTrue);
-      expect(result.isScrolledUp, isFalse);
+      expect(result.controller.offset, closeTo(3000, 0.1));
+      expect(result.isReadingHistory, isTrue);
     });
 
-    testWidgets('restores an explicitly paused near-bottom session', (
-      tester,
-    ) async {
-      late ScrollTrackingResult result;
-      var sessionId = 'session-near-bottom-paused';
+    testWidgets(
+      'user scroll cancels restore when saved offset no longer exists',
+      (tester) async {
+        late ScrollTrackingResult result;
+        var sessionId = 'shortened-source';
+        var itemCount = 200;
 
-      Widget buildApp() {
-        return MaterialApp(
-          home: HookBuilder(
-            builder: (context) {
-              result = useScrollTracking(sessionId);
-              return ListView.builder(
-                controller: result.controller,
-                reverse: true,
-                itemCount: 100,
-                itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i')),
-              );
-            },
-          ),
+        Widget app() => _ScrollHarness(
+          sessionId: sessionId,
+          itemCount: itemCount,
+          onResult: (value) => result = value,
         );
-      }
 
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.byType(ListView)),
-      );
-      await gesture.moveBy(const Offset(0, 16));
-      await tester.pump();
-      expect(result.isFollowingOutput, isFalse);
-      await gesture.up();
-      await tester.pumpAndSettle();
-      expect(result.controller.offset, lessThanOrEqualTo(24));
+        await tester.pumpWidget(app());
+        await tester.pumpAndSettle();
+        result.controller.jumpTo(3000);
+        await tester.pump();
 
-      sessionId = 'session-near-bottom-other';
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
-      sessionId = 'session-near-bottom-paused';
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
+        sessionId = 'shortened-other';
+        itemCount = 30;
+        await tester.pumpWidget(app());
+        await tester.pumpAndSettle();
+        sessionId = 'shortened-source';
+        await tester.pumpWidget(app());
 
-      expect(result.isFollowingOutput, isFalse);
-    });
+        await tester.pump();
+        await tester.drag(find.byType(ListView), const Offset(0, -300));
+        await tester.pumpAndSettle();
+        final userOffset = result.controller.offset;
+        for (var i = 0; i < 5; i++) {
+          await tester.pump();
+        }
 
-    testWidgets('force scroll cooperates with reading-position physics', (
+        expect(
+          userOffset,
+          lessThan(result.controller.position.maxScrollExtent),
+        );
+        expect(result.controller.offset, closeTo(userOffset, 0.1));
+      },
+    );
+
+    testWidgets('completed restore does not override a programmatic scroll', (
       tester,
     ) async {
       late ScrollTrackingResult result;
-      final bottomItemHeight = ValueNotifier(50.0);
-      addTearDown(bottomItemHeight.dispose);
+      var sessionId = 'completed-restore-source';
+      var itemCount = 200;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: _IntegratedScrollHarness(
-            bottomItemHeight: bottomItemHeight,
-            onResult: (value) => result = value,
-          ),
-        ),
+      Widget app() => _ScrollHarness(
+        sessionId: sessionId,
+        itemCount: itemCount,
+        onResult: (value) => result = value,
       );
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(3000);
+      await tester.pump();
+
+      sessionId = 'completed-restore-other';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      sessionId = 'completed-restore-source';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(result.controller.offset, closeTo(3000, 0.1));
+
+      result.controller.jumpTo(1000);
+      await tester.pump();
+      itemCount = 250;
+      await tester.pumpWidget(app());
       await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(ListView), const Offset(0, 300));
-      await tester.pumpAndSettle();
-      expect(result.isFollowingOutput, isFalse);
+      expect(result.controller.offset, closeTo(1000, 0.1));
+    });
 
-      final maxExtentBeforeGrowth = result.controller.position.maxScrollExtent;
-      bottomItemHeight.value += 50;
-      await tester.pumpAndSettle();
-      expect(
-        result.controller.position.maxScrollExtent,
-        greaterThan(maxExtentBeforeGrowth),
+    testWidgets('pending restore target survives leaving the session', (
+      tester,
+    ) async {
+      late ScrollTrackingResult result;
+      var sessionId = 'pending-restore-source';
+      var itemCount = 200;
+
+      Widget app() => _ScrollHarness(
+        sessionId: sessionId,
+        itemCount: itemCount,
+        onResult: (value) => result = value,
       );
-      expect(result.isFollowingOutput, isFalse);
 
-      result.forceScrollToBottom();
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(3000);
+      await tester.pump();
+
+      sessionId = 'pending-restore-other';
+      itemCount = 10;
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      sessionId = 'pending-restore-source';
+      await tester.pumpWidget(app());
+      await tester.pump();
+      expect(result.controller.offset, lessThan(3000));
+
+      sessionId = 'pending-restore-other';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      sessionId = 'pending-restore-source';
+      itemCount = 200;
+      await tester.pumpWidget(app());
       await tester.pumpAndSettle();
 
-      expect(result.isFollowingOutput, isTrue);
-      expect(result.controller.offset, 0);
-      expect(tester.takeException(), isNull);
+      expect(result.controller.offset, closeTo(3000, 0.1));
+    });
+
+    testWidgets('new session does not inherit the previous session offset', (
+      tester,
+    ) async {
+      late ScrollTrackingResult result;
+      var sessionId = 'previous-scrolled-session';
+
+      Widget app() => _ScrollHarness(
+        sessionId: sessionId,
+        itemCount: 200,
+        onResult: (value) => result = value,
+      );
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(2000);
+      await tester.pump();
+
+      sessionId = 'brand-new-session';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(result.controller.offset, closeTo(0, 0.1));
+
+      sessionId = 'previous-scrolled-session';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(result.controller.offset, closeTo(2000, 0.1));
+
+      sessionId = 'brand-new-session';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(result.controller.offset, closeTo(0, 0.1));
+    });
+
+    testWidgets('goToLatest resumes normal offset persistence', (tester) async {
+      late ScrollTrackingResult result;
+      var sessionId = 'go-latest-pending-source';
+      var itemCount = 200;
+
+      Widget app() => _ScrollHarness(
+        sessionId: sessionId,
+        itemCount: itemCount,
+        onResult: (value) => result = value,
+      );
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(3000);
+      await tester.pump();
+
+      sessionId = 'go-latest-pending-other';
+      itemCount = 20;
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      sessionId = 'go-latest-pending-source';
+      await tester.pumpWidget(app());
+      await tester.pump();
+
+      result.goToLatest();
+      await tester.pumpAndSettle();
+      itemCount = 200;
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      result.controller.jumpTo(500);
+      await tester.pump();
+
+      sessionId = 'go-latest-pending-other';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      sessionId = 'go-latest-pending-source';
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+
+      expect(result.controller.offset, closeTo(500, 0.1));
     });
   });
 }
 
-class _IntegratedScrollHarness extends HookWidget {
-  const _IntegratedScrollHarness({
-    required this.bottomItemHeight,
+class _ScrollHarness extends StatelessWidget {
+  const _ScrollHarness({
+    required this.sessionId,
     required this.onResult,
+    this.itemCount = 100,
   });
 
-  final ValueNotifier<double> bottomItemHeight;
+  final String sessionId;
   final ValueChanged<ScrollTrackingResult> onResult;
+  final int itemCount;
 
   @override
   Widget build(BuildContext context) {
-    final result = useScrollTracking('session-integrated-physics');
-    onResult(result);
-
-    return ValueListenableBuilder<double>(
-      valueListenable: bottomItemHeight,
-      builder: (context, firstItemHeight, _) {
-        return ListView.builder(
-          controller: result.controller,
-          reverse: true,
-          physics: MaintainReadingPositionPhysics(
-            shouldMaintain: () => !result.isFollowingOutput,
-          ),
-          itemCount: 40,
-          itemBuilder: (_, i) => SizedBox(
-            height: i == 0 ? firstItemHeight : 50,
-            child: Text('$i'),
-          ),
-        );
-      },
+    return MaterialApp(
+      home: HookBuilder(
+        builder: (context) {
+          final result = useScrollTracking(sessionId);
+          onResult(result);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            result.onScrollMetricsChanged();
+          });
+          return NotificationListener<ScrollMetricsNotification>(
+            onNotification: (_) {
+              result.onScrollMetricsChanged();
+              return false;
+            },
+            child: ListView.builder(
+              controller: result.controller,
+              reverse: true,
+              itemCount: itemCount,
+              itemBuilder: (_, index) =>
+                  SizedBox(height: 50, child: Text('$index')),
+            ),
+          );
+        },
+      ),
     );
   }
 }

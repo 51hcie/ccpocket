@@ -315,8 +315,14 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
       _streamingCubit.reset();
     }
 
-    // Prepend entries (past history)
-    if (update.entriesToPrepend.isNotEmpty) {
+    // Past history is a snapshot. Replace the previous past slice so a refresh
+    // cannot transiently duplicate every old message in the viewport.
+    if (originalMsg is PastHistoryMessage) {
+      final liveEntries = entries.skip(_pastEntryCount).toList();
+      _pastEntryCount = update.entriesToPrepend.length;
+      entries = [...update.entriesToPrepend, ...liveEntries];
+      didModifyEntries = true;
+    } else if (update.entriesToPrepend.isNotEmpty) {
       _pastEntryCount += update.entriesToPrepend.length;
       entries = [...update.entriesToPrepend, ...entries];
       didModifyEntries = true;
@@ -1991,7 +1997,6 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
   /// restoring approval state that may have arrived while disconnected.
   void refreshHistory() {
     _pastHistoryLoaded = false;
-    _pastEntryCount = 0;
     _bridge.requestSessionHistory(sessionId);
   }
 

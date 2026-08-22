@@ -3,143 +3,201 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:scroll_to_index/scroll_to_index.dart';
 
-/// Cross-session scroll position and output-following intent persistence.
-final Map<String, ({double offset, bool isFollowingOutput})> _scrollStates = {};
+/// Cross-session scroll position persistence.
+final Map<String, double> _scrollOffsets = {};
 
-/// Minimum change in maxScrollExtent (in logical pixels) to be considered a
-/// layout-driven shift rather than floating-point rounding noise.
-const _kExtentChangeTolerance = 1.0;
+/// A tiny tolerance avoids toggling reading mode because of rounding noise.
+const _kReadingThreshold = 1.0;
 
-/// Distance from the bottom that still counts as following live output.
-const _kAutoFollowThreshold = 24.0;
+/// Keep the return button hidden for small, incidental movement near latest.
+const _kScrollToLatestButtonThreshold = 100.0;
 
 @visibleForTesting
-bool nextAutoFollowState({
-  required bool isFollowing,
-  required double distanceFromBottom,
-  required ScrollDirection direction,
-}) {
-  if (distanceFromBottom <= 1) return true;
-  if (direction == ScrollDirection.reverse) return false;
-  if (distanceFromBottom > _kAutoFollowThreshold) return false;
-  if (!isFollowing && direction == ScrollDirection.forward) return true;
-  return isFollowing;
-}
+bool isReadingHistoryAt(double distanceFromLatest) =>
+    distanceFromLatest > _kReadingThreshold;
+
+@visibleForTesting
+bool shouldShowScrollToLatestAt(double distanceFromLatest) =>
+    distanceFromLatest > _kScrollToLatestButtonThreshold;
+
+bool shouldAutoCollapseToolResults(bool isReadingHistory) => !isReadingHistory;
 
 /// Result record returned by [useScrollTracking].
 typedef ScrollTrackingResult = ({
   AutoScrollController controller,
-  bool isScrolledUp,
-  bool isFollowingOutput,
-  void Function() scrollToBottom,
-  void Function() forceScrollToBottom,
+  bool isReadingHistory,
+  bool showScrollToLatest,
+  bool Function() isReadingHistoryNow,
+  VoidCallback onScrollMetricsChanged,
+  void Function() goToLatest,
 });
 
-/// Manages scroll position tracking with three responsibilities:
+/// Tracks the single piece of intent the chat needs: whether the user is
+/// reading away from the latest message.
 ///
-/// 1. **Output following**: Follows live output only while the user remains at
-///    the bottom. Scrolling toward older messages pauses following immediately.
-/// 2. **Cross-session offset persistence**: Saves/restores scroll offset keyed
-///    by [sessionId] so switching sessions preserves position.
-/// 3. **Scroll-to-bottom**: Provides a [scrollToBottom] callback that smoothly
-///    animates to the bottom (skipped while output following is paused).
+/// The reverse list naturally follows output at offset zero. This hook only
+/// persists offsets across sessions and exposes an explicit way to return to
+/// latest; it does not infer intent from scroll direction or content extent.
 ScrollTrackingResult useScrollTracking(String sessionId) {
   final controller = useMemoized(AutoScrollController.new);
-  // Dispose the controller when the hook is disposed.
   useEffect(() => controller.dispose, const []);
 
-  final isFollowingOutput = useState(true);
-  final isFollowingOutputRef = useRef(true);
+  final isReadingHistory = useState(false);
+  final showScrollToLatest = useState(false);
+  final isReadingHistoryRef = useRef(false);
+  final isGoingToLatest = useRef(false);
+  final restorationVersion = useRef(0);
+  final onScrollMetricsChangedRef = useRef<VoidCallback>(() {});
 
-  // Track previous maxScrollExtent to detect layout-driven changes
-  // (e.g. Android notification shade toggling safe-area padding).
-  final prevMaxExtent = useRef<double?>(null);
+  void updateState(double distanceFromLatest) {
+    final reading = isReadingHistoryAt(distanceFromLatest);
+    final showButton = shouldShowScrollToLatestAt(distanceFromLatest);
+    isReadingHistoryRef.value = reading;
+    if (isReadingHistory.value != reading) {
+      isReadingHistory.value = reading;
+    }
+    if (showScrollToLatest.value != showButton) {
+      showScrollToLatest.value = showButton;
+    }
+  }
 
   useEffect(() {
-    void onScroll() {
-      if (!controller.hasClients) return;
-      final pos = controller.position;
+    var cancelled = false;
+    final currentRestorationVersion = ++restorationVersion.value;
+    isGoingToLatest.value = false;
+    isReadingHistoryRef.value = false;
+    isReadingHistory.value = false;
+    showScrollToLatest.value = false;
 
-      final prevMax = prevMaxExtent.value;
-      prevMaxExtent.value = pos.maxScrollExtent;
+    final savedOffset = _scrollOffsets[sessionId] ?? 0;
+    var lastRestoreMaxExtent = double.negativeInfinity;
+    // Suppress stale pixels from the previous session until the first layout
+    // has applied this session's target, including the default target of zero.
+    var restorePending = true;
+    var applyingRestore = false;
+    var restoreScheduled = false;
+    late final VoidCallback scheduleRestore;
 
-      // When maxScrollExtent shifts (viewport/layout change) while we were
-      // already at the bottom, ignore this event — don't pause following.
-      // The framework will settle the scroll position on the next frame.
-      // This prevents the FAB from flashing when the Android notification
-      // shade is pulled down/up.
-      // Note: when following is already paused (user scrolled up), we don't
-      // guard — the user's intent takes priority over layout shifts.
-      if (prevMax != null && isFollowingOutputRef.value) {
-        final extentDelta = (pos.maxScrollExtent - prevMax).abs();
-        if (extentDelta > _kExtentChangeTolerance) return;
+    void restoreSavedOffset() {
+      restoreScheduled = false;
+      if (cancelled ||
+          currentRestorationVersion != restorationVersion.value ||
+          !controller.hasClients) {
+        return;
       }
-
-      final next = nextAutoFollowState(
-        isFollowing: isFollowingOutputRef.value,
-        distanceFromBottom: pos.pixels - pos.minScrollExtent,
-        direction: pos.userScrollDirection,
+      final position = controller.position;
+      lastRestoreMaxExtent = position.maxScrollExtent;
+      final reachableOffset = savedOffset.clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
       );
-      isFollowingOutputRef.value = next;
-      if (next != isFollowingOutput.value) {
-        isFollowingOutput.value = next;
+      if ((position.pixels - reachableOffset).abs() > _kReadingThreshold) {
+        applyingRestore = true;
+        controller.jumpTo(reachableOffset);
+        applyingRestore = false;
       }
+      restorePending =
+          (savedOffset - reachableOffset).abs() > _kReadingThreshold;
+      updateState(reachableOffset - position.minScrollExtent);
+    }
+
+    scheduleRestore = () {
+      if (restoreScheduled ||
+          cancelled ||
+          currentRestorationVersion != restorationVersion.value) {
+        return;
+      }
+      restoreScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => restoreSavedOffset());
+    };
+
+    void onScroll() {
+      if (!controller.hasClients || isGoingToLatest.value) return;
+      final position = controller.position;
+      if (currentRestorationVersion != restorationVersion.value) {
+        restorePending = false;
+      }
+      if (position.userScrollDirection != ScrollDirection.idle) {
+        restorePending = false;
+        restorationVersion.value++;
+        _scrollOffsets[sessionId] = position.pixels;
+      } else if (restorePending &&
+          position.maxScrollExtent >
+              lastRestoreMaxExtent + _kReadingThreshold) {
+        // Resume a pending restore only when newly laid-out content makes more
+        // of the saved offset reachable. This also handles delayed history.
+        scheduleRestore();
+      } else if (!applyingRestore && !restorePending) {
+        _scrollOffsets[sessionId] = position.pixels;
+      }
+      updateState(position.pixels - position.minScrollExtent);
     }
 
     controller.addListener(onScroll);
-
-    // Restore saved offset after first frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final saved = _scrollStates[sessionId];
-      final followsSavedPosition = saved?.isFollowingOutput ?? true;
-      isFollowingOutputRef.value = followsSavedPosition;
-      isFollowingOutput.value = followsSavedPosition;
-      if (saved != null && controller.hasClients) {
-        controller.jumpTo(saved.offset);
+    void metricsCallback() {
+      if (!restorePending ||
+          currentRestorationVersion != restorationVersion.value ||
+          !controller.hasClients ||
+          isGoingToLatest.value) {
+        return;
       }
-    });
+      final position = controller.position;
+      if (position.maxScrollExtent <
+          lastRestoreMaxExtent - _kReadingThreshold) {
+        lastRestoreMaxExtent = position.maxScrollExtent;
+      }
+      if (position.maxScrollExtent >
+          lastRestoreMaxExtent + _kReadingThreshold) {
+        scheduleRestore();
+      }
+    }
+
+    onScrollMetricsChangedRef.value = metricsCallback;
+    scheduleRestore();
 
     return () {
-      // Persist offset before disposal.
-      if (controller.hasClients) {
-        _scrollStates[sessionId] = (
-          offset: controller.offset,
-          isFollowingOutput: isFollowingOutputRef.value,
-        );
+      cancelled = true;
+      if (identical(onScrollMetricsChangedRef.value, metricsCallback)) {
+        onScrollMetricsChangedRef.value = () {};
       }
       controller.removeListener(onScroll);
-      prevMaxExtent.value = null;
     };
   }, [sessionId]);
 
-  void animateToBottom() {
+  void goToLatest() {
+    restorationVersion.value++;
+    isGoingToLatest.value = true;
+    _scrollOffsets[sessionId] = 0;
+    updateState(0);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (controller.hasClients) {
-        controller.animateTo(
-          0.0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
+      if (!controller.hasClients) {
+        isGoingToLatest.value = false;
+        return;
       }
+      controller
+          .animateTo(
+            controller.position.minScrollExtent,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          )
+          .whenComplete(() {
+            isGoingToLatest.value = false;
+            if (controller.hasClients) {
+              updateState(
+                controller.position.pixels -
+                    controller.position.minScrollExtent,
+              );
+            }
+          });
     });
-  }
-
-  void scrollToBottom() {
-    if (!isFollowingOutputRef.value) return;
-    animateToBottom();
-  }
-
-  void forceScrollToBottom() {
-    isFollowingOutputRef.value = true;
-    isFollowingOutput.value = true;
-    animateToBottom();
   }
 
   return (
     controller: controller,
-    isScrolledUp: !isFollowingOutput.value,
-    isFollowingOutput: isFollowingOutput.value,
-    scrollToBottom: scrollToBottom,
-    forceScrollToBottom: forceScrollToBottom,
+    isReadingHistory: isReadingHistory.value,
+    showScrollToLatest: showScrollToLatest.value,
+    isReadingHistoryNow: () => isReadingHistoryRef.value,
+    onScrollMetricsChanged: () => onScrollMetricsChangedRef.value(),
+    goToLatest: goToLatest,
   );
 }

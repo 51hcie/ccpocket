@@ -34,7 +34,7 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(
-      _KeyboardScrollHarness(controller: controller, isFollowingOutput: false),
+      _KeyboardScrollHarness(controller: controller, isReadingHistory: true),
     );
     await tester.pumpAndSettle();
     controller.jumpTo(300);
@@ -68,10 +68,7 @@ void main() {
       addTearDown(controller.dispose);
 
       await tester.pumpWidget(
-        _KeyboardScrollHarness(
-          controller: controller,
-          isFollowingOutput: false,
-        ),
+        _KeyboardScrollHarness(controller: controller, isReadingHistory: true),
       );
       await tester.pumpAndSettle();
       controller.jumpTo(300);
@@ -106,7 +103,7 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(
-      _KeyboardScrollHarness(controller: controller, isFollowingOutput: true),
+      _KeyboardScrollHarness(controller: controller, isReadingHistory: false),
     );
     await tester.pumpAndSettle();
 
@@ -135,11 +132,11 @@ class _BuildCounter extends StatelessWidget {
 class _KeyboardScrollHarness extends StatelessWidget {
   const _KeyboardScrollHarness({
     required this.controller,
-    required this.isFollowingOutput,
+    required this.isReadingHistory,
   });
 
   final ScrollController controller;
-  final bool isFollowingOutput;
+  final bool isReadingHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -150,8 +147,8 @@ class _KeyboardScrollHarness extends StatelessWidget {
           content: ListView.builder(
             controller: controller,
             reverse: true,
-            physics: MaintainReadingPositionPhysics(
-              shouldMaintain: () => !isFollowingOutput,
+            physics: MaintainReadingPositionOnResizePhysics(
+              shouldMaintain: () => isReadingHistory,
             ),
             itemCount: 100,
             itemBuilder: (_, index) =>

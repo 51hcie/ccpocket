@@ -676,7 +676,7 @@ class _ChatScreenBody extends HookWidget {
           l: l,
           collapseToolResults: collapseToolResults,
           planFeedbackController: planFeedbackController,
-          scrollToBottom: scroll.scrollToBottom,
+          isReadingHistory: scroll.isReadingHistoryNow,
         ),
       );
       return sub.cancel;
@@ -1269,12 +1269,14 @@ class _ChatScreenBody extends HookWidget {
                       ),
                     ),
                     floatingButtonBuilder: (overlayHeight) {
-                      if (!scroll.isScrolledUp) return const SizedBox.shrink();
+                      if (!scroll.showScrollToLatest) {
+                        return const SizedBox.shrink();
+                      }
                       return Positioned(
                         right: 12,
                         bottom: overlayHeight + 12,
                         child: ScrollToBottomButton(
-                          onPressed: scroll.forceScrollToBottom,
+                          onPressed: scroll.goToLatest,
                         ),
                       );
                     },
@@ -1299,7 +1301,8 @@ class _ChatScreenBody extends HookWidget {
                       scrollToUserEntry: scrollToUserEntry,
                       bottomPadding: 8,
                       isCodex: false,
-                      isFollowingOutput: scroll.isFollowingOutput,
+                      isReadingHistory: scroll.isReadingHistory,
+                      onScrollMetricsChanged: scroll.onScrollMetricsChanged,
                       onFilePeekOpened: context
                           .read<ChatSessionCubit>()
                           .recordPeekedFile,
@@ -1310,7 +1313,7 @@ class _ChatScreenBody extends HookWidget {
                   ChatInputWithOverlays(
                     sessionId: sessionId,
                     status: status,
-                    onScrollToBottom: scroll.scrollToBottom,
+                    onGoToLatest: scroll.goToLatest,
                     inputController: chatInputController,
                     initialDiffSelection: diffSelectionFromNav.value,
                     onDiffSelectionConsumed: () {
@@ -1490,7 +1493,7 @@ void _executeSideEffects(
   required AppLocalizations l,
   required ValueNotifier<int> collapseToolResults,
   required TextEditingController planFeedbackController,
-  required VoidCallback scrollToBottom,
+  required bool Function() isReadingHistory,
 }) {
   for (final effect in effects) {
     switch (effect) {
@@ -1501,7 +1504,9 @@ void _executeSideEffects(
       case ChatSideEffect.lightHaptic:
         HapticFeedback.lightImpact();
       case ChatSideEffect.collapseToolResults:
-        collapseToolResults.value++;
+        if (shouldAutoCollapseToolResults(isReadingHistory())) {
+          collapseToolResults.value++;
+        }
       case ChatSideEffect.clearPlanFeedback:
         planFeedbackController.clear();
       case ChatSideEffect.notifyApprovalRequired:
@@ -1536,8 +1541,6 @@ void _executeSideEffects(
             payload: sessionId,
           );
         }
-      case ChatSideEffect.scrollToBottom:
-        scrollToBottom();
     }
   }
 }

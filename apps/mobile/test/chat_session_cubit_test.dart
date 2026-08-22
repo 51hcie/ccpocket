@@ -2129,6 +2129,89 @@ void main() {
       expect(cubit.state.entries.first, isA<UserChatEntry>());
     });
 
+    test('refresh replaces the previous past-history snapshot', () async {
+      final cubit = createCubit('s1');
+      addTearDown(cubit.close);
+      await Future.microtask(() {});
+
+      mockBridge.emitMessage(
+        const PastHistoryMessage(
+          claudeSessionId: 'old',
+          messages: [
+            PastMessage(
+              role: 'user',
+              content: [TextContent(text: 'old')],
+            ),
+          ],
+        ),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
+      cubit.sendMessage('live');
+
+      cubit.refreshHistory();
+      mockBridge.emitMessage(
+        const PastHistoryMessage(
+          claudeSessionId: 'old',
+          messages: [
+            PastMessage(
+              role: 'user',
+              content: [TextContent(text: 'new 1')],
+            ),
+            PastMessage(
+              role: 'assistant',
+              content: [TextContent(text: 'new 2')],
+            ),
+          ],
+        ),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
+
+      expect(cubit.state.entries, hasLength(3));
+      final text = cubit.state.entries.map((entry) {
+        return switch (entry) {
+          UserChatEntry(:final text) => text,
+          ServerChatEntry(message: AssistantServerMessage(:final message)) =>
+            message.content.whereType<TextContent>().map((c) => c.text).join(),
+          _ => '',
+        };
+      }).toList();
+      expect(text, ['new 1', 'new 2', 'live']);
+    });
+
+    test('refresh can replace past history with an empty snapshot', () async {
+      final cubit = createCubit('s1');
+      addTearDown(cubit.close);
+      await Future.microtask(() {});
+
+      mockBridge.emitMessage(
+        const PastHistoryMessage(
+          claudeSessionId: 'old',
+          messages: [
+            PastMessage(
+              role: 'user',
+              content: [TextContent(text: 'old')],
+            ),
+          ],
+        ),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
+      cubit.sendMessage('live');
+
+      cubit.refreshHistory();
+      mockBridge.emitMessage(
+        const PastHistoryMessage(claudeSessionId: 'old', messages: []),
+        sessionId: 's1',
+      );
+      await Future.microtask(() {});
+
+      expect(cubit.state.entries, hasLength(1));
+      expect(cubit.state.entries.single, isA<UserChatEntry>());
+      expect((cubit.state.entries.single as UserChatEntry).text, 'live');
+    });
+
     test('queued messages are promoted to sent one-by-one when assistant responses arrive', () async {
       final cubit = createCubit('s1');
       addTearDown(cubit.close);

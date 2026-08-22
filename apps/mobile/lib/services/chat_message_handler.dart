@@ -18,7 +18,6 @@ enum ChatSideEffect {
   heavyHaptic,
   mediumHaptic,
   lightHaptic,
-  scrollToBottom,
   notifyApprovalRequired,
   notifyAskQuestion,
   notifySessionComplete,

@@ -45,7 +45,7 @@ enum _CompletionOverlay { slash, dollar, file }
 class ChatInputWithOverlays extends HookWidget {
   final String sessionId;
   final ProcessStatus status;
-  final VoidCallback onScrollToBottom;
+  final VoidCallback onGoToLatest;
   final TextEditingController inputController;
 
   /// Diff selection to attach (set by parent when returning from GitScreen).
@@ -70,7 +70,7 @@ class ChatInputWithOverlays extends HookWidget {
     super.key,
     required this.sessionId,
     required this.status,
-    required this.onScrollToBottom,
+    required this.onGoToLatest,
     required this.inputController,
     this.initialDiffSelection,
     this.onDiffSelectionConsumed,
@@ -636,7 +636,7 @@ class ChatInputWithOverlays extends HookWidget {
       final draftService = context.read<DraftService>();
       draftService.deleteDraft(sessionId);
       draftService.deleteImageDraft(sessionId);
-      onScrollToBottom();
+      onGoToLatest();
 
       // Record prompt in history (skip auto-generated fallback text)
       if (finalText.isNotEmpty) {

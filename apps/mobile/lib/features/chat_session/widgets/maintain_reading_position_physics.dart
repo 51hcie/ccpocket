@@ -1,24 +1,26 @@
 import 'package:flutter/foundation.dart' show ValueGetter, clampDouble;
 import 'package:flutter/widgets.dart';
 
-/// Keeps the content currently being read visually fixed while new output
-/// grows at the bottom of a `reverse: true` chat list.
+/// Keeps the content being read fixed when the viewport itself changes size,
+/// for example when the keyboard or a bottom overlay opens.
 ///
-/// The correction happens during layout, before a frame is painted, so the
-/// viewport does not flicker between the unadjusted and corrected positions.
-class MaintainReadingPositionPhysics extends ScrollPhysics {
-  const MaintainReadingPositionPhysics({
+/// Message-content changes are deliberately ignored here. A lazy list's
+/// `maxScrollExtent` is only an estimate, so using its delta can produce large
+/// jumps. The chat message list preserves a measured visible anchor for those
+/// changes instead.
+class MaintainReadingPositionOnResizePhysics extends ScrollPhysics {
+  const MaintainReadingPositionOnResizePhysics({
     required this.shouldMaintain,
     super.parent,
   });
 
   final ValueGetter<bool> shouldMaintain;
 
-  static const double extentChangeTolerance = 1;
+  static const double dimensionChangeTolerance = 1;
 
   @override
-  MaintainReadingPositionPhysics applyTo(ScrollPhysics? ancestor) {
-    return MaintainReadingPositionPhysics(
+  MaintainReadingPositionOnResizePhysics applyTo(ScrollPhysics? ancestor) {
+    return MaintainReadingPositionOnResizePhysics(
       shouldMaintain: shouldMaintain,
       parent: buildParent(ancestor),
     );
@@ -40,11 +42,12 @@ class MaintainReadingPositionPhysics extends ScrollPhysics {
 
     if (isScrolling || !shouldMaintain()) return adjusted;
 
-    final delta = newPosition.maxScrollExtent - oldPosition.maxScrollExtent;
-    if (delta.abs() <= extentChangeTolerance) return adjusted;
+    final viewportDelta =
+        oldPosition.viewportDimension - newPosition.viewportDimension;
+    if (viewportDelta.abs() <= dimensionChangeTolerance) return adjusted;
 
     return clampDouble(
-      newPosition.pixels + delta,
+      newPosition.pixels + viewportDelta,
       newPosition.minScrollExtent,
       newPosition.maxScrollExtent,
     );
