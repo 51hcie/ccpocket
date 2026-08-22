@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.115.0] - 2026-08-22
+
+### Added
+- Add localized guidance and a dedicated error card for explicitly enabling Claude subscription authentication on Bridge 1.71.0 or later.
+
+### Changed
+- Keep Claude API-key authentication as the recommended default while documenting the policy uncertainty and host-side opt-in used for subscription login.
+
 ## [1.114.2] - 2026-08-19
 
 ### Changed
