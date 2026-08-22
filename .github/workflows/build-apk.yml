@@ -21,6 +21,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Install Android NDK
+        run: |
+          SDKMANAGER="${ANDROID_HOME:?}/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "ndk;29.0.13846066"
       - name: Use precompiled Rust artifacts for Shorebird
         run: |
           printf '%s\n' 'use_precompiled_binaries: true' > apps/mobile/cargokit_options.yaml
