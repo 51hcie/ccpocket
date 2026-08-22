@@ -2,6 +2,15 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.71.0] - 2026-08-22
+
+### Added
+- Add explicit `BRIDGE_ALLOW_CLAUDE_OAUTH=1` opt-in for using the Bridge machine's Claude subscription login, with authentication-source checks for sessions and model discovery.
+
+### Changed
+- Keep API-key authentication as the default and report a dedicated actionable error when subscription authentication has not been explicitly enabled.
+- Persist the subscription opt-in in launchd and systemd service setup, and align doctor diagnostics and authentication guidance with the selected mode.
+
 ## [1.70.2] - 2026-08-19
 
 ### Fixed
