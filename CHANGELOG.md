@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.115.2] - 2026-08-22
+
+### Fixed
+- Prevent a one-frame scroll flicker when new streaming output arrives while reading older messages, including during keyboard resizing and after switching sessions.
+
 ## [1.115.1] - 2026-08-22
 
 ### Fixed
