@@ -5,7 +5,7 @@ import { setupProxy } from "./proxy.js";
 import { BridgeWebSocketServer } from "./websocket.js";
 import { ImageStore } from "./image-store.js";
 import { GalleryStore } from "./gallery-store.js";
-import { printStartupInfo } from "./startup-info.js";
+import { formatHttpUrl, printStartupInfo } from "./startup-info.js";
 import { MdnsAdvertiser, shouldAdvertiseMdns } from "./mdns.js";
 import { ProjectHistory } from "./project-history.js";
 import { getVersionInfo } from "./version.js";
@@ -242,7 +242,7 @@ export async function startServer() {
   }
 
   console.log(
-    `[bridge] Ready. Listening on http://${HOST}:${PORT} (HTTP + WebSocket)`,
+    `[bridge] Ready. Listening on ${formatHttpUrl(HOST, PORT)} (HTTP + WebSocket)`,
   );
   mdns?.start(PORT, API_KEY);
   printStartupInfo(PORT, HOST, API_KEY);
