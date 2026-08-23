@@ -142,6 +142,7 @@ class ChatInputWithOverlays extends HookWidget {
       return null;
     }, [initialDiffSelection]);
 
+    final l = AppLocalizations.of(context);
     // Project files for @-mention
     final projectFiles = context.watch<FileListCubit>().state;
 

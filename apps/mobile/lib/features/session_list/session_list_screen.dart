@@ -103,6 +103,7 @@ String shortenPath(String path) {
 bool autoRenameForProvider(SettingsState settings, Provider provider) {
   return switch (provider) {
     Provider.codex => settings.autoRenameCodexSessions,
+    Provider.antigravity => false,
     Provider.claude => settings.autoRenameClaudeSessions,
   };
 }
@@ -893,9 +894,13 @@ class _SessionListScreenState extends State<SessionListScreen>
     );
   }
 
+  static const _prefKeyAntigravitySessionStartDefaults =
+      'antigravity_session_start_defaults';
+
   static String _sessionStartDefaultsKeyForProvider(Provider provider) {
     return switch (provider) {
       Provider.codex => _prefKeyCodexSessionStartDefaults,
+      Provider.antigravity => _prefKeyAntigravitySessionStartDefaults,
       Provider.claude => _prefKeyClaudeSessionStartDefaults,
     };
   }
@@ -903,6 +908,7 @@ class _SessionListScreenState extends State<SessionListScreen>
   static Provider? _sessionStartDefaultsProviderFromRaw(String? raw) {
     return switch (raw) {
       'codex' => Provider.codex,
+      'antigravity' => Provider.antigravity,
       'claude' => Provider.claude,
       _ => null,
     };

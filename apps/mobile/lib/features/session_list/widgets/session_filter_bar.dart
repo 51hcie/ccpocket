@@ -91,6 +91,7 @@ class SessionFilterBar extends StatelessWidget {
     final label = switch (providerFilter) {
       ProviderFilter.all => l.allAiTools,
       ProviderFilter.claude => 'Claude',
+      ProviderFilter.antigravity => 'Antigravity',
       ProviderFilter.codex => 'Codex',
     };
 

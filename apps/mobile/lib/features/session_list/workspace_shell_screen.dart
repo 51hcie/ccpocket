@@ -1078,7 +1078,7 @@ class _WorkspaceContentHost extends StatelessWidget {
             ?.clearSelectedSession,
         hideSessionBackButton: true,
       ),
-      Provider.claude => ClaudeSessionScreen(
+      _ => ClaudeSessionScreen(
         key: ValueKey('workspace_claude_${selection.sessionId}'),
         sessionId: selection.sessionId,
         projectPath: selection.projectPath,

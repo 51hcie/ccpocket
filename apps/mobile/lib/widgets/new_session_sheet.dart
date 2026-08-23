@@ -2575,7 +2575,7 @@ class _OptionsSection extends StatelessWidget {
               icon: Icons.auto_awesome,
               title: 'Gemini 3.7 Flash High',
               subtitle: 'Active Antigravity engine',
-              onTap: null,
+              onTap: () {},
             ),
             const SizedBox(height: 8),
           ] else if (provider == Provider.codex) ...[
