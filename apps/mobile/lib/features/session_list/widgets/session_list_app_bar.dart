@@ -39,7 +39,10 @@ class SessionListSliverAppBar extends StatelessWidget {
       toolbarHeight: toolbarHeight ?? kToolbarHeight,
       title: GestureDetector(
         onTap: onTitleTap,
-        child: _SessionListTitle(title: l.appTitle, subtitle: bridgeLabel),
+        child: _SessionListTitle(
+          title: BrandConfig.appName,
+          subtitle: bridgeLabel,
+        ),
       ),
       actions: [
         IconButton(
@@ -115,7 +118,7 @@ class SessionListPaneHeader extends StatelessWidget {
                   onTap: onTitleTap,
                   child: _SessionListTitle(
                     key: const ValueKey('session_list_pane_title'),
-                    title: l.appTitle,
+                    title: BrandConfig.appName,
                     subtitle: bridgeLabel,
                     titleStyle: titleStyle,
                   ),
@@ -138,37 +141,33 @@ class SessionListPaneHeader extends StatelessWidget {
             ),
             if (openGallery != null ||
                 disconnect != null ||
-                togglePaneVisibility != null)
-              SizedBox(width: actionGap),
-            if (openGallery != null)
-              _PaneHeaderActionButton(
-                key: const ValueKey('gallery_button'),
-                tooltip: l.gallery,
-                onPressed: openGallery,
-                icon: const Icon(Icons.collections_outlined),
-                compact: chrome.useMacOSAdaptiveChrome,
-              ),
-            if (openGallery != null &&
-                (disconnect != null || togglePaneVisibility != null))
-              SizedBox(width: actionGap),
-            if (disconnect != null)
-              _PaneHeaderActionButton(
-                key: const ValueKey('disconnect_button'),
-                tooltip: l.disconnect,
-                onPressed: disconnect,
-                icon: const Icon(Icons.link_off),
-                compact: chrome.useMacOSAdaptiveChrome,
-              ),
-            if (disconnect != null && togglePaneVisibility != null)
-              SizedBox(width: actionGap),
-            if (togglePaneVisibility != null)
-              _PaneHeaderActionButton(
-                key: const ValueKey('collapse_left_pane_button'),
-                tooltip: l.hideSessions,
-                onPressed: togglePaneVisibility,
-                icon: const Icon(Icons.chevron_left),
-                compact: chrome.useMacOSAdaptiveChrome,
-              ),
+                togglePaneVisibility != null) ...[
+              if (actionGap > 0) SizedBox(width: actionGap),
+              if (openGallery != null)
+                _PaneHeaderActionButton(
+                  key: const ValueKey('gallery_button'),
+                  tooltip: l.gallery,
+                  onPressed: openGallery,
+                  icon: const Icon(Icons.collections),
+                  compact: chrome.useMacOSAdaptiveChrome,
+                ),
+              if (disconnect != null)
+                _PaneHeaderActionButton(
+                  key: const ValueKey('disconnect_button'),
+                  tooltip: l.disconnect,
+                  onPressed: disconnect,
+                  icon: const Icon(Icons.link_off),
+                  compact: chrome.useMacOSAdaptiveChrome,
+                ),
+              if (togglePaneVisibility != null)
+                _PaneHeaderActionButton(
+                  key: const ValueKey('toggle_pane_visibility_button'),
+                  tooltip: l.toggleLeftPaneTooltip,
+                  onPressed: togglePaneVisibility,
+                  icon: const Icon(Icons.view_sidebar_outlined),
+                  compact: chrome.useMacOSAdaptiveChrome,
+                ),
+            ],
           ],
         ),
       ),
@@ -176,20 +175,58 @@ class SessionListPaneHeader extends StatelessWidget {
   }
 }
 
+class _PaneHeaderActionButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final Widget icon;
+  final String tooltip;
+  final bool compact;
+
+  const _PaneHeaderActionButton({
+    super.key,
+    required this.onPressed,
+    required this.icon,
+    required this.tooltip,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      final chrome = resolveWorkspacePaneChrome(
+        platform: Theme.of(context).platform,
+        isAdaptiveWorkspace: true,
+        isLeftPaneVisible: true,
+        slot: WorkspacePaneSlot.left,
+      );
+      return IconButton(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        icon: icon,
+        style: chrome.compactButtonStyle(),
+      );
+    }
+    return IconButton(onPressed: onPressed, tooltip: tooltip, icon: icon);
+  }
+}
+
 class _SessionListTitle extends StatelessWidget {
-  final String title;
+  final String? title;
   final String? subtitle;
   final TextStyle? titleStyle;
 
   const _SessionListTitle({
     super.key,
-    required this.title,
+    this.title,
     this.subtitle,
     this.titleStyle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveTitle =
+        (BrandConfig.isAnyCoding || title == null || title!.isEmpty)
+            ? BrandConfig.appName
+            : title!;
     final subtitle = this.subtitle;
     final theme = Theme.of(context);
     final defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
@@ -206,7 +243,7 @@ class _SessionListTitle extends StatelessWidget {
         ],
         Flexible(
           child: Text(
-            title,
+            effectiveTitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: titleStyle ?? defaultTitleStyle,
@@ -234,39 +271,6 @@ class _SessionListTitle extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PaneHeaderActionButton extends StatelessWidget {
-  final String tooltip;
-  final VoidCallback onPressed;
-  final Widget icon;
-  final bool compact;
-
-  const _PaneHeaderActionButton({
-    super.key,
-    required this.tooltip,
-    required this.onPressed,
-    required this.icon,
-    this.compact = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      style: compact
-          ? resolveWorkspacePaneChrome(
-              platform: Theme.of(context).platform,
-              isAdaptiveWorkspace: true,
-              isLeftPaneVisible: true,
-              slot: WorkspacePaneSlot.left,
-            ).compactButtonStyle()
-          : null,
-      visualDensity: VisualDensity.compact,
-      onPressed: onPressed,
-      tooltip: tooltip,
-      icon: icon,
     );
   }
 }

@@ -12,6 +12,7 @@ import '../../features/gallery/gallery_screen.dart';
 import '../../features/git/git_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/setup_guide/setup_guide_screen.dart';
+import '../../constants/brand_config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
 import '../../providers/bridge_cubits.dart';
@@ -1217,7 +1218,7 @@ class WorkspaceLandingScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          l.appTitle,
+                          BrandConfig.appName,
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),

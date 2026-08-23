@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/brand_config.dart';
 import '../../../l10n/app_localizations.dart';
 import 'guide_page.dart';
 
-/// Page 1: CC Pocketとは
+/// Page 1: About AnyCoding / CC Pocket
 class GuidePageAbout extends StatelessWidget {
   const GuidePageAbout({super.key});
 
@@ -15,11 +16,16 @@ class GuidePageAbout extends StatelessWidget {
 
     return GuidePage(
       icon: Icons.smartphone,
-      title: l.guideAboutTitle,
+      title: BrandConfig.isAnyCoding ? '什么是 AnyCoding？' : l.guideAboutTitle,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.guideAboutDescription, style: bodyStyle),
+          Text(
+            BrandConfig.isAnyCoding
+                ? BrandConfig.aboutDescription
+                : l.guideAboutDescription,
+            style: bodyStyle,
+          ),
           const SizedBox(height: 24),
           // Architecture diagram
           Container(

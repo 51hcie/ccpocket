@@ -83,5 +83,47 @@ void main() {
       expect(find.text('0'), findsOneWidget);
       expect(find.text('4'), findsOneWidget);
     });
+    testWidgets('SessionListSliverAppBar renders BrandConfig.appName runtime title', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: CustomScrollView(
+              slivers: [
+                SessionListSliverAppBar(
+                  onTitleTap: () {},
+                  onDisconnect: () {},
+                  bridgeLabel: 'AnyCoding Mac',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // In AnyCoding mode it must find AnyCoding; in standard mode CC Pocket
+      expect(find.text(BrandConfig.appName), findsOneWidget);
+      expect(find.text('AnyCoding Mac'), findsOneWidget);
+    });
+
+    testWidgets('SessionListPaneHeader renders BrandConfig.appName runtime title', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SessionListPaneHeader(
+              onTitleTap: () {},
+              onOpenSettings: () {},
+              bridgeLabel: 'AnyCoding Mac',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text(BrandConfig.appName), findsOneWidget);
+      expect(find.text('AnyCoding Mac'), findsOneWidget);
+    });
   });
 }

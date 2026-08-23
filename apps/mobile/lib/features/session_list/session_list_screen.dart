@@ -1798,7 +1798,7 @@ class _SessionListScreenState extends State<SessionListScreen>
                 toolbarHeight: chrome.toolbarHeight,
                 title: GestureDetector(
                   onTap: _onTitleTap,
-                  child: Text(l.appTitle),
+                  child: Text(BrandConfig.appName),
                 ),
                 actions: [
                   IconButton(
