@@ -6,6 +6,7 @@ import 'messages.dart';
 /// Tabs available in the new session sheet.
 enum NewSessionTab {
   codex('codex', 'Codex'),
+  antigravity('antigravity', 'Antigravity'),
   claude('claude', 'Claude');
 
   final String value;
@@ -16,6 +17,7 @@ enum NewSessionTab {
   Provider toProvider() => switch (this) {
     NewSessionTab.claude => Provider.claude,
     NewSessionTab.codex => Provider.codex,
+    NewSessionTab.antigravity => Provider.antigravity,
   };
 
   /// Look up a tab by its wire-format value.
@@ -27,24 +29,31 @@ enum NewSessionTab {
   }
 }
 
-enum EnabledAgentsMode { both, codex, claude }
+enum EnabledAgentsMode { both, codex, claude, all }
 
 extension NewSessionTabL10n on NewSessionTab {
   String localizedLabel(AppLocalizations l) => switch (this) {
     NewSessionTab.codex => l.newSessionTabCodex,
+    NewSessionTab.antigravity => 'Antigravity',
     NewSessionTab.claude => l.newSessionTabClaudeCode,
   };
 }
 
 /// Default tab order when no user preference is saved.
-const defaultNewSessionTabs = [NewSessionTab.codex, NewSessionTab.claude];
+const defaultNewSessionTabs = [
+  NewSessionTab.codex,
+  NewSessionTab.antigravity,
+  NewSessionTab.claude,
+];
 
 EnabledAgentsMode enabledAgentsModeFromTabs(List<NewSessionTab> tabs) {
   final set = tabs.toSet();
   final hasCodex = set.contains(NewSessionTab.codex);
   final hasClaude = set.contains(NewSessionTab.claude);
-  if (hasCodex && !hasClaude) return EnabledAgentsMode.codex;
-  if (hasClaude && !hasCodex) return EnabledAgentsMode.claude;
+  final hasAntigravity = set.contains(NewSessionTab.antigravity);
+  if (hasCodex && hasClaude && hasAntigravity) return EnabledAgentsMode.all;
+  if (hasCodex && !hasClaude && !hasAntigravity) return EnabledAgentsMode.codex;
+  if (hasClaude && !hasCodex && !hasAntigravity) return EnabledAgentsMode.claude;
   return EnabledAgentsMode.both;
 }
 
@@ -53,6 +62,12 @@ List<NewSessionTab> tabsForEnabledAgentsMode(
   List<NewSessionTab> current,
 ) {
   switch (mode) {
+    case EnabledAgentsMode.all:
+      return const [
+        NewSessionTab.codex,
+        NewSessionTab.antigravity,
+        NewSessionTab.claude,
+      ];
     case EnabledAgentsMode.both:
       final ordered = [
         for (final tab in current)

@@ -18,6 +18,11 @@ import {
   type RewindFilesResult,
 } from "./sdk-process.js";
 import { CodexProcess, type CodexStartOptions } from "./codex-process.js";
+import {
+  AntigravityProcess,
+  type AntigravityStartOptions,
+} from "./antigravity-process.js";
+import { globalAntigravityStore } from "./antigravity-store.js";
 import type {
   ServerMessage,
   ProcessStatus,
@@ -45,7 +50,12 @@ export interface WorktreeOptions {
 
 export interface SessionInfo {
   id: string;
-  process: SdkProcess | CodexProcess;
+  bridgeSessionId?: string;
+  antigravityConversationId?: string;
+  turnId?: string;
+  terminalStatus?: string;
+  mode?: string;
+  process: SdkProcess | CodexProcess | AntigravityProcess;
   provider: Provider;
   history: ServerMessage[];
   historyEntries: HistoryEntry[];
@@ -306,9 +316,6 @@ export class SessionManager {
   ): string {
     const id = randomUUID().slice(0, 8);
     const effectiveProvider = provider ?? "claude";
-    const proc =
-      effectiveProvider === "codex" ? new CodexProcess() : new SdkProcess();
-
     // Handle worktree: reuse existing or create new
     let wtPath: string | undefined;
     let wtBranch: string | undefined;
@@ -335,6 +342,13 @@ export class SessionManager {
     // Use worktree path as cwd if available
     const effectiveCwd = wtPath ?? projectPath;
 
+    const proc =
+      effectiveProvider === "codex"
+        ? new CodexProcess()
+        : effectiveProvider === "antigravity"
+          ? new AntigravityProcess(effectiveCwd)
+          : new SdkProcess();
+
     let gitBranch = "";
     try {
       gitBranch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
@@ -347,6 +361,9 @@ export class SessionManager {
 
     const session: SessionInfo = {
       id,
+      bridgeSessionId: id,
+      antigravityConversationId:
+        effectiveProvider === "antigravity" ? options?.sessionId : undefined,
       process: proc,
       provider: effectiveProvider,
       history: [],
@@ -369,7 +386,8 @@ export class SessionManager {
         !codexOptions?.threadId,
       // Pre-populate claudeSessionId for resumed sessions so that get_history
       // can return it immediately (before the SDK sends a system/result event).
-      claudeSessionId: options?.sessionId,
+      claudeSessionId:
+        effectiveProvider !== "antigravity" ? options?.sessionId : undefined,
     };
     if (effectiveProvider === "codex") {
       this.seedCodexPastUserTurnUuidMap(session);
@@ -429,7 +447,68 @@ export class SessionManager {
           });
         }
 
-        if (effectiveProvider === "claude") {
+        if (effectiveProvider === "antigravity") {
+          const antigravityProc = proc as AntigravityProcess;
+          if (
+            msg.type === "system" &&
+            msg.subtype === "init" &&
+            (msg as any).conversationId
+          ) {
+            session.antigravityConversationId = (msg as any).conversationId;
+            await globalAntigravityStore.saveSession({
+              bridgeSessionId: session.id,
+              antigravityConversationId: session.antigravityConversationId,
+              provider: "antigravity",
+              workspacePath: session.projectPath,
+              mode: antigravityProc.getMode(),
+              model: antigravityProc.getModel(),
+              terminalStatus: antigravityProc.getTerminalStatus(),
+              turnId: antigravityProc.getTurnId() ?? undefined,
+              currentTurn: 1,
+              firstPrompt: "",
+              createdAt: session.createdAt.toISOString(),
+              updatedAt: new Date().toISOString(),
+              lastActivityAt: new Date().toISOString(),
+            });
+            this.onSessionUpdated?.(session.id);
+          }
+          if (msg.type === "result") {
+            if (
+              "sessionId" in msg &&
+              msg.sessionId &&
+              !session.antigravityConversationId
+            ) {
+              session.antigravityConversationId = msg.sessionId;
+            }
+            const termStatus = antigravityProc.getTerminalStatus();
+            session.terminalStatus = termStatus;
+            const firstUserEntry = session.history.find(
+              (h) => h.type === "user_input",
+            );
+            await globalAntigravityStore.saveSession({
+              bridgeSessionId: session.id,
+              antigravityConversationId: session.antigravityConversationId,
+              provider: "antigravity",
+              workspacePath: session.projectPath,
+              mode: antigravityProc.getMode(),
+              model: antigravityProc.getModel(),
+              terminalStatus: termStatus,
+              turnId: antigravityProc.getTurnId() ?? undefined,
+              finalResult: (msg as any).result,
+              failureCode: (msg as any).error ? "ERROR" : null,
+              failureMessage: (msg as any).error,
+              currentTurn: 1,
+              firstPrompt:
+                firstUserEntry && firstUserEntry.type === "user_input"
+                  ? (firstUserEntry as any).text || ""
+                  : "",
+              createdAt: session.createdAt.toISOString(),
+              updatedAt: new Date().toISOString(),
+              lastActivityAt: new Date().toISOString(),
+            });
+            this.onSessionUpdated?.(session.id);
+          }
+        } else if (effectiveProvider === "claude") {
           // Capture Claude session_id from result events
           if (msg.type === "result" && "sessionId" in msg && msg.sessionId) {
             session.claudeSessionId = msg.sessionId;
@@ -709,6 +788,14 @@ export class SessionManager {
 
     if (effectiveProvider === "codex") {
       (proc as CodexProcess).start(effectiveCwd, codexOptions);
+    } else if (effectiveProvider === "antigravity") {
+      void (proc as AntigravityProcess).start({
+        workspacePath: effectiveCwd,
+        prompt: ((options as unknown as Record<string, unknown>)?.prompt as string) || "",
+        mode: options?.permissionMode === "plan" ? "plan" : "accept-edits",
+        model: options?.model,
+        conversationId: options?.sessionId,
+      });
     } else {
       (proc as SdkProcess).start(effectiveCwd, options);
     }
@@ -1192,7 +1279,7 @@ export class SessionManager {
   }
 
   private async autoRenameSession(session: SessionInfo): Promise<void> {
-    if (session.name) return;
+    if (session.name || session.provider === "antigravity") return;
     const transcript = buildAutoRenameTranscript(session.history);
     if (!transcript) return;
 
@@ -1422,6 +1509,14 @@ export class SessionManager {
         pluginMetadata?: Array<Record<string, unknown>>;
       }
     | undefined {
+    if (provider === "antigravity") {
+      return {
+        slashCommands: ["/plan", "/accept-edits", "/antigravity", "/status"],
+        skills: [],
+        apps: [],
+        plugins: [],
+      };
+    }
     return this.commandCache.get(this.commandCacheKey(provider, effectiveCwd));
   }
 

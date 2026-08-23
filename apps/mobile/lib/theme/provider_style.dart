@@ -22,6 +22,7 @@ ProviderStyle providerStyleFor(BuildContext context, Provider provider) {
   final accent = switch (provider) {
     Provider.claude => colorScheme.primary,
     Provider.codex => colorScheme.secondary,
+    Provider.antigravity => const Color(0xFFF06A35),
   };
 
   return ProviderStyle(
@@ -31,9 +32,14 @@ ProviderStyle providerStyleFor(BuildContext context, Provider provider) {
     icon: switch (provider) {
       Provider.claude => Icons.smart_toy_outlined,
       Provider.codex => Icons.code,
+      Provider.antigravity => Icons.auto_awesome,
     },
   );
 }
 
 Provider providerFromRaw(String? provider) =>
-    provider == Provider.codex.value ? Provider.codex : Provider.claude;
+    provider == Provider.codex.value
+        ? Provider.codex
+        : (provider == Provider.antigravity.value
+            ? Provider.antigravity
+            : Provider.claude);

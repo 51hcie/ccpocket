@@ -30,6 +30,8 @@ import {
   type CodexThreadSummary,
 } from "./codex-process.js";
 import { stopManagedCodexAppServers } from "./codex-transport.js";
+import { AntigravityProcess } from "./antigravity-process.js";
+import { globalAntigravityStore } from "./antigravity-store.js";
 import {
   parseClientMessage,
   type AssistantContent,
@@ -825,6 +827,9 @@ export class BridgeWebSocketServer {
     }
     void this.archiveStore.init().catch((err) => {
       console.error("[ws] Failed to initialize archive store:", err);
+    });
+    void globalAntigravityStore.init().catch((err) => {
+      console.error("[ws] Failed to initialize Antigravity store:", err);
     });
     if (!this.pushRelay.isConfigured) {
       console.log("[ws] Push relay disabled (Firebase auth not available)");
@@ -2323,7 +2328,10 @@ export class BridgeWebSocketServer {
           break;
         }
         try {
-          const provider = msg.provider ?? "claude";
+          const provider =
+            (msg.provider as Provider) ??
+            (process.env.BRIDGE_DEFAULT_PROVIDER as Provider) ??
+            "claude";
           const normalizedCodexPermissionsMode =
             provider === "codex"
               ? normalizeCodexPermissionsMode(msg.codexPermissionsMode)
@@ -2814,6 +2822,26 @@ export class BridgeWebSocketServer {
           } else {
             codexProc.sendInput(text);
           }
+          break;
+        }
+
+        // Antigravity input path
+        if (session.provider === "antigravity") {
+          this.send(ws, {
+            type: "input_ack",
+            sessionId: session.id,
+            ...(clientMessageId ? { clientMessageId } : {}),
+            acceptedSeq,
+            queued: false,
+          });
+          const agyProc = session.process as AntigravityProcess;
+          agyProc.sendInput(text).catch((err) => {
+            console.error(`[ws] Antigravity sendInput error:`, err);
+            this.send(ws, {
+              type: "error",
+              message: String(err),
+            });
+          });
           break;
         }
 
@@ -3557,6 +3585,10 @@ export class BridgeWebSocketServer {
 
       case "get_goal": {
         const session = this.resolveSession(msg.sessionId);
+        if (session && session.provider === "antigravity") {
+          this.send(ws, { type: "goal_state", sessionId: session.id, goal: null });
+          break;
+        }
         if (!session || session.provider !== "codex") {
           this.send(ws, {
             type: "error",
@@ -4547,7 +4579,10 @@ export class BridgeWebSocketServer {
           msg.projectPath,
           this.platform,
         );
-        const provider = msg.provider ?? "claude";
+        const provider =
+          (msg.provider as Provider) ??
+          (process.env.BRIDGE_DEFAULT_PROVIDER as Provider) ??
+          "claude";
         if (!this.isPathAllowed(resumeProjectPath)) {
           this.sendResumeFailed(ws, {
             provider,
@@ -4556,6 +4591,52 @@ export class BridgeWebSocketServer {
             resumeRequestId: msg.resumeRequestId,
           });
           this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
+          break;
+        }
+
+        if (provider === "antigravity") {
+          const sessionRefId = msg.sessionId;
+          const existingRecord = globalAntigravityStore.getSession(sessionRefId);
+          if (!existingRecord && !this.sessionManager.get(sessionRefId)) {
+            this.sendResumeFailed(ws, {
+              provider: "antigravity",
+              sourceSessionId: sessionRefId,
+              projectPath: resumeProjectPath,
+              resumeRequestId: msg.resumeRequestId,
+            });
+            this.send(ws, {
+              type: "error",
+              message: `Antigravity session "${sessionRefId}" not found.`,
+            });
+            break;
+          }
+          const convId = existingRecord?.antigravityConversationId || sessionRefId;
+          const workspace = existingRecord?.workspacePath || resumeProjectPath;
+          const sessionId = this.sessionManager.create(
+            workspace,
+            { sessionId: convId },
+            undefined,
+            undefined,
+            "antigravity",
+            undefined,
+          );
+          const createdSession = this.sessionManager.get(sessionId);
+          if (createdSession) {
+            createdSession.antigravityConversationId = convId;
+            (createdSession.process as AntigravityProcess).setConversationId(convId);
+          }
+          this.send(
+            ws,
+            this.buildSessionCreatedMessage({
+              sessionId,
+              provider: "antigravity",
+              projectPath: workspace,
+              session: createdSession,
+              sourceSessionId: sessionRefId,
+              resumeRequestId: msg.resumeRequestId,
+            }),
+          );
+          this.broadcastSessionList();
           break;
         }
         const normalizedCodexPermissionsMode =

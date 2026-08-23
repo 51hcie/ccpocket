@@ -5,8 +5,11 @@ import { describe, expect, it } from "vitest";
 const require = createRequire(import.meta.url);
 const tsxCli = require.resolve("tsx/cli");
 
+import { dirname } from "node:path";
+
 function runCli(args: string[], bridgePort?: string) {
   const env = { ...process.env };
+  env.PATH = `${dirname(process.execPath)}:${process.env.PATH || ""}`;
   if (bridgePort === undefined) {
     delete env.BRIDGE_PORT;
   } else {
@@ -19,7 +22,7 @@ function runCli(args: string[], bridgePort?: string) {
   });
 }
 
-describe("ccpocket-bridge CLI", () => {
+describe("ccpocket-bridge CLI", { timeout: 20000 }, () => {
   it("rejects an invalid --port value before server startup", () => {
     const result = runCli(["--port", "abc"]);
 

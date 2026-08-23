@@ -187,7 +187,8 @@ class CodexGoal {
 
 enum Provider {
   claude('claude', 'Claude'),
-  codex('codex', 'Codex');
+  codex('codex', 'Codex'),
+  antigravity('antigravity', 'Antigravity');
 
   final String value;
   final String label;

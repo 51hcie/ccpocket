@@ -95,6 +95,8 @@ class SessionListCubit extends Cubit<SessionListState> {
     var provider = ProviderFilter.all;
     if (providerStr == ProviderFilter.claude.name) {
       provider = ProviderFilter.claude;
+    } else if (providerStr == ProviderFilter.antigravity.name) {
+      provider = ProviderFilter.antigravity;
     } else if (providerStr == ProviderFilter.codex.name) {
       provider = ProviderFilter.codex;
     }
@@ -195,12 +197,13 @@ class SessionListCubit extends Cubit<SessionListState> {
     });
   }
 
-  /// Toggle provider filter: All → Codex → Claude → All.
+  /// Toggle provider filter: All → Codex → Antigravity → Claude → All.
   void toggleProviderFilter({List<ProviderFilter>? allowedFilters}) {
     final options = allowedFilters == null || allowedFilters.isEmpty
         ? const [
             ProviderFilter.all,
             ProviderFilter.codex,
+            ProviderFilter.antigravity,
             ProviderFilter.claude,
           ]
         : allowedFilters;
@@ -393,6 +396,7 @@ class SessionListCubit extends Cubit<SessionListState> {
   static String? _providerToString(ProviderFilter f) => switch (f) {
     ProviderFilter.all => null,
     ProviderFilter.claude => 'claude',
+    ProviderFilter.antigravity => 'antigravity',
     ProviderFilter.codex => 'codex',
   };
 
@@ -409,6 +413,12 @@ List<ProviderFilter> providerFiltersForEnabledTabs(
   List<NewSessionTab> enabledTabs,
 ) {
   return switch (enabledAgentsModeFromTabs(enabledTabs)) {
+    EnabledAgentsMode.all => const [
+      ProviderFilter.all,
+      ProviderFilter.codex,
+      ProviderFilter.antigravity,
+      ProviderFilter.claude,
+    ],
     EnabledAgentsMode.both => const [
       ProviderFilter.all,
       ProviderFilter.codex,

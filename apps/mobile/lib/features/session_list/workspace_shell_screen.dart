@@ -1064,7 +1064,21 @@ class _WorkspaceContentHost extends StatelessWidget {
             ?.clearSelectedSession,
         hideSessionBackButton: true,
       ),
-      _ => ClaudeSessionScreen(
+      Provider.antigravity => ClaudeSessionScreen(
+        key: ValueKey('workspace_antigravity_${selection.sessionId}'),
+        sessionId: selection.sessionId,
+        projectPath: selection.projectPath,
+        gitBranch: selection.gitBranch,
+        worktreePath: selection.worktreePath,
+        isPending: selection.isPending,
+        initialPermissionMode: selection.permissionMode,
+        initialSandboxMode: selection.sandboxMode,
+        pendingSessionCreated: selection.pendingSessionCreated,
+        onBackToSessions: WorkspaceShellScreen.maybeOf(context)
+            ?.clearSelectedSession,
+        hideSessionBackButton: true,
+      ),
+      Provider.claude => ClaudeSessionScreen(
         key: ValueKey('workspace_claude_${selection.sessionId}'),
         sessionId: selection.sessionId,
         projectPath: selection.projectPath,

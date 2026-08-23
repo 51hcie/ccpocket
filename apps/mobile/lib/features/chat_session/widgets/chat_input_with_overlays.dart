@@ -1049,7 +1049,12 @@ class ChatInputWithOverlays extends HookWidget {
                 onTapDiffPreview: onOpenGitScreen != null
                     ? () => onOpenGitScreen!(attachedDiffSelection.value)
                     : null,
-                hintText: hintText,
+                hintText: hintText ??
+                    (isCodex
+                        ? l.codexMessagePlaceholder
+                        : (chatCubit.provider == Provider.antigravity
+                            ? 'Message Antigravity...'
+                            : l.messagePlaceholder)),
                 onPasteImage: isDesktopPlatform ? tryPasteImage : null,
                 imagePasteShortcut: context
                     .watch<SettingsCubit>()

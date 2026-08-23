@@ -67,7 +67,54 @@ class SessionModeBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (isCodex) ...[
+                if (chatCubit.provider == Provider.antigravity) ...[
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 14,
+                            color: const Color(0xFFF06A35),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Gemini 3.7 Flash High',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  PlanModeChip(
+                    enabled: planMode,
+                    activeGlow: false,
+                    onTap: () => togglePlanMode(
+                      context,
+                      chatCubit,
+                      onBeforeRestart: onBeforeRestart,
+                    ),
+                  ),
+                ] else if (isCodex) ...[
                   CodexModelChip(
                     model: codexModel!,
                     reasoningEffort: codexReasoningEffort,
@@ -126,7 +173,7 @@ class SessionModeBar extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (!isCodex) ...[
+                if (chatCubit.provider == Provider.claude) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: VerticalDivider(

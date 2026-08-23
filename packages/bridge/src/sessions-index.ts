@@ -5,10 +5,11 @@ import { basename, extname, join } from "node:path";
 import { homedir } from "node:os";
 import { renameSession as renameClaudeSdkSession } from "@anthropic-ai/claude-agent-sdk";
 import { isAutoRenamePromptText } from "./auto-rename.js";
+import { globalAntigravityStore } from "./antigravity-store.js";
 
 export interface SessionIndexEntry {
   sessionId: string;
-  provider: "claude" | "codex";
+  provider: "claude" | "codex" | "antigravity";
   /** User-assigned session name (customTitle for Claude, thread_name for Codex). */
   name?: string;
   agentNickname?: string;
@@ -68,7 +69,7 @@ export interface GetRecentSessionsOptions {
   /** Session IDs to exclude (archived sessions). */
   archivedSessionIds?: ReadonlySet<string>;
   /** Filter by provider (claude or codex). */
-  provider?: "claude" | "codex";
+  provider?: "claude" | "codex" | "antigravity";
   /** Show only sessions with a non-empty name. */
   namedOnly?: boolean;
   /** Free-text search across name, firstPrompt, lastPrompt and summary. */
@@ -910,8 +911,12 @@ export async function getAllRecentSessions(
   const limit = options.limit ?? 20;
   const offset = options.offset ?? 0;
   const filterProjectPath = options.projectPath;
-  const shouldLoadClaude = options.provider !== "codex";
-  const shouldLoadCodex = options.provider !== "claude";
+  const shouldLoadClaude =
+    options.provider === undefined || options.provider === "claude";
+  const shouldLoadCodex =
+    options.provider === undefined || options.provider === "codex";
+  const shouldLoadAntigravity =
+    options.provider === undefined || options.provider === "antigravity";
   const includeOnlyNamedClaude = options.namedOnly === true;
 
   const projectsDir = join(homedir(), ".claude", "projects");
@@ -1072,11 +1077,19 @@ export async function getAllRecentSessions(
   markDuration(durations, "loadClaudeSessions", loadClaudeStartedAt);
   markDuration(durations, "loadCodexSessions", loadCodexStartedAt);
 
+  const antigravityEntries = shouldLoadAntigravity
+    ? globalAntigravityStore.listRecentSessions(options)
+    : [];
+
   // Combine results and deduplicate by sessionId.
   // The same session can appear in both the main project dir and a worktree dir
   // (Claude CLI writes to both sessions-index.json files).  Keep the entry with
   // richer data (more non-empty fields) so the UI shows correct metadata.
-  const combined = [...claudeEntries, ...codexEntries];
+  const combined = [
+    ...claudeEntries,
+    ...codexEntries,
+    ...antigravityEntries,
+  ];
   const seen = new Map<string, SessionIndexEntry>();
   for (const entry of combined) {
     const existing = seen.get(entry.sessionId);

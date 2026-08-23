@@ -2555,124 +2555,149 @@ class _OptionsSection extends StatelessWidget {
               ),
             ),
           ),
-          if (provider == Provider.codex && codexProfiles.isNotEmpty) ...[
-            DropdownButtonFormField<String?>(
-              key: const ValueKey('dialog_codex_profile'),
-              initialValue: selectedCodexProfile,
-              isExpanded: true,
-              decoration: buildInputDecoration('Profile'),
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(
-                    l.defaultLabel,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-                for (final profile in codexProfiles)
-                  DropdownMenuItem<String?>(
-                    value: profile,
-                    child: Text(profile, style: const TextStyle(fontSize: 13)),
-                  ),
-              ],
-              onChanged: onCodexProfileChanged,
+          if (provider == Provider.antigravity) ...[
+            modeSelectorField(
+              key: const ValueKey('dialog_antigravity_mode'),
+              label: 'Mode',
+              icon: planMode ? Icons.edit_note : Icons.auto_awesome,
+              title: planMode ? 'Plan' : 'Accept Edits',
+              subtitle: planMode
+                  ? 'Antigravity creates a plan before executing'
+                  : 'Antigravity applies edits directly to files',
+              onTap: () {
+                onPlanModeChanged(!planMode);
+              },
             ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                l.codexProfilePrecedenceNote,
+            const SizedBox(height: 8),
+            modeSelectorField(
+              key: const ValueKey('dialog_antigravity_model'),
+              label: 'Model',
+              icon: Icons.auto_awesome,
+              title: 'Gemini 3.7 Flash High',
+              subtitle: 'Active Antigravity engine',
+              onTap: null,
+            ),
+            const SizedBox(height: 8),
+          ] else if (provider == Provider.codex) ...[
+            if (codexProfiles.isNotEmpty) ...[
+              DropdownButtonFormField<String?>(
+                key: const ValueKey('dialog_codex_profile'),
+                initialValue: selectedCodexProfile,
+                isExpanded: true,
+                decoration: buildInputDecoration('Profile'),
                 style: TextStyle(
-                  fontSize: 12,
-                  color: appColors.subtleText,
-                  height: 1.4,
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                items: [
+                  DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(
+                      l.defaultLabel,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                  for (final profile in codexProfiles)
+                    DropdownMenuItem<String?>(
+                      value: profile,
+                      child: Text(profile, style: const TextStyle(fontSize: 13)),
+                    ),
+                ],
+                onChanged: onCodexProfileChanged,
+              ),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  l.codexProfilePrecedenceNote,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: appColors.subtleText,
+                    height: 1.4,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
-          provider == Provider.codex
-              ? modeSelectorField(
-                  key: const ValueKey('dialog_codex_permissions_mode'),
-                  label: 'Permissions',
-                  icon: codexPermissionsIcon(codexPermissionsMode),
-                  title: codexPermissionsMode.label,
-                  subtitle: codexPermissionsDescription(codexPermissionsMode),
-                  accentColor:
-                      codexPermissionsMode == CodexPermissionsMode.fullAccess
+              const SizedBox(height: 20),
+            ],
+            modeSelectorField(
+              key: const ValueKey('dialog_codex_permissions_mode'),
+              label: 'Permissions',
+              icon: codexPermissionsIcon(codexPermissionsMode),
+              title: codexPermissionsMode.label,
+              subtitle: codexPermissionsDescription(codexPermissionsMode),
+              accentColor:
+                  codexPermissionsMode == CodexPermissionsMode.fullAccess
                       ? Theme.of(context).colorScheme.error
                       : null,
-                  onTap: () => showModeSheet<CodexPermissionsMode>(
-                    title: 'Permissions',
-                    subtitle: l.sheetSubtitleApproval,
-                    modes: CodexPermissionsMode.values,
-                    currentMode: codexPermissionsMode,
-                    iconFor: codexPermissionsIcon,
-                    labelFor: (mode) => mode.label,
-                    descriptionFor: codexPermissionsDescription,
-                    enabledFor: (mode) =>
-                        !codexAutoReviewDisabled ||
-                        mode != CodexPermissionsMode.autoReview,
-                    onSelected: onCodexPermissionsModeChanged,
-                    colorFor: (mode, cs) => switch (mode) {
-                      CodexPermissionsMode.fullAccess => cs.error,
-                      CodexPermissionsMode.autoReview => cs.primary,
-                      _ => cs.primary,
-                    },
-                  ),
-                )
-              : modeSelectorField(
-                  key: const ValueKey('dialog_permission_mode'),
-                  label: l.approval,
-                  icon: permissionIcon(selectedPermissionMode),
-                  title: selectedPermissionMode.label,
-                  subtitle: permissionDescription(selectedPermissionMode),
-                  accentColor: switch (selectedPermissionMode) {
-                    PermissionMode.auto => autoModeColor,
-                    PermissionMode.bypassPermissions => Theme.of(
-                      context,
-                    ).colorScheme.error,
-                    _ => null,
-                  },
-                  onTap: () => showModeSheet<PermissionMode>(
-                    title: l.approval,
-                    subtitle: l.sheetSubtitleApproval,
-                    modes: PermissionMode.values,
-                    currentMode: selectedPermissionMode,
-                    iconFor: permissionIcon,
-                    labelFor: (m) => m.label,
-                    descriptionFor: permissionDescription,
-                    onSelected: (value) {
-                      onClaudePermissionModeChanged(value);
-                      switch (value) {
-                        case PermissionMode.defaultMode:
-                          onExecutionModeChanged(ExecutionMode.defaultMode);
-                          onPlanModeChanged(false);
-                        case PermissionMode.auto:
-                          onExecutionModeChanged(ExecutionMode.defaultMode);
-                          onPlanModeChanged(false);
-                        case PermissionMode.acceptEdits:
-                          onExecutionModeChanged(ExecutionMode.acceptEdits);
-                          onPlanModeChanged(false);
-                        case PermissionMode.plan:
-                          onExecutionModeChanged(ExecutionMode.defaultMode);
-                          onPlanModeChanged(true);
-                        case PermissionMode.bypassPermissions:
-                          onExecutionModeChanged(ExecutionMode.fullAccess);
-                          onPlanModeChanged(false);
-                      }
-                    },
-                    colorFor: (mode, cs) => switch (mode) {
-                      PermissionMode.auto => autoModeColor,
-                      PermissionMode.bypassPermissions => cs.error,
-                      _ => cs.primary,
-                    },
-                  ),
-                ),
+              onTap: () => showModeSheet<CodexPermissionsMode>(
+                title: 'Permissions',
+                subtitle: l.sheetSubtitleApproval,
+                modes: CodexPermissionsMode.values,
+                currentMode: codexPermissionsMode,
+                iconFor: codexPermissionsIcon,
+                labelFor: (mode) => mode.label,
+                descriptionFor: codexPermissionsDescription,
+                enabledFor: (mode) =>
+                    !codexAutoReviewDisabled ||
+                    mode != CodexPermissionsMode.autoReview,
+                onSelected: onCodexPermissionsModeChanged,
+                colorFor: (mode, cs) => switch (mode) {
+                  CodexPermissionsMode.fullAccess => cs.error,
+                  CodexPermissionsMode.autoReview => cs.primary,
+                  _ => cs.primary,
+                },
+              ),
+            ),
+          ] else ...[
+            modeSelectorField(
+              key: const ValueKey('dialog_permission_mode'),
+              label: l.approval,
+              icon: permissionIcon(selectedPermissionMode),
+              title: selectedPermissionMode.label,
+              subtitle: permissionDescription(selectedPermissionMode),
+              accentColor: switch (selectedPermissionMode) {
+                PermissionMode.auto => autoModeColor,
+                PermissionMode.bypassPermissions => Theme.of(
+                  context,
+                ).colorScheme.error,
+                _ => null,
+              },
+              onTap: () => showModeSheet<PermissionMode>(
+                title: l.approval,
+                subtitle: l.sheetSubtitleApproval,
+                modes: PermissionMode.values,
+                currentMode: selectedPermissionMode,
+                iconFor: permissionIcon,
+                labelFor: (m) => m.label,
+                descriptionFor: permissionDescription,
+                onSelected: (value) {
+                  onClaudePermissionModeChanged(value);
+                  switch (value) {
+                    case PermissionMode.defaultMode:
+                      onExecutionModeChanged(ExecutionMode.defaultMode);
+                      onPlanModeChanged(false);
+                    case PermissionMode.auto:
+                      onExecutionModeChanged(ExecutionMode.defaultMode);
+                      onPlanModeChanged(false);
+                    case PermissionMode.acceptEdits:
+                      onExecutionModeChanged(ExecutionMode.acceptEdits);
+                      onPlanModeChanged(false);
+                    case PermissionMode.plan:
+                      onExecutionModeChanged(ExecutionMode.defaultMode);
+                      onPlanModeChanged(true);
+                    case PermissionMode.bypassPermissions:
+                      onExecutionModeChanged(ExecutionMode.fullAccess);
+                      onPlanModeChanged(false);
+                  }
+                },
+                colorFor: (mode, cs) => switch (mode) {
+                  PermissionMode.auto => autoModeColor,
+                  PermissionMode.bypassPermissions => cs.error,
+                  _ => cs.primary,
+                },
+              ),
+            ),
+          ],
           if (isClaude) ...[
             const SizedBox(height: 8),
             modeSelectorField(
@@ -3061,6 +3086,9 @@ class _AdvancedOptions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (provider == Provider.antigravity) {
+      return const SizedBox.shrink();
+    }
     final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     return Container(

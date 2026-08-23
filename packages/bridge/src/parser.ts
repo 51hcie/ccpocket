@@ -67,7 +67,7 @@ export type CodexPermissionsMode =
   | "fullAccess"
   | "custom";
 
-export type Provider = "claude" | "codex";
+export type Provider = "claude" | "codex" | "antigravity";
 
 export type CodexGoalStatus =
   | "active"
@@ -232,7 +232,7 @@ export type ClientMessage =
       offset?: number;
       projectPath?: string;
       requestScope?: "list" | "project";
-      provider?: "claude" | "codex";
+      provider?: Provider;
       namedOnly?: boolean;
       searchQuery?: string;
     }

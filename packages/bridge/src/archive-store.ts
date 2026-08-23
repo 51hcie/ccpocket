@@ -3,9 +3,11 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 
+import type { Provider } from "./parser.js";
+ 
 export interface ArchivedSession {
   sessionId: string;
-  provider: "claude" | "codex";
+  provider: Provider;
   projectPath: string;
   archivedAt: string;
 }
@@ -54,7 +56,7 @@ export class ArchiveStore {
   /** Archive a session. Idempotent – archiving an already-archived session is a no-op. */
   async archive(
     sessionId: string,
-    provider: "claude" | "codex",
+    provider: Provider,
     projectPath: string,
   ): Promise<void> {
     if (this.cache.has(sessionId)) return;
