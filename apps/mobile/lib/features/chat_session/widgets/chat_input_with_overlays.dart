@@ -26,6 +26,7 @@ import '../../../widgets/workspace_pane_chrome.dart';
 import '../../settings/state/settings_cubit.dart';
 import '../../../services/draft_service.dart';
 import '../../prompt_history/widgets/prompt_history_sheet.dart';
+import '../../session_list/services/dashboard_metrics_calculator.dart';
 import '../../../widgets/slash_command_sheet.dart'
     show
         SlashCommand,
@@ -1051,11 +1052,11 @@ class ChatInputWithOverlays extends HookWidget {
                     ? () => onOpenGitScreen!(attachedDiffSelection.value)
                     : null,
                 hintText: hintText ??
-                    (isCodex
-                        ? l.codexMessagePlaceholder
-                        : (chatCubit.provider == Provider.antigravity
-                            ? 'Message Antigravity...'
-                            : l.messagePlaceholder)),
+                    resolveMessagePlaceholder(
+                      provider: chatCubit.provider,
+                      claudePlaceholder: l.messagePlaceholder,
+                      codexPlaceholder: l.codexMessagePlaceholder,
+                    ),
                 onPasteImage: isDesktopPlatform ? tryPasteImage : null,
                 imagePasteShortcut: context
                     .watch<SettingsCubit>()

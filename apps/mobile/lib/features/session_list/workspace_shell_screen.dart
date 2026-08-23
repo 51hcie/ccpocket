@@ -1067,6 +1067,7 @@ class _WorkspaceContentHost extends StatelessWidget {
       Provider.antigravity => ClaudeSessionScreen(
         key: ValueKey('workspace_antigravity_${selection.sessionId}'),
         sessionId: selection.sessionId,
+        provider: Provider.antigravity,
         projectPath: selection.projectPath,
         gitBranch: selection.gitBranch,
         worktreePath: selection.worktreePath,
@@ -1081,6 +1082,7 @@ class _WorkspaceContentHost extends StatelessWidget {
       _ => ClaudeSessionScreen(
         key: ValueKey('workspace_claude_${selection.sessionId}'),
         sessionId: selection.sessionId,
+        provider: Provider.claude,
         projectPath: selection.projectPath,
         gitBranch: selection.gitBranch,
         worktreePath: selection.worktreePath,

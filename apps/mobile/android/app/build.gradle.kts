@@ -51,7 +51,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.k9i.ccpocket"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     // The 16 KB page-aligned irondash fork requires NDK 29.
     ndkVersion = "29.0.13846066"
 

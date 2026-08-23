@@ -306,4 +306,46 @@ void main() {
       expect(counts.running, 1); // pending resume counted in offline actions
     });
   });
+
+  group('Provider Message Placeholder Resolution', () {
+    test('resolves Antigravity message placeholder', () {
+      final placeholder = resolveMessagePlaceholder(
+        provider: Provider.antigravity,
+      );
+      expect(placeholder, 'Message Antigravity...');
+    });
+
+    test('resolves Codex message placeholder with default fallback', () {
+      final placeholder = resolveMessagePlaceholder(
+        provider: Provider.codex,
+      );
+      expect(placeholder, 'Message Codex...');
+    });
+
+    test('resolves Codex message placeholder with custom localization', () {
+      final placeholder = resolveMessagePlaceholder(
+        provider: Provider.codex,
+        codexPlaceholder: 'Codex にメッセージ...',
+      );
+      expect(placeholder, 'Codex にメッセージ...');
+    });
+
+    test('resolves Claude message placeholder by default for null or claude', () {
+      expect(
+        resolveMessagePlaceholder(provider: Provider.claude),
+        'Message Claude...',
+      );
+      expect(
+        resolveMessagePlaceholder(provider: null),
+        'Message Claude...',
+      );
+      expect(
+        resolveMessagePlaceholder(
+          provider: Provider.claude,
+          claudePlaceholder: 'Claude にメッセージ...',
+        ),
+        'Claude にメッセージ...',
+      );
+    });
+  });
 }

@@ -92,9 +92,34 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     return item!.itemId.substring(deliveryPendingQueuedInputPrefix.length);
   }
 
+  static Provider _resolveEffectiveProvider({
+    required String sessionId,
+    required Provider? provider,
+    required BridgeService bridge,
+  }) {
+    if (provider != null && provider != Provider.claude) {
+      return provider;
+    }
+    for (final s in bridge.sessions) {
+      if (s.id == sessionId || s.claudeSessionId == sessionId) {
+        if (s.provider == 'antigravity') return Provider.antigravity;
+        if (s.provider == 'codex') return Provider.codex;
+        if (s.provider == 'claude') return Provider.claude;
+      }
+    }
+    for (final r in bridge.recentSessions) {
+      if (r.sessionId == sessionId) {
+        if (r.provider == 'antigravity') return Provider.antigravity;
+        if (r.provider == 'codex') return Provider.codex;
+        if (r.provider == 'claude') return Provider.claude;
+      }
+    }
+    return provider ?? Provider.claude;
+  }
+
   ChatSessionCubit({
     required this.sessionId,
-    this.provider,
+    Provider? provider,
     required BridgeService bridge,
     required StreamingStateCubit streamingCubit,
     String initialExplorerCurrentPath = '',
@@ -105,34 +130,62 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     String? initialCodexApprovalsReviewer,
     CodexPermissionsMode? initialCodexPermissionsMode,
     String? initialProjectPath,
-  }) : _bridge = bridge,
+  }) : provider = _resolveEffectiveProvider(
+         sessionId: sessionId,
+         provider: provider,
+         bridge: bridge,
+       ),
+       _bridge = bridge,
        _streamingCubit = streamingCubit,
        super(
          ChatSessionState(
            permissionMode: initialPermissionMode ?? PermissionMode.defaultMode,
            executionMode: deriveExecutionMode(
-             provider: provider?.value,
+             provider: _resolveEffectiveProvider(
+               sessionId: sessionId,
+               provider: provider,
+               bridge: bridge,
+             ).value,
              permissionMode: initialPermissionMode?.value,
            ),
-           codexApprovalPolicy: provider == Provider.codex
+           codexApprovalPolicy: _resolveEffectiveProvider(
+                     sessionId: sessionId,
+                     provider: provider,
+                     bridge: bridge,
+                   ) ==
+                   Provider.codex
                ? (initialCodexApprovalPolicy == CodexApprovalPolicy.onFailure
                      ? CodexApprovalPolicy.onRequest
                      : initialCodexApprovalPolicy ??
                            codexApprovalPolicyFromLegacyExecutionMode(
                              deriveExecutionMode(
-                               provider: provider?.value,
+                               provider: _resolveEffectiveProvider(
+                                 sessionId: sessionId,
+                                 provider: provider,
+                                 bridge: bridge,
+                               ).value,
                                permissionMode: initialPermissionMode?.value,
                              ).value,
                            ))
                : CodexApprovalPolicy.onRequest,
            codexApprovalsReviewer:
-               provider == Provider.codex &&
+               _resolveEffectiveProvider(
+                         sessionId: sessionId,
+                         provider: provider,
+                         bridge: bridge,
+                       ) ==
+                       Provider.codex &&
                    isCodexAutoReviewApprovalsReviewer(
                      initialCodexApprovalsReviewer,
                    )
                ? 'auto_review'
                : 'user',
-           codexPermissionsMode: provider == Provider.codex
+           codexPermissionsMode: _resolveEffectiveProvider(
+                     sessionId: sessionId,
+                     provider: provider,
+                     bridge: bridge,
+                   ) ==
+                   Provider.codex
                ? (initialCodexPermissionsMode ??
                      (initialCodexApprovalPolicy != null ||
                              initialSandboxMode != null ||
@@ -147,7 +200,14 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
            planMode: initialPermissionMode == PermissionMode.plan,
            sandboxMode:
                initialSandboxMode ??
-               (provider == Provider.codex ? SandboxMode.on : SandboxMode.off),
+               (_resolveEffectiveProvider(
+                         sessionId: sessionId,
+                         provider: provider,
+                         bridge: bridge,
+                       ) ==
+                       Provider.codex
+                   ? SandboxMode.on
+                   : SandboxMode.off),
            inPlanMode: initialPermissionMode == PermissionMode.plan,
            explorerCurrentPath: initialExplorerCurrentPath.trim(),
            recentPeekedFiles: initialRecentPeekedFiles

@@ -82,6 +82,7 @@ class _NoopListenable implements Listenable {
 @RoutePage()
 class ClaudeSessionScreen extends StatefulWidget {
   final String sessionId;
+  final Provider? provider;
   final String? projectPath;
   final String? gitBranch;
   final String? worktreePath;
@@ -98,6 +99,7 @@ class ClaudeSessionScreen extends StatefulWidget {
   const ClaudeSessionScreen({
     super.key,
     required this.sessionId,
+    this.provider,
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
@@ -116,6 +118,7 @@ class ClaudeSessionScreen extends StatefulWidget {
 @RoutePage(name: 'WorkspaceClaudeSessionRoute')
 class WorkspaceClaudeSessionScreen extends StatelessWidget {
   final String sessionId;
+  final Provider? provider;
   final String? projectPath;
   final String? gitBranch;
   final String? worktreePath;
@@ -129,6 +132,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
   const WorkspaceClaudeSessionScreen({
     super.key,
     required this.sessionId,
+    this.provider,
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
@@ -144,6 +148,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClaudeSessionScreen(
       sessionId: sessionId,
+      provider: provider,
       projectPath: projectPath,
       gitBranch: gitBranch,
       worktreePath: worktreePath,
@@ -215,16 +220,17 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
   void _syncSessionRouteIdentity() {
     final routeIdentity = _sessionRouteIdentity;
     if (routeIdentity == null) return;
+    final providerName = widget.provider?.value ?? 'claude';
     SessionRouteRegistry.instance.update(
       routeIdentity: routeIdentity,
       owner: _sessionRouteOwner,
       sessionId: _sessionId,
-      provider: 'claude',
+      provider: providerName,
     );
     if (ModalRoute.of(context)?.isCurrent ?? false) {
       NotificationService.instance.setActiveSession(
         sessionId: _sessionId,
-        provider: 'claude',
+        provider: providerName,
       );
     }
   }
@@ -450,6 +456,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     return _ChatScreenProviders(
       key: ValueKey(_sessionId),
       sessionId: _sessionId,
+      provider: widget.provider,
       projectPath: _projectPath,
       gitBranch: _gitBranch,
       worktreePath: _worktreePath,
@@ -466,6 +473,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
 /// Wrapper that creates screen-scoped cubits once per session.
 class _ChatScreenProviders extends StatelessWidget {
   final String sessionId;
+  final Provider? provider;
   final String? projectPath;
   final String? gitBranch;
   final String? worktreePath;
@@ -479,6 +487,7 @@ class _ChatScreenProviders extends StatelessWidget {
   const _ChatScreenProviders({
     super.key,
     required this.sessionId,
+    this.provider,
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
@@ -499,7 +508,7 @@ class _ChatScreenProviders extends StatelessWidget {
         BlocProvider(
           create: (context) => ChatSessionCubit(
             sessionId: sessionId,
-            provider: Provider.claude,
+            provider: provider,
             bridge: bridge,
             streamingCubit: context.read<StreamingStateCubit>(),
             initialExplorerCurrentPath: explorerCurrentPath,

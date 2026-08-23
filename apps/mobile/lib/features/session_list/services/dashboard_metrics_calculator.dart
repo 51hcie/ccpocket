@@ -63,6 +63,26 @@ EngineAvailabilityStatus resolveAntigravityStatus({
   return EngineAvailabilityStatus.supported;
 }
 
+/// Resolves provider-specific chat input placeholder text.
+///
+/// Antigravity: 'Message Antigravity...'
+/// Codex: 'Message Codex...' (or localized [codexPlaceholder])
+/// Claude: 'Message Claude...' (or localized [claudePlaceholder])
+String resolveMessagePlaceholder({
+  required Provider? provider,
+  String? claudePlaceholder,
+  String? codexPlaceholder,
+  String? antigravityPlaceholder,
+}) {
+  if (provider == Provider.antigravity) {
+    return antigravityPlaceholder ?? 'Message Antigravity...';
+  }
+  if (provider == Provider.codex) {
+    return codexPlaceholder ?? 'Message Codex...';
+  }
+  return claudePlaceholder ?? 'Message Claude...';
+}
+
 /// Pure data class holding the 4 task counters for the home dashboard.
 class DashboardTaskCounts {
   final int running;

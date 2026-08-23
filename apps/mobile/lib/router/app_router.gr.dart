@@ -120,6 +120,7 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
   ClaudeSessionRoute({
     Key? key,
     required String sessionId,
+    Provider? provider,
     String? projectPath,
     String? gitBranch,
     String? worktreePath,
@@ -135,6 +136,7 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
          args: ClaudeSessionRouteArgs(
            key: key,
            sessionId: sessionId,
+           provider: provider,
            projectPath: projectPath,
            gitBranch: gitBranch,
            worktreePath: worktreePath,
@@ -157,6 +159,7 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
       return ClaudeSessionScreen(
         key: args.key,
         sessionId: args.sessionId,
+        provider: args.provider,
         projectPath: args.projectPath,
         gitBranch: args.gitBranch,
         worktreePath: args.worktreePath,
@@ -175,6 +178,7 @@ class ClaudeSessionRouteArgs {
   const ClaudeSessionRouteArgs({
     this.key,
     required this.sessionId,
+    this.provider,
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
@@ -189,6 +193,8 @@ class ClaudeSessionRouteArgs {
   final Key? key;
 
   final String sessionId;
+
+  final Provider? provider;
 
   final String? projectPath;
 
@@ -1030,6 +1036,7 @@ class WorkspaceClaudeSessionRoute
   WorkspaceClaudeSessionRoute({
     Key? key,
     required String sessionId,
+    Provider? provider,
     String? projectPath,
     String? gitBranch,
     String? worktreePath,
@@ -1045,6 +1052,7 @@ class WorkspaceClaudeSessionRoute
          args: WorkspaceClaudeSessionRouteArgs(
            key: key,
            sessionId: sessionId,
+           provider: provider,
            projectPath: projectPath,
            gitBranch: gitBranch,
            worktreePath: worktreePath,
@@ -1067,6 +1075,7 @@ class WorkspaceClaudeSessionRoute
       return WorkspaceClaudeSessionScreen(
         key: args.key,
         sessionId: args.sessionId,
+        provider: args.provider,
         projectPath: args.projectPath,
         gitBranch: args.gitBranch,
         worktreePath: args.worktreePath,
@@ -1085,6 +1094,7 @@ class WorkspaceClaudeSessionRouteArgs {
   const WorkspaceClaudeSessionRouteArgs({
     this.key,
     required this.sessionId,
+    this.provider,
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
@@ -1099,6 +1109,8 @@ class WorkspaceClaudeSessionRouteArgs {
   final Key? key;
 
   final String sessionId;
+
+  final Provider? provider;
 
   final String? projectPath;
 

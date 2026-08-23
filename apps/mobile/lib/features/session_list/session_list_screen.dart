@@ -1414,6 +1414,7 @@ class _SessionListScreenState extends State<SessionListScreen>
         ),
       _ => ClaudeSessionRoute(
           sessionId: sessionId,
+          provider: provider,
           projectPath: projectPath,
           gitBranch: gitBranch,
           worktreePath: worktreePath,
