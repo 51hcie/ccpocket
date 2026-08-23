@@ -102,8 +102,14 @@ class SessionListPaneHeader extends StatelessWidget {
       isLeftPaneVisible: true,
       slot: WorkspacePaneSlot.left,
     );
-    final titleStyle = Theme.of(context).textTheme.titleLarge
-        ?.copyWith(fontWeight: FontWeight.w700);
+    final hasSubtitle = bridgeLabel != null && bridgeLabel.isNotEmpty;
+    final titleStyle = hasSubtitle
+        ? Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          )
+        : Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          );
     final actionGap = chrome.useMacOSAdaptiveChrome ? 8.0 : 0.0;
 
     return SizedBox(
@@ -255,22 +261,26 @@ class _SessionListTitle extends StatelessWidget {
     if (subtitle == null || subtitle.isEmpty) {
       return titleRow;
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        titleRow,
-        const SizedBox(height: 1),
-        Text(
-          subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontSize: 11,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          titleRow,
+          const SizedBox(height: 1),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 11,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
