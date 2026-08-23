@@ -449,6 +449,14 @@ export class SessionManager {
 
         if (effectiveProvider === "antigravity") {
           const antigravityProc = proc as AntigravityProcess;
+          const existingRecord = globalAntigravityStore.getSession(session.id);
+          const userInputs = session.history.filter(
+            (h): h is Extract<typeof h, { type: "user_input" }> => h.type === "user_input",
+          );
+          const currentTurn = Math.max(existingRecord?.currentTurn ?? 1, userInputs.length);
+          const firstUserEntry = userInputs[0];
+          const lastUserEntry = userInputs[userInputs.length - 1];
+
           if (
             msg.type === "system" &&
             msg.subtype === "init" &&
@@ -464,9 +472,16 @@ export class SessionManager {
               model: antigravityProc.getModel(),
               terminalStatus: antigravityProc.getTerminalStatus(),
               turnId: antigravityProc.getTurnId() ?? undefined,
-              currentTurn: 1,
-              firstPrompt: "",
-              createdAt: session.createdAt.toISOString(),
+              currentTurn,
+              firstPrompt:
+                firstUserEntry?.text ||
+                existingRecord?.firstPrompt ||
+                "",
+              lastPrompt:
+                lastUserEntry?.text ||
+                existingRecord?.lastPrompt ||
+                "",
+              createdAt: existingRecord?.createdAt || session.createdAt.toISOString(),
               updatedAt: new Date().toISOString(),
               lastActivityAt: new Date().toISOString(),
             });
@@ -482,9 +497,6 @@ export class SessionManager {
             }
             const termStatus = antigravityProc.getTerminalStatus();
             session.terminalStatus = termStatus;
-            const firstUserEntry = session.history.find(
-              (h) => h.type === "user_input",
-            );
             await globalAntigravityStore.saveSession({
               bridgeSessionId: session.id,
               antigravityConversationId: session.antigravityConversationId,
@@ -497,12 +509,16 @@ export class SessionManager {
               finalResult: (msg as any).result,
               failureCode: (msg as any).error ? "ERROR" : null,
               failureMessage: (msg as any).error,
-              currentTurn: 1,
+              currentTurn,
               firstPrompt:
-                firstUserEntry && firstUserEntry.type === "user_input"
-                  ? (firstUserEntry as any).text || ""
-                  : "",
-              createdAt: session.createdAt.toISOString(),
+                firstUserEntry?.text ||
+                existingRecord?.firstPrompt ||
+                "",
+              lastPrompt:
+                lastUserEntry?.text ||
+                existingRecord?.lastPrompt ||
+                "",
+              createdAt: existingRecord?.createdAt || session.createdAt.toISOString(),
               updatedAt: new Date().toISOString(),
               lastActivityAt: new Date().toISOString(),
             });

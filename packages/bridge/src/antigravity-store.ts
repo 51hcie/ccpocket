@@ -28,12 +28,24 @@ export interface AntigravitySessionRecord {
 export class AntigravityStore {
   private readonly dirPath: string;
   private memoryCache: Map<string, AntigravitySessionRecord> = new Map();
+  private initPromise: Promise<void> | null = null;
 
   constructor(customDir?: string) {
     this.dirPath = customDir ?? join(homedir(), ".ccpocket", "antigravity-sessions");
   }
 
   async init(): Promise<void> {
+    if (!this.initPromise) {
+      this.initPromise = this._doInit();
+    }
+    return this.initPromise;
+  }
+
+  async ensureInitialized(): Promise<void> {
+    return this.init();
+  }
+
+  private async _doInit(): Promise<void> {
     await mkdir(this.dirPath, { recursive: true });
     try {
       const files = await readdir(this.dirPath);

@@ -1077,6 +1077,9 @@ export async function getAllRecentSessions(
   markDuration(durations, "loadClaudeSessions", loadClaudeStartedAt);
   markDuration(durations, "loadCodexSessions", loadCodexStartedAt);
 
+  if (shouldLoadAntigravity) {
+    await globalAntigravityStore.ensureInitialized();
+  }
   const antigravityEntries = shouldLoadAntigravity
     ? globalAntigravityStore.listRecentSessions(options)
     : [];

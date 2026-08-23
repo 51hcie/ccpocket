@@ -86,3 +86,6 @@ tmp/verification/issue54-path/
 
 # SSH smoke test generated credentials
 tools/ssh-jump-smoke/generated/
+
+# CI / local build artifacts
+build_artifacts/

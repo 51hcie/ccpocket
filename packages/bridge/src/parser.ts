@@ -1273,7 +1273,8 @@ export function parseClientMessage(data: string): ClientMessage | null {
         if (
           msg.provider !== undefined &&
           msg.provider !== "claude" &&
-          msg.provider !== "codex"
+          msg.provider !== "codex" &&
+          msg.provider !== "antigravity"
         )
           return null;
         break;
@@ -1293,7 +1294,8 @@ export function parseClientMessage(data: string): ClientMessage | null {
         if (
           msg.provider &&
           msg.provider !== "claude" &&
-          msg.provider !== "codex"
+          msg.provider !== "codex" &&
+          msg.provider !== "antigravity"
         )
           return null;
         if (msg.model !== undefined && typeof msg.model !== "string")
@@ -1703,7 +1705,7 @@ export function parseClientMessage(data: string): ClientMessage | null {
         break;
       case "archive_session":
         if (typeof msg.sessionId !== "string") return null;
-        if (msg.provider !== "claude" && msg.provider !== "codex") return null;
+        if (msg.provider !== "claude" && msg.provider !== "codex" && msg.provider !== "antigravity") return null;
         if (typeof msg.projectPath !== "string") return null;
         break;
       default:

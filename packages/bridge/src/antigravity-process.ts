@@ -15,10 +15,10 @@ export type AntigravityExecutionMode = "plan" | "accept-edits" | "execute";
 export type AntigravityTerminalStatus =
   | "queued"
   | "running"
-  | "waiting_for_input"
+  | "interrupting"
+  | "interrupted"
   | "completed"
   | "failed"
-  | "interrupted"
   | "unknown";
 
 export interface AntigravityStartOptions {
@@ -126,7 +126,7 @@ export class AntigravityProcess extends EventEmitter {
     if (options.prompt && options.prompt.trim().length > 0) {
       await this.spawnTurn(options.prompt);
     } else {
-      this.internalStatus = "waiting_for_input";
+      this.internalStatus = "queued";
       this.bridgeStatus = "idle";
       this.emit("status", "idle");
     }
@@ -397,7 +397,7 @@ export class AntigravityProcess extends EventEmitter {
   }
 
   get isWaitingForInput(): boolean {
-    return this.internalStatus === "waiting_for_input" || this.internalStatus === "completed" || this.internalStatus === "queued";
+    return this.internalStatus === "completed" || this.internalStatus === "queued" || this.internalStatus === "interrupted";
   }
 
   stop(): void {
