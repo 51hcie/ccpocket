@@ -37,10 +37,11 @@ class ConnectionUrlParser {
         final segments = uri.pathSegments;
         if (segments.isEmpty) return null;
         final sessionId = segments.first;
-        if (sessionId.isEmpty) return null;
-        final provider = uri.queryParameters['provider'] == 'codex'
-            ? 'codex'
-            : 'claude';
+        final providerParam = uri.queryParameters['provider'];
+        final provider =
+            (providerParam == 'codex' || providerParam == 'antigravity')
+                ? providerParam!
+                : 'claude';
         return SessionLinkParams(sessionId: sessionId, provider: provider);
       }
 

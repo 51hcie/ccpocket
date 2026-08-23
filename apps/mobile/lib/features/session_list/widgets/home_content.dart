@@ -32,6 +32,7 @@ import 'macos_native_app_banner.dart';
 import 'session_reconnect_banner.dart';
 import 'support_banner.dart';
 import 'dual_engine_dashboard_card.dart';
+import '../services/dashboard_metrics_calculator.dart';
 
 class _ProjectSessionGroup {
   final String projectPath;
@@ -136,6 +137,7 @@ class HomeContent extends StatefulWidget {
   final VoidCallback? onOpenSupportSettings;
   final bool? showInlineStopButtonOverride;
   final String? connectedBridgeLabel;
+  final List<String> codexModels;
 
   const HomeContent({
     super.key,
@@ -191,6 +193,7 @@ class HomeContent extends StatefulWidget {
     this.onOpenSupportSettings,
     this.showInlineStopButtonOverride,
     this.connectedBridgeLabel,
+    this.codexModels = const [],
   });
 
   @override
@@ -560,31 +563,33 @@ class HomeContentState extends State<HomeContent> {
         widget.namedOnly ||
         widget.searchQuery.isNotEmpty;
 
-    final runningCount = widget.sessions
-        .where((s) => s.status == 'running' && s.pendingPermission == null)
-        .length +
-        widget.offlinePendingActions.length;
-    final waitingCount = widget.sessions
-        .where((s) =>
-            s.pendingPermission != null || s.status == 'waiting_for_input')
-        .length;
-    final failedCount = widget.sessions
-        .where((s) => s.status == 'failed' || s.status == 'error')
-        .length;
-    final completedCount = widget.recentSessions.length +
-        widget.sessions
-            .where((s) => s.status == 'completed' || s.status == 'idle')
-            .length;
+    final taskCounts = calculateDashboardTaskCounts(
+      activeSessions: widget.sessions,
+      recentSessions: widget.recentSessions,
+      offlinePendingActions: widget.offlinePendingActions,
+    );
+
+    final isConnected =
+        widget.connectionState == BridgeConnectionState.connected;
+    final codexStatus = resolveCodexStatus(
+      isConnected: isConnected,
+      codexModels: widget.codexModels,
+    );
+    final antigravityStatus = resolveAntigravityStatus(
+      isConnected: isConnected,
+    );
 
     final dashboardCard = DualEngineDashboardCard(
       connectionState: widget.connectionState,
       endpointLabel: widget.connectedBridgeLabel,
-      runningCount: runningCount,
-      waitingCount: waitingCount,
-      failedCount: failedCount,
-      completedCount: completedCount,
-      isCodexAvailable: true,
-      isAntigravityAvailable: true,
+      runningCount: taskCounts.running,
+      waitingCount: taskCounts.waiting,
+      failedCount: taskCounts.failed,
+      completedCount: taskCounts.completed,
+      codexStatusLabel: codexStatus.label,
+      antigravityStatusLabel: antigravityStatus.label,
+      isCodexOnline: codexStatus.isOnline,
+      isAntigravityOnline: antigravityStatus.isOnline,
     );
 
     if (!hasRunningSessions &&

@@ -212,6 +212,16 @@ void main() {
         expect(result.provider, 'codex');
       });
 
+      test('parses Antigravity provider from session link query', () {
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://session/agy-session?provider=antigravity',
+        ) as SessionLinkParams?;
+
+        expect(result, isNotNull);
+        expect(result!.sessionId, 'agy-session');
+        expect(result.provider, 'antigravity');
+      });
+
       test('defaults unsupported session link provider to Claude', () {
         final result = ConnectionUrlParser.parse(
           'ccpocket://session/claude-session?provider=unknown',

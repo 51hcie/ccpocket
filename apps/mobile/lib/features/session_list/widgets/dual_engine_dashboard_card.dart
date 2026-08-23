@@ -12,6 +12,10 @@ class DualEngineDashboardCard extends StatelessWidget {
   final int waitingCount;
   final int failedCount;
   final int completedCount;
+  final String? codexStatusLabel;
+  final String? antigravityStatusLabel;
+  final bool? isCodexOnline;
+  final bool? isAntigravityOnline;
   final bool isCodexAvailable;
   final bool isAntigravityAvailable;
 
@@ -23,6 +27,10 @@ class DualEngineDashboardCard extends StatelessWidget {
     this.waitingCount = 0,
     this.failedCount = 0,
     this.completedCount = 0,
+    this.codexStatusLabel,
+    this.antigravityStatusLabel,
+    this.isCodexOnline,
+    this.isAntigravityOnline,
     this.isCodexAvailable = true,
     this.isAntigravityAvailable = true,
   });
@@ -32,6 +40,16 @@ class DualEngineDashboardCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isConnected = connectionState == BridgeConnectionState.connected;
+
+    final resolvedCodexStatus = codexStatusLabel ??
+        (isConnected && isCodexAvailable ? 'Ready' : 'Offline');
+    final resolvedCodexOnline =
+        isCodexOnline ?? (isConnected && isCodexAvailable);
+
+    final resolvedAntigravityStatus = antigravityStatusLabel ??
+        (isConnected && isAntigravityAvailable ? 'Supported' : 'Offline');
+    final resolvedAntigravityOnline =
+        isAntigravityOnline ?? (isConnected && isAntigravityAvailable);
 
     return Container(
       key: const ValueKey('dual_engine_dashboard_card'),
@@ -63,7 +81,8 @@ class DualEngineDashboardCard extends StatelessWidget {
                   boxShadow: isConnected
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF34C759).withValues(alpha: 0.4),
+                            color:
+                                const Color(0xFF34C759).withValues(alpha: 0.4),
                             blurRadius: 6,
                             spreadRadius: 1,
                           ),
@@ -84,7 +103,8 @@ class DualEngineDashboardCard extends StatelessWidget {
               if (endpointLabel != null && endpointLabel!.isNotEmpty)
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(6),
@@ -112,13 +132,15 @@ class DualEngineDashboardCard extends StatelessWidget {
               _EngineBadge(
                 provider: Provider.codex,
                 name: 'Codex',
-                isReady: isConnected && isCodexAvailable,
+                statusText: resolvedCodexStatus,
+                isOnline: resolvedCodexOnline,
               ),
               const SizedBox(width: 8),
               _EngineBadge(
                 provider: Provider.antigravity,
                 name: 'Antigravity',
-                isReady: isConnected && isAntigravityAvailable,
+                statusText: resolvedAntigravityStatus,
+                isOnline: resolvedAntigravityOnline,
               ),
             ],
           ),
@@ -176,12 +198,14 @@ class DualEngineDashboardCard extends StatelessWidget {
 class _EngineBadge extends StatelessWidget {
   final Provider provider;
   final String name;
-  final bool isReady;
+  final String statusText;
+  final bool isOnline;
 
   const _EngineBadge({
     required this.provider,
     required this.name,
-    required this.isReady,
+    required this.statusText,
+    required this.isOnline,
   });
 
   @override
@@ -192,10 +216,14 @@ class _EngineBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isReady ? style.background : cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        color: isOnline
+            ? style.background
+            : cs.surfaceContainerHighest.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isReady ? style.border : cs.outlineVariant.withValues(alpha: 0.3),
+          color: isOnline
+              ? style.border
+              : cs.outlineVariant.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -204,15 +232,19 @@ class _EngineBadge extends StatelessWidget {
           Icon(
             style.icon,
             size: 13,
-            color: isReady ? style.foreground : cs.onSurfaceVariant.withValues(alpha: 0.5),
+            color: isOnline
+                ? style.foreground
+                : cs.onSurfaceVariant.withValues(alpha: 0.5),
           ),
           const SizedBox(width: 5),
           Text(
-            '$name: ${isReady ? "Ready" : "Offline"}',
+            '$name: $statusText',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isReady ? style.foreground : cs.onSurfaceVariant.withValues(alpha: 0.6),
+              color: isOnline
+                  ? style.foreground
+                  : cs.onSurfaceVariant.withValues(alpha: 0.6),
             ),
           ),
         ],

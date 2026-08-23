@@ -161,7 +161,8 @@ List<RecentSession> filterByQuery(List<RecentSession> sessions, String query) {
 
 List<RecentSession> preserveFactualRecentSessions(
   List<RecentSession> sessions,
-) => sessions;
+) =>
+    sessions;
 
 NewSessionParams? mergeCodexDefaultsIntoInitialSessionDefaults(
   NewSessionParams? defaults,
@@ -321,8 +322,8 @@ class _SessionListScreenState extends State<SessionListScreen>
         final text = msg.success
             ? l.sessionArchived
             : (msg.error?.isNotEmpty == true
-                  ? l.archiveFailedWithError(msg.error!)
-                  : l.archiveFailed);
+                ? l.archiveFailedWithError(msg.error!)
+                : l.archiveFailed);
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(text)));
       }
@@ -339,8 +340,8 @@ class _SessionListScreenState extends State<SessionListScreen>
   }
 
   Future<void> _loadMacOSNativeAppBannerState() async {
-    final isIOSAppOnMac = await PlatformEnvironmentService.instance
-        .isIOSAppOnMac();
+    final isIOSAppOnMac =
+        await PlatformEnvironmentService.instance.isIOSAppOnMac();
     if (!isIOSAppOnMac) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -409,8 +410,8 @@ class _SessionListScreenState extends State<SessionListScreen>
       }
       if (!mounted || !_isAutoConnecting) return;
       final attempted = await context.read<BridgeService>().autoConnect(
-        shouldConnect: () => mounted && _isAutoConnecting,
-      );
+            shouldConnect: () => mounted && _isAutoConnecting,
+          );
       if (!attempted && mounted) {
         setState(() => _isAutoConnecting = false);
       }
@@ -440,8 +441,7 @@ class _SessionListScreenState extends State<SessionListScreen>
           candidate.host,
           port,
         );
-        connectionMode =
-            requestedConnectionMode ??
+        connectionMode = requestedConnectionMode ??
             existing?.connectionMode ??
             BridgeConnectionMode.automatic;
         final probeMode = switch (connectionMode) {
@@ -756,8 +756,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     NewSessionParams? initialParams,
     bool lockProvider = false,
   }) async {
-    final sessions =
-        widget.debugRecentSessions ??
+    final sessions = widget.debugRecentSessions ??
         context.read<SessionListCubit>().state.sessions;
     final history = context.read<ProjectHistoryCubit>().state;
     final bridge = context.read<BridgeService>();
@@ -778,11 +777,9 @@ class _SessionListScreenState extends State<SessionListScreen>
     final bridge = context.read<BridgeService>();
     final settings = context.read<SettingsCubit>().state;
     final isOffline = !bridge.isConnected;
-    final useCodexProfile =
-        result.provider == Provider.codex &&
+    final useCodexProfile = result.provider == Provider.codex &&
         (result.codexProfile?.isNotEmpty ?? false);
-    final useCodexCustomPermissions =
-        result.provider == Provider.codex &&
+    final useCodexCustomPermissions = result.provider == Provider.codex &&
         (useCodexProfile ||
             result.codexPermissionsMode == CodexPermissionsMode.custom);
     _pendingResumeProjectPath = result.projectPath;
@@ -798,16 +795,16 @@ class _SessionListScreenState extends State<SessionListScreen>
             : result.executionMode.value,
         approvalPolicy: result.provider == Provider.codex
             ? (useCodexCustomPermissions
-                  ? null
-                  : result.codexApprovalPolicy.value)
+                ? null
+                : result.codexApprovalPolicy.value)
             : null,
         approvalsReviewer: result.provider == Provider.codex
             ? (useCodexCustomPermissions ? null : result.codexApprovalsReviewer)
             : null,
         codexPermissionsMode: result.provider == Provider.codex
             ? (useCodexCustomPermissions
-                  ? CodexPermissionsMode.custom.value
-                  : result.codexPermissionsMode.value)
+                ? CodexPermissionsMode.custom.value
+                : result.codexPermissionsMode.value)
             : null,
         planMode: result.provider == Provider.codex && useCodexProfile
             ? null
@@ -815,9 +812,8 @@ class _SessionListScreenState extends State<SessionListScreen>
         effort: result.provider == Provider.claude
             ? result.claudeEffort?.value
             : null,
-        maxTurns: result.provider == Provider.claude
-            ? result.claudeMaxTurns
-            : null,
+        maxTurns:
+            result.provider == Provider.claude ? result.claudeMaxTurns : null,
         maxBudgetUsd: result.provider == Provider.claude
             ? result.claudeMaxBudgetUsd
             : null,
@@ -839,26 +835,25 @@ class _SessionListScreenState extends State<SessionListScreen>
             : (useCodexProfile ? null : result.model),
         sandboxMode:
             result.provider == Provider.codex && useCodexCustomPermissions
-            ? null
-            : result.sandboxMode?.value,
+                ? null
+                : result.sandboxMode?.value,
         modelReasoningEffort:
             result.provider == Provider.codex && useCodexProfile
-            ? null
-            : result.modelReasoningEffort?.value,
-        serviceTier: result.provider == Provider.codex
-            ? result.codexSpeed.value
-            : null,
+                ? null
+                : result.modelReasoningEffort?.value,
+        serviceTier:
+            result.provider == Provider.codex ? result.codexSpeed.value : null,
         networkAccessEnabled:
             result.provider == Provider.codex && useCodexCustomPermissions
-            ? null
-            : result.networkAccessEnabled,
+                ? null
+                : result.networkAccessEnabled,
         webSearchMode: result.provider == Provider.codex && useCodexProfile
             ? null
             : result.webSearchMode?.value,
         additionalWritableRoots:
             result.provider == Provider.codex && !useCodexCustomPermissions
-            ? result.additionalWritableRoots
-            : null,
+                ? result.additionalWritableRoots
+                : null,
         autoRename: autoRenameForProvider(settings, result.provider),
       ),
     );
@@ -973,9 +968,8 @@ class _SessionListScreenState extends State<SessionListScreen>
   }
 
   void _trackPendingClaudeDefaultsCorrection(NewSessionParams params) {
-    _pendingClaudeDefaultsCorrection = params.provider == Provider.claude
-        ? params
-        : null;
+    _pendingClaudeDefaultsCorrection =
+        params.provider == Provider.claude ? params : null;
   }
 
   Future<void> _syncPendingClaudeDefaultsWithSessionCreated(
@@ -1145,9 +1139,9 @@ class _SessionListScreenState extends State<SessionListScreen>
         : null;
     final codexApprovalPolicy =
         codexApprovalPolicyFromRaw(session.codexApprovalPolicy) ??
-        codexApprovalPolicyFromLegacyExecutionMode(
-          sessionSettings?['executionMode'] as String?,
-        );
+            codexApprovalPolicyFromLegacyExecutionMode(
+              sessionSettings?['executionMode'] as String?,
+            );
     final codexAutoReviewEnabled = isCodexAutoReviewApprovalsReviewer(
       session.codexApprovalsReviewer,
     );
@@ -1185,8 +1179,7 @@ class _SessionListScreenState extends State<SessionListScreen>
       useWorktree: hasExistingWorktree,
       worktreeBranch: session.gitBranch.isNotEmpty ? session.gitBranch : null,
       existingWorktreePath: hasExistingWorktree ? existingWorktreePath : null,
-      model:
-          normalizeCodexModelForAvailableList(
+      model: normalizeCodexModelForAvailableList(
             session.codexModel,
             codexModels,
           ) ??
@@ -1244,9 +1237,9 @@ class _SessionListScreenState extends State<SessionListScreen>
       );
       if (newName == null || !mounted) return;
       context.read<BridgeService>().renameSession(
-        sessionId: session.id,
-        name: newName.isEmpty ? null : newName,
-      );
+            sessionId: session.id,
+            name: newName.isEmpty ? null : newName,
+          );
       // Running session list will auto-update via broadcastSessionList
       return;
     }
@@ -1305,16 +1298,16 @@ class _SessionListScreenState extends State<SessionListScreen>
       final effectiveName = newName.isEmpty ? null : newName;
       // Optimistically update the local state for instant UI feedback
       context.read<SessionListCubit>().updateSessionName(
-        session.sessionId,
-        effectiveName,
-      );
+            session.sessionId,
+            effectiveName,
+          );
       context.read<BridgeService>().renameSession(
-        sessionId: session.sessionId,
-        name: effectiveName,
-        provider: session.provider,
-        providerSessionId: session.sessionId,
-        projectPath: session.projectPath,
-      );
+            sessionId: session.sessionId,
+            name: effectiveName,
+            provider: session.provider,
+            providerSessionId: session.sessionId,
+            projectPath: session.projectPath,
+          );
       // Also refresh from server to confirm persistence
       context.read<BridgeService>().requestRecentSessions();
       return;
@@ -1362,10 +1355,10 @@ class _SessionListScreenState extends State<SessionListScreen>
     if (_archivingSessionIds.contains(session.sessionId)) return;
     setState(() => _archivingSessionIds.add(session.sessionId));
     context.read<BridgeService>().archiveSession(
-      sessionId: session.sessionId,
-      provider: session.provider ?? 'claude',
-      projectPath: session.projectPath,
-    );
+          sessionId: session.sessionId,
+          provider: session.provider ?? 'claude',
+          projectPath: session.projectPath,
+        );
   }
 
   void _navigateToChat(
@@ -1408,32 +1401,31 @@ class _SessionListScreenState extends State<SessionListScreen>
 
     final navigation = context.router.push(switch (provider) {
       Provider.codex => CodexSessionRoute(
-        sessionId: sessionId,
-        projectPath: projectPath,
-        gitBranch: gitBranch,
-        worktreePath: worktreePath,
-        isPending: isPending,
-        initialSandboxMode: sandboxMode,
-        initialPermissionMode: permissionMode,
-        initialApprovalPolicy: approvalPolicy,
-        initialApprovalsReviewer: approvalsReviewer,
-        pendingSessionCreated: pendingNotifier,
-      ),
+          sessionId: sessionId,
+          projectPath: projectPath,
+          gitBranch: gitBranch,
+          worktreePath: worktreePath,
+          isPending: isPending,
+          initialSandboxMode: sandboxMode,
+          initialPermissionMode: permissionMode,
+          initialApprovalPolicy: approvalPolicy,
+          initialApprovalsReviewer: approvalsReviewer,
+          pendingSessionCreated: pendingNotifier,
+        ),
       _ => ClaudeSessionRoute(
-        sessionId: sessionId,
-        projectPath: projectPath,
-        gitBranch: gitBranch,
-        worktreePath: worktreePath,
-        isPending: isPending,
-        initialPermissionMode: permissionMode,
-        initialSandboxMode: sandboxMode,
-        pendingSessionCreated: pendingNotifier,
-      ),
+          sessionId: sessionId,
+          projectPath: projectPath,
+          gitBranch: gitBranch,
+          worktreePath: worktreePath,
+          isPending: isPending,
+          initialPermissionMode: permissionMode,
+          initialSandboxMode: sandboxMode,
+          pendingSessionCreated: pendingNotifier,
+        ),
     });
     navigation.then((_) {
       if (!mounted) return;
-      final isConnected =
-          context.read<ConnectionCubit>().state ==
+      final isConnected = context.read<ConnectionCubit>().state ==
           BridgeConnectionState.connected;
       if (isConnected) {
         _refresh();
@@ -1443,8 +1435,8 @@ class _SessionListScreenState extends State<SessionListScreen>
 
   void _resumeSession(RecentSession session) async {
     final bridge = context.read<BridgeService>();
-    final result = await SessionResumeCoordinator(bridge: bridge)
-        .resume(session);
+    final result =
+        await SessionResumeCoordinator(bridge: bridge).resume(session);
     if (!mounted) return;
     if (result.disposition == SessionResumeDisposition.alreadyQueued) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1486,31 +1478,28 @@ class _SessionListScreenState extends State<SessionListScreen>
     final isCodex = edited.provider == Provider.codex;
     final useCodexProfile =
         isCodex && (edited.codexProfile?.isNotEmpty ?? false);
-    final useCodexCustomPermissions =
-        isCodex &&
+    final useCodexCustomPermissions = isCodex &&
         (useCodexProfile ||
             edited.codexPermissionsMode == CodexPermissionsMode.custom);
     bridge.resumeSession(
       session.sessionId,
       resumeProjectPath,
-      permissionMode: isCodex && useCodexProfile
-          ? null
-          : edited.permissionMode.value,
-      executionMode: isCodex && useCodexProfile
-          ? null
-          : edited.executionMode.value,
+      permissionMode:
+          isCodex && useCodexProfile ? null : edited.permissionMode.value,
+      executionMode:
+          isCodex && useCodexProfile ? null : edited.executionMode.value,
       approvalPolicy: isCodex
           ? (useCodexCustomPermissions
-                ? null
-                : edited.codexApprovalPolicy.value)
+              ? null
+              : edited.codexApprovalPolicy.value)
           : null,
       approvalsReviewer: isCodex
           ? (useCodexCustomPermissions ? null : edited.codexApprovalsReviewer)
           : null,
       codexPermissionsMode: isCodex
           ? (useCodexCustomPermissions
-                ? CodexPermissionsMode.custom.value
-                : edited.codexPermissionsMode.value)
+              ? CodexPermissionsMode.custom.value
+              : edited.codexPermissionsMode.value)
           : null,
       planMode: isCodex && useCodexProfile ? null : edited.planMode,
       effort: !isCodex ? edited.claudeEffort?.value : null,
@@ -1526,12 +1515,12 @@ class _SessionListScreenState extends State<SessionListScreen>
           : edited.sandboxMode?.value,
       model: isCodex
           ? (useCodexProfile
-                ? null
-                : (normalizeCodexModelForAvailableList(
-                        edited.model,
-                        context.read<BridgeService>().codexModels,
-                      ) ??
-                      edited.model))
+              ? null
+              : (normalizeCodexModelForAvailableList(
+                    edited.model,
+                    context.read<BridgeService>().codexModels,
+                  ) ??
+                  edited.model))
           : edited.claudeModel,
       modelReasoningEffort: isCodex && useCodexProfile
           ? null
@@ -1675,51 +1664,51 @@ class _SessionListScreenState extends State<SessionListScreen>
       child: BlocBuilder<UnseenSessionsCubit, Set<String>>(
         builder: (context, unseenSessionIds) =>
             BlocListener<ConnectionCubit, BridgeConnectionState>(
-              listener: (context, nextState) {
-                // Clear auto-connecting spinner once we get any connection state update
-                if (_isAutoConnecting) {
-                  setState(() => _isAutoConnecting = false);
-                }
-                if (nextState == BridgeConnectionState.connected) {
-                  context.read<SessionListCubit>().refresh();
-                }
+          listener: (context, nextState) {
+            // Clear auto-connecting spinner once we get any connection state update
+            if (_isAutoConnecting) {
+              setState(() => _isAutoConnecting = false);
+            }
+            if (nextState == BridgeConnectionState.connected) {
+              context.read<SessionListCubit>().refresh();
+            }
+          },
+          child: CallbackShortcuts(
+            bindings: <ShortcutActivator, VoidCallback>{
+              // Cmd+N: New Session
+              const SingleActivator(
+                LogicalKeyboardKey.keyN,
+                meta: true,
+              ): () {
+                if (showConnectedUI) _showNewSessionDialog();
               },
-              child: CallbackShortcuts(
-                bindings: <ShortcutActivator, VoidCallback>{
-                  // Cmd+N: New Session
-                  const SingleActivator(
-                    LogicalKeyboardKey.keyN,
-                    meta: true,
-                  ): () {
-                    if (showConnectedUI) _showNewSessionDialog();
-                  },
-                  // Cmd+K: Focus search
-                  const SingleActivator(
-                    LogicalKeyboardKey.keyK,
-                    meta: true,
-                  ): () {
-                    _homeContentKey.currentState?.openSearch();
-                  },
-                },
-                child: Focus(
-                  autofocus: true,
-                  child: _buildScaffoldBody(
-                    context: context,
-                    l: l,
-                    showConnectedUI: showConnectedUI,
-                    connectionState: connectionState,
-                    sessions: sessions,
-                    recentSessionsList: recentSessionsList,
-                    slState: slState,
-                    unseenSessionIds: unseenSessionIds,
-                    discoveredServers: discoveredServers,
-                    machineState: machineState,
-                    machineManagerCubit: machineManagerCubit,
-                    connectedBridgeLabel: connectedBridgeLabel,
-                  ),
-                ),
+              // Cmd+K: Focus search
+              const SingleActivator(
+                LogicalKeyboardKey.keyK,
+                meta: true,
+              ): () {
+                _homeContentKey.currentState?.openSearch();
+              },
+            },
+            child: Focus(
+              autofocus: true,
+              child: _buildScaffoldBody(
+                context: context,
+                l: l,
+                showConnectedUI: showConnectedUI,
+                connectionState: connectionState,
+                sessions: sessions,
+                recentSessionsList: recentSessionsList,
+                slState: slState,
+                unseenSessionIds: unseenSessionIds,
+                discoveredServers: discoveredServers,
+                machineState: machineState,
+                machineManagerCubit: machineManagerCubit,
+                connectedBridgeLabel: connectedBridgeLabel,
               ),
             ),
+          ),
+        ),
       ),
     );
   }
@@ -1738,8 +1727,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     required MachineManagerCubit? machineManagerCubit,
     required String? connectedBridgeLabel,
   }) {
-    final canDisconnect =
-        showConnectedUI ||
+    final canDisconnect = showConnectedUI ||
         _isAutoConnecting ||
         connectionState == BridgeConnectionState.connecting;
     final chrome = resolveWorkspacePaneChrome(
@@ -1835,16 +1823,16 @@ class _SessionListScreenState extends State<SessionListScreen>
       body: body,
       floatingActionButton:
           showConnectedUI && MediaQuery.of(context).viewInsets.bottom == 0
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: FloatingActionButton.extended(
-                key: const ValueKey('new_session_fab'),
-                onPressed: _showNewSessionDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('New'),
-              ),
-            )
-          : null,
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: FloatingActionButton.extended(
+                    key: const ValueKey('new_session_fab'),
+                    onPressed: _showNewSessionDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('New'),
+                  ),
+                )
+              : null,
     );
   }
 
@@ -1875,8 +1863,8 @@ class _SessionListScreenState extends State<SessionListScreen>
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<SessionListCubit>().applyEnabledAgents(
-            settingsState.newSessionTabs,
-          );
+                settingsState.newSessionTabs,
+              );
         });
       }
       final content = StreamBuilder<List<OfflinePendingAction>>(
@@ -1895,6 +1883,7 @@ class _SessionListScreenState extends State<SessionListScreen>
               sessions: sessions,
               offlinePendingActions: offlinePendingActions,
               recentSessions: recentSessionsList,
+              codexModels: bridge.codexModels,
               accumulatedProjectPaths: slState.accumulatedProjectPaths,
               collapsedProjectPaths: slState.collapsedProjectPaths,
               loadingProjectPaths: slState.loadingProjectPaths,
@@ -1910,44 +1899,44 @@ class _SessionListScreenState extends State<SessionListScreen>
               unseenSessionIds: unseenSessionIds,
               currentProjectFilter: bridge.currentProjectFilter,
               onNewSession: _showNewSessionDialog,
-              onTapRunning:
-                  (
-                    sessionId, {
-                    String? projectPath,
-                    String? gitBranch,
-                    String? worktreePath,
-                    String? provider,
-                    String? permissionMode,
-                    String? sandboxMode,
-                    String? approvalPolicy,
-                    String? approvalsReviewer,
-                  }) => _navigateToChat(
-                    sessionId,
-                    projectPath: projectPath,
-                    gitBranch: gitBranch,
-                    worktreePath: worktreePath,
-                    provider: provider == 'codex' ? Provider.codex : null,
-                    permissionMode: permissionMode,
-                    sandboxMode: sandboxMode,
-                    approvalPolicy: approvalPolicy,
-                    approvalsReviewer: approvalsReviewer,
-                  ),
+              onTapRunning: (
+                sessionId, {
+                String? projectPath,
+                String? gitBranch,
+                String? worktreePath,
+                String? provider,
+                String? permissionMode,
+                String? sandboxMode,
+                String? approvalPolicy,
+                String? approvalsReviewer,
+              }) =>
+                  _navigateToChat(
+                sessionId,
+                projectPath: projectPath,
+                gitBranch: gitBranch,
+                worktreePath: worktreePath,
+                provider: provider == 'codex' ? Provider.codex : null,
+                permissionMode: permissionMode,
+                sandboxMode: sandboxMode,
+                approvalPolicy: approvalPolicy,
+                approvalsReviewer: approvalsReviewer,
+              ),
               onStopSession: _stopSession,
               onCancelOfflinePendingAction: (actionId) =>
                   unawaited(bridge.cancelOfflinePendingAction(actionId)),
-              onApprovePermission:
-                  (sessionId, toolUseId, {bool clearContext = false}) {
-                    final bridge = context.read<BridgeService>();
-                    bridge.markToolUseResponded(sessionId, toolUseId);
-                    bridge.send(
-                      ClientMessage.approve(
-                        toolUseId,
-                        sessionId: sessionId,
-                        clearContext: clearContext,
-                      ),
-                    );
-                    bridge.clearSessionPermission(sessionId);
-                  },
+              onApprovePermission: (sessionId, toolUseId,
+                  {bool clearContext = false}) {
+                final bridge = context.read<BridgeService>();
+                bridge.markToolUseResponded(sessionId, toolUseId);
+                bridge.send(
+                  ClientMessage.approve(
+                    toolUseId,
+                    sessionId: sessionId,
+                    clearContext: clearContext,
+                  ),
+                );
+                bridge.clearSessionPermission(sessionId);
+              },
               onApproveAlways: (sessionId, toolUseId) {
                 final bridge = context.read<BridgeService>();
                 bridge.markToolUseResponded(sessionId, toolUseId);
@@ -2111,43 +2100,42 @@ class _SessionListScreenState extends State<SessionListScreen>
               ? BridgeConnectionMode.secureOnly
               : BridgeConnectionMode.standardOnly,
         ),
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {
-              final newMachine = cubit.createNewMachine(
-                name: machine.name,
-                host: machine.host,
-                port: machine.port,
-                useSsl: machine.useSsl,
-              );
-              await cubit.addMachine(
-                newMachine.copyWith(
-                  useSsl: machine.useSsl,
-                  connectionMode: machine.connectionMode,
-                  sshEnabled: machine.sshEnabled,
-                  sshUsername: machine.sshUsername,
-                  sshPort: machine.sshPort,
-                  sshAuthType: machine.sshAuthType,
-                  sshJumpHost: machine.sshJumpHost,
-                  sshJumpPort: machine.sshJumpPort,
-                  sshJumpUsername: machine.sshJumpUsername,
-                  sshJumpAuthType: machine.sshJumpAuthType,
-                  isFavorite: true,
-                ),
-                apiKey: apiKey,
-                sshPassword: sshPassword,
-                sshPrivateKey: sshPrivateKey,
-                sshJumpPassword: sshJumpPassword,
-                sshJumpPrivateKey: sshJumpPrivateKey,
-              );
-              savedMachine = cubit.findByHostPort(machine.host, machine.port);
-            },
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {
+          final newMachine = cubit.createNewMachine(
+            name: machine.name,
+            host: machine.host,
+            port: machine.port,
+            useSsl: machine.useSsl,
+          );
+          await cubit.addMachine(
+            newMachine.copyWith(
+              useSsl: machine.useSsl,
+              connectionMode: machine.connectionMode,
+              sshEnabled: machine.sshEnabled,
+              sshUsername: machine.sshUsername,
+              sshPort: machine.sshPort,
+              sshAuthType: machine.sshAuthType,
+              sshJumpHost: machine.sshJumpHost,
+              sshJumpPort: machine.sshJumpPort,
+              sshJumpUsername: machine.sshJumpUsername,
+              sshJumpAuthType: machine.sshJumpAuthType,
+              isFavorite: true,
+            ),
+            apiKey: apiKey,
+            sshPassword: sshPassword,
+            sshPrivateKey: sshPrivateKey,
+            sshJumpPassword: sshJumpPassword,
+            sshJumpPrivateKey: sshJumpPrivateKey,
+          );
+          savedMachine = cubit.findByHostPort(machine.host, machine.port);
+        },
         onSaveAndConnect: (machine, apiKey) {
           final saved = savedMachine;
           if (saved?.sshJumpHost?.trim().isNotEmpty == true) {
@@ -2426,31 +2414,28 @@ class _SessionListScreenState extends State<SessionListScreen>
         existingSshPrivateKey: sshPrivateKey,
         existingSshJumpPassword: sshJumpPassword,
         existingSshJumpPrivateKey: sshJumpPrivateKey,
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {
-              await cubit.updateMachine(
-                machine,
-                apiKey: apiKey,
-                sshPassword: sshPassword,
-                sshPrivateKey: sshPrivateKey,
-                sshJumpPassword: sshJumpPassword,
-                sshJumpPrivateKey: sshJumpPrivateKey,
-                clearCredentials:
-                    !machine.sshEnabled ||
-                    machine.sshAuthType != m.machine.sshAuthType,
-                clearJumpCredentials:
-                    machine.sshJumpHost == null ||
-                    machine.sshJumpAuthType != m.machine.sshJumpAuthType,
-              );
-              await cubit.checkHealth(machine.id);
-            },
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {
+          await cubit.updateMachine(
+            machine,
+            apiKey: apiKey,
+            sshPassword: sshPassword,
+            sshPrivateKey: sshPrivateKey,
+            sshJumpPassword: sshJumpPassword,
+            sshJumpPrivateKey: sshJumpPrivateKey,
+            clearCredentials: !machine.sshEnabled ||
+                machine.sshAuthType != m.machine.sshAuthType,
+            clearJumpCredentials: machine.sshJumpHost == null ||
+                machine.sshJumpAuthType != m.machine.sshJumpAuthType,
+          );
+          await cubit.checkHealth(machine.id);
+        },
         onTestConnection: cubit.testConnectionWithCredentials,
       ),
     );
@@ -2494,43 +2479,42 @@ class _SessionListScreenState extends State<SessionListScreen>
       constraints: macOSModalBottomSheetConstraints(context),
       backgroundColor: Colors.transparent,
       builder: (ctx) => MachineEditSheet(
-        onSave:
-            ({
-              required machine,
-              apiKey,
-              sshPassword,
-              sshPrivateKey,
-              sshJumpPassword,
-              sshJumpPrivateKey,
-            }) async {
-              final newMachine = cubit.createNewMachine(
-                name: machine.name,
-                host: machine.host,
-                port: machine.port,
-                useSsl: machine.useSsl,
-              );
-              await cubit.addMachine(
-                newMachine.copyWith(
-                  useSsl: machine.useSsl,
-                  connectionMode: machine.connectionMode,
-                  sshEnabled: machine.sshEnabled,
-                  sshUsername: machine.sshUsername,
-                  sshPort: machine.sshPort,
-                  sshAuthType: machine.sshAuthType,
-                  sshJumpHost: machine.sshJumpHost,
-                  sshJumpPort: machine.sshJumpPort,
-                  sshJumpUsername: machine.sshJumpUsername,
-                  sshJumpAuthType: machine.sshJumpAuthType,
-                  isFavorite: true, // New manually added machines are favorites
-                ),
-                apiKey: apiKey,
-                sshPassword: sshPassword,
-                sshPrivateKey: sshPrivateKey,
-                sshJumpPassword: sshJumpPassword,
-                sshJumpPrivateKey: sshJumpPrivateKey,
-              );
-              savedMachine = cubit.findByHostPort(machine.host, machine.port);
-            },
+        onSave: ({
+          required machine,
+          apiKey,
+          sshPassword,
+          sshPrivateKey,
+          sshJumpPassword,
+          sshJumpPrivateKey,
+        }) async {
+          final newMachine = cubit.createNewMachine(
+            name: machine.name,
+            host: machine.host,
+            port: machine.port,
+            useSsl: machine.useSsl,
+          );
+          await cubit.addMachine(
+            newMachine.copyWith(
+              useSsl: machine.useSsl,
+              connectionMode: machine.connectionMode,
+              sshEnabled: machine.sshEnabled,
+              sshUsername: machine.sshUsername,
+              sshPort: machine.sshPort,
+              sshAuthType: machine.sshAuthType,
+              sshJumpHost: machine.sshJumpHost,
+              sshJumpPort: machine.sshJumpPort,
+              sshJumpUsername: machine.sshJumpUsername,
+              sshJumpAuthType: machine.sshJumpAuthType,
+              isFavorite: true, // New manually added machines are favorites
+            ),
+            apiKey: apiKey,
+            sshPassword: sshPassword,
+            sshPrivateKey: sshPrivateKey,
+            sshJumpPassword: sshJumpPassword,
+            sshJumpPrivateKey: sshJumpPrivateKey,
+          );
+          savedMachine = cubit.findByHostPort(machine.host, machine.port);
+        },
         onSaveAndConnect: (machine, apiKey) {
           final saved = savedMachine;
           if (saved?.sshJumpHost?.trim().isNotEmpty == true) {
