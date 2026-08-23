@@ -10,7 +10,9 @@ import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_constants.dart';
+import '../../constants/brand_config.dart';
 import '../../constants/feature_flags.dart';
+import '../../widgets/anycoding_logo.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_icon.dart';
 import '../../models/git_diff_interaction_mode.dart';
@@ -953,33 +955,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
               ],
 
-              ValueListenableBuilder<SupportCatalogState>(
-                valueListenable: revenueCat.catalogState,
-                builder: (context, supportState, _) {
-                  if (!supportState.isAvailable &&
-                      supportState.errorMessage == null) {
-                    return const SizedBox.shrink();
-                  }
+              if (BrandConfig.showSupporterFeatures)
+                ValueListenableBuilder<SupportCatalogState>(
+                  valueListenable: revenueCat.catalogState,
+                  builder: (context, supportState, _) {
+                    if (!supportState.isAvailable &&
+                        supportState.errorMessage == null) {
+                      return const SizedBox.shrink();
+                    }
 
-                  _maybeFocusSupportSection();
+                    _maybeFocusSupportSection();
 
-                  return KeyedSubtree(
-                    key: _supportSectionKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _SectionHeader(title: l.sectionSupport),
-                        SupportSectionCard(
-                          highlighted: _highlightSupportSection,
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                    return KeyedSubtree(
+                      key: _supportSectionKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _SectionHeader(title: l.sectionSupport),
+                          SupportSectionCard(
+                            highlighted: _highlightSupportSection,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
-              if (isConnected) ...[
+              if (isConnected && BrandConfig.showSharePromotion) ...[
                 // ── Spread ──
                 _SectionHeader(title: l.sectionSpread),
                 Card(
@@ -988,7 +991,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       const _SpreadAppealMessage(),
                       // Rate on Store (mobile only)
-                      if (isMobilePlatform) ...[
+                      if (isMobilePlatform && BrandConfig.showStoreReview) ...[
                         ListTile(
                           leading: Icon(
                             Icons.rate_review_outlined,
@@ -1053,6 +1056,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
+                    if (BrandConfig.isAnyCoding) ...[
+                      ListTile(
+                        leading: const AnyCodingLogo(size: 24),
+                        title: Text(
+                          BrandConfig.appName,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(BrandConfig.aboutDescription),
+                      ),
+                      Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: cs.outlineVariant,
+                      ),
+                      ListTile(
+                        leading: Icon(
+                          Icons.source_outlined,
+                          color: cs.onSurfaceVariant,
+                        ),
+                        title: Text(BrandConfig.openSourceAttribution),
+                        subtitle: const Text(
+                          'MIT License · GitHub / K9i-0 / ccpocket',
+                        ),
+                        trailing: const Icon(Icons.open_in_new, size: 18),
+                        onTap: () => launchUrl(
+                          Uri.parse(AppConstants.githubUrl),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                      ),
+                      Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: cs.outlineVariant,
+                      ),
+                    ],
                     // Version
                     const _VersionTile(),
                     const _AppUpdateTile(),
@@ -1071,22 +1111,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       endIndent: 16,
                       color: cs.outlineVariant,
                     ),
-                    // GitHub Repository
-                    ListTile(
-                      leading: Icon(Icons.code, color: cs.onSurfaceVariant),
-                      title: Text(l.githubRepository),
-                      trailing: const Icon(Icons.open_in_new, size: 18),
-                      onTap: () => launchUrl(
-                        Uri.parse(AppConstants.githubUrl),
-                        mode: LaunchMode.externalApplication,
+                    if (!BrandConfig.isAnyCoding) ...[
+                      // GitHub Repository
+                      ListTile(
+                        leading: Icon(Icons.code, color: cs.onSurfaceVariant),
+                        title: Text(l.githubRepository),
+                        trailing: const Icon(Icons.open_in_new, size: 18),
+                        onTap: () => launchUrl(
+                          Uri.parse(AppConstants.githubUrl),
+                          mode: LaunchMode.externalApplication,
+                        ),
                       ),
-                    ),
-                    Divider(
-                      height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: cs.outlineVariant,
-                    ),
+                      Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: cs.outlineVariant,
+                      ),
+                    ],
                     // Changelog
                     ListTile(
                       leading: Icon(Icons.history, color: cs.onSurfaceVariant),
@@ -1137,13 +1179,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'ccpocket',
-                      style: Theme.of(context).textTheme.titleSmall
-                          ?.copyWith(color: cs.onSurfaceVariant),
+                      BrandConfig.appName,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '\u00a9 2026 K9i',
+                      BrandConfig.isAnyCoding
+                          ? '© 2026 AnyCoding'
+                          : '\u00a9 2026 K9i',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant.withValues(alpha: 0.6),
                       ),

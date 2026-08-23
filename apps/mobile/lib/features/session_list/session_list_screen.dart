@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../constants/brand_config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/network_endpoint.dart';
 import '../../utils/platform_helper.dart';
@@ -1829,8 +1830,16 @@ class _SessionListScreenState extends State<SessionListScreen>
                   child: FloatingActionButton.extended(
                     key: const ValueKey('new_session_fab'),
                     onPressed: _showNewSessionDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('New'),
+                    icon: const Icon(Icons.add_rounded, size: 22),
+                    label: Text(
+                      BrandConfig.isAnyCoding ? '新建任务' : l.newSession,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    elevation: 3,
+                    highlightElevation: 6,
                   ),
                 )
               : null,

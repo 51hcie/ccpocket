@@ -1,9 +1,11 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
+import '../../../constants/brand_config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../router/app_router.dart';
 import '../../../services/app_update_service.dart';
+import '../../../widgets/anycoding_logo.dart';
 import '../../../widgets/workspace_pane_chrome.dart';
 
 /// Floating SliverAppBar for the session list screen.
@@ -190,27 +192,37 @@ class _SessionListTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtitle = this.subtitle;
     final theme = Theme.of(context);
-    final defaultTitleStyle = theme.textTheme.titleLarge?.copyWith(
+    final defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
     );
+
+    final titleRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (BrandConfig.isAnyCoding) ...[
+          const AnyCodingLogo(size: 22),
+          const SizedBox(width: 8),
+        ],
+        Flexible(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: titleStyle ?? defaultTitleStyle,
+          ),
+        ),
+      ],
+    );
+
     if (subtitle == null || subtitle.isEmpty) {
-      return Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: titleStyle ?? defaultTitleStyle,
-      );
+      return titleRow;
     }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: titleStyle ?? defaultTitleStyle,
-        ),
+        titleRow,
         const SizedBox(height: 1),
         Text(
           subtitle,

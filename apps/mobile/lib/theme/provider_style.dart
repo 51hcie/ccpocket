@@ -19,20 +19,23 @@ class ProviderStyle {
 
 ProviderStyle providerStyleFor(BuildContext context, Provider provider) {
   final colorScheme = Theme.of(context).colorScheme;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   final accent = switch (provider) {
     Provider.claude => colorScheme.primary,
-    Provider.codex => colorScheme.secondary,
-    Provider.antigravity => const Color(0xFFF06A35),
+    Provider.codex =>
+      isDark ? const Color(0xFF00D2B4) : const Color(0xFF0D9488),
+    Provider.antigravity =>
+      isDark ? const Color(0xFFFF7A00) : const Color(0xFFEA580C),
   };
 
   return ProviderStyle(
     foreground: accent,
-    background: accent.withValues(alpha: 0.12),
-    border: accent.withValues(alpha: 0.34),
+    background: accent.withValues(alpha: isDark ? 0.16 : 0.10),
+    border: accent.withValues(alpha: isDark ? 0.40 : 0.30),
     icon: switch (provider) {
       Provider.claude => Icons.smart_toy_outlined,
-      Provider.codex => Icons.code,
-      Provider.antigravity => Icons.auto_awesome,
+      Provider.codex => Icons.terminal_rounded,
+      Provider.antigravity => Icons.auto_awesome_rounded,
     },
   );
 }

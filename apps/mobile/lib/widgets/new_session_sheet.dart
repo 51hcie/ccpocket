@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../constants/brand_config.dart';
 import '../features/session_list/session_list_screen.dart'
     show recentProjects, shortenPath;
 import '../l10n/app_localizations.dart';
@@ -1569,7 +1570,7 @@ class _SheetTitle extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  l.newSession,
+                  BrandConfig.isAnyCoding ? '新建任务' : l.newSession,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -3688,7 +3689,9 @@ class _SheetActions extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Start with ${provider.label}',
+                      BrandConfig.isAnyCoding
+                          ? '启动 ${provider.label} 任务'
+                          : 'Start with ${provider.label}',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -3730,7 +3733,7 @@ class _ProviderToggleButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? style.background : Colors.transparent,
           borderRadius: BorderRadius.circular(8),

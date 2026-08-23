@@ -1,6 +1,7 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
 
+import '../constants/brand_config.dart';
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -10,7 +11,7 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
-  String get appTitle => 'CC Pocket';
+  String get appTitle => BrandConfig.appName;
 
   @override
   String get cancel => 'キャンセル';

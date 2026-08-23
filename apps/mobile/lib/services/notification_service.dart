@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show ChangeNotifier, kIsWeb;
 import 'package:flutter/scheduler.dart' show SchedulerBinding, SchedulerPhase;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../constants/brand_config.dart';
 import '../l10n/app_localizations.dart';
 import '../models/messages.dart';
 
@@ -41,10 +42,10 @@ class NotificationService extends ChangeNotifier {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    const linuxSettings = LinuxInitializationSettings(
-      defaultActionName: 'Open CC Pocket',
+    final linuxSettings = LinuxInitializationSettings(
+      defaultActionName: 'Open ${BrandConfig.appName}',
     );
-    const settings = InitializationSettings(
+    final settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
       macOS: macosSettings,
@@ -64,10 +65,10 @@ class NotificationService extends ChangeNotifier {
         >();
     if (androidPlugin != null) {
       await androidPlugin.createNotificationChannel(
-        const AndroidNotificationChannel(
+        AndroidNotificationChannel(
           'ccpocket_channel',
-          'ccpocket',
-          description: 'Claude Code session notifications',
+          BrandConfig.appName,
+          description: '${BrandConfig.appName} session notifications',
           importance: Importance.high,
         ),
       );

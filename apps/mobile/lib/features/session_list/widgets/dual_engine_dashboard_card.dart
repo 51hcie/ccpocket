@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
 import '../../../theme/provider_style.dart';
 

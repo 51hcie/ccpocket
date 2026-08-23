@@ -27,6 +27,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:talker_bloc_logger/talker_bloc_logger.dart';
 
+import 'constants/brand_config.dart';
 import 'core/logger.dart';
 import 'l10n/app_localizations.dart';
 import 'features/session_list/state/session_list_cubit.dart';
@@ -409,7 +410,9 @@ class _CcpocketAppState extends State<CcpocketApp> {
 
     final notification = message.notification;
     final title =
-        notification?.title ?? data['title']?.toString() ?? 'CC Pocket';
+        notification?.title ??
+        data['title']?.toString() ??
+        BrandConfig.notificationTitle;
     final body =
         notification?.body ??
         data['body']?.toString() ??
@@ -532,7 +535,7 @@ class _CcpocketAppState extends State<CcpocketApp> {
             appLocale ?? WidgetsBinding.instance.platformDispatcher.locale;
         updateReleaseErrorWidgetLocale(appLocale);
         return MaterialApp.router(
-          title: 'CC Pocket',
+          title: BrandConfig.appName,
           theme: AppTheme.lightThemeForLocale(themeLocale),
           darkTheme: AppTheme.darkThemeForLocale(themeLocale),
           themeMode: settings.themeMode,
