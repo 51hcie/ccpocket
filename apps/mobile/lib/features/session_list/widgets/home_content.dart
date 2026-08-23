@@ -560,10 +560,21 @@ class HomeContentState extends State<HomeContent> {
         widget.namedOnly ||
         widget.searchQuery.isNotEmpty;
 
-    final runningCount = widget.sessions.length + widget.offlinePendingActions.length;
-    final waitingCount = widget.sessions.where((s) => s.pendingPermission != null || s.terminalStatus == 'waiting_for_input').length;
-    final failedCount = widget.recentSessions.where((s) => s.terminalStatus == 'failed' || s.terminalStatus == 'error' || s.terminalStatus == 'interrupted').length;
-    final completedCount = widget.recentSessions.where((s) => s.terminalStatus == 'completed' || s.terminalStatus == 'success' || (s.terminalStatus == null && s.result != null)).length;
+    final runningCount = widget.sessions
+        .where((s) => s.status == 'running' && s.pendingPermission == null)
+        .length +
+        widget.offlinePendingActions.length;
+    final waitingCount = widget.sessions
+        .where((s) =>
+            s.pendingPermission != null || s.status == 'waiting_for_input')
+        .length;
+    final failedCount = widget.sessions
+        .where((s) => s.status == 'failed' || s.status == 'error')
+        .length;
+    final completedCount = widget.recentSessions.length +
+        widget.sessions
+            .where((s) => s.status == 'completed' || s.status == 'idle')
+            .length;
 
     final dashboardCard = DualEngineDashboardCard(
       connectionState: widget.connectionState,
