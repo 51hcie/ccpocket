@@ -93,6 +93,18 @@ void main() {
         expect(result!.serverUrl, 'ws://[fe80::1%25en0]:19000');
       });
 
+      test('parses global bracketed IPv6 host:port', () {
+        final result = ConnectionUrlParser.parse(
+          '[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+        ) as ConnectionParams?;
+
+        expect(result, isNotNull);
+        expect(
+          result!.serverUrl,
+          'ws://[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+        );
+      });
+
       test('rejects malformed bracketed IPv6 and invalid ports', () {
         expect(ConnectionUrlParser.parse('[not-ipv6:address]:8765'), isNull);
         expect(ConnectionUrlParser.parse('[::1]:0'), isNull);
@@ -142,6 +154,22 @@ void main() {
 
         expect(result, isNotNull);
         expect(result!.token, isNull);
+      });
+
+      test('parses deep link with global IPv6 url and token', () {
+        final encoded = Uri.encodeQueryComponent(
+          'ws://[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+        );
+        final result = ConnectionUrlParser.parse(
+          'ccpocket://connect?url=$encoded&token=ipv6-secret',
+        ) as ConnectionParams?;
+
+        expect(result, isNotNull);
+        expect(
+          result!.serverUrl,
+          'ws://[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+        );
+        expect(result.token, 'ipv6-secret');
       });
 
       test('rejects an invalid websocket URL in a deep link', () {

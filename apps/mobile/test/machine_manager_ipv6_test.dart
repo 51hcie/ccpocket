@@ -179,4 +179,55 @@ void main() {
       manager.dispose();
     },
   );
+
+  test(
+    'saves global public IPv6 machine configuration and generates correct wsUrl and httpUrl',
+    () async {
+      final manager = await createManager();
+      const ipv6Machine = Machine(
+        id: 'mac-external-ipv6',
+        name: 'Mac External IPv6',
+        host: '2408:824e:158d:5a80:875:122:45bf:5441',
+        port: 8766,
+        useSsl: false,
+        connectionMode: BridgeConnectionMode.standardOnly,
+        isFavorite: true,
+      );
+
+      await manager.addMachine(ipv6Machine);
+
+      expect(manager.currentMachines, hasLength(1));
+      final saved = manager.currentMachines.single;
+      expect(saved.id, 'mac-external-ipv6');
+      expect(saved.host, '2408:824e:158d:5a80:875:122:45bf:5441');
+      expect(saved.port, 8766);
+      expect(
+        saved.wsUrl,
+        'ws://[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+      );
+      expect(
+        saved.httpUrl,
+        'http://[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+      );
+      expect(
+        saved.displayName,
+        'Mac External IPv6',
+      );
+      expect(
+        saved.uniqueKey,
+        '[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+      );
+
+      // Reconnect/recordConnection with bracketed IPv6 preserves same entry
+      final updated = await manager.recordConnection(
+        host: '[2408:824e:158d:5a80:875:122:45bf:5441]',
+        port: 8766,
+      );
+      expect(manager.currentMachines, hasLength(1));
+      expect(updated.id, 'mac-external-ipv6');
+      expect(updated.lastConnected, isNotNull);
+
+      manager.dispose();
+    },
+  );
 }

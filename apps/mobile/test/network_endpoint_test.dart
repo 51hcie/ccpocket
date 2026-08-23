@@ -15,6 +15,26 @@ void main() {
       expect(formatHostPort('::1', 8765), '[::1]:8765');
       expect(formatHostPort('[::1]', 8765), '[::1]:8765');
       expect(normalizeHostInput(' [::1] '), '::1');
+      expect(
+        formatHostPort('2408:824e:158d:5a80:875:122:45bf:5441', 8766),
+        '[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+      );
+      expect(
+        formatUriOrigin(
+          scheme: 'http',
+          host: '2408:824e:158d:5a80:875:122:45bf:5441',
+          port: 8766,
+        ),
+        'http://[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+      );
+      expect(
+        formatUriOrigin(
+          scheme: 'wss',
+          host: '[2408:824e:158d:5a80:875:122:45bf:5441]',
+          port: 8766,
+        ),
+        'wss://[2408:824e:158d:5a80:875:122:45bf:5441]:8766',
+      );
     });
 
     test('encodes an IPv6 zone separator only in URI output', () {
