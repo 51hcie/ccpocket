@@ -50,6 +50,7 @@ import 'services/draft_service.dart';
 import 'services/fcm_service.dart';
 import 'services/in_app_review_service.dart';
 import 'services/machine_manager_service.dart';
+import 'services/macremote_bootstrap_service.dart';
 import 'services/mock_preview_extension.dart';
 import 'services/notification_service.dart';
 import 'services/performance_probe_extension.dart';
@@ -128,6 +129,14 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   const secureStorage = FlutterSecureStorage();
   final machineManagerService = MachineManagerService(prefs, secureStorage);
+  try {
+    await bootstrapMacremoteBridge(
+      prefs: prefs,
+      machineManager: machineManagerService,
+    );
+  } catch (e) {
+    logger.error('[main] Macremote bridge bootstrap failed', e);
+  }
   // SSH is only supported on native platforms (not web)
   final sshStartupService = kIsWeb
       ? null
