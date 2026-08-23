@@ -102,7 +102,8 @@ class SessionListPaneHeader extends StatelessWidget {
       isLeftPaneVisible: true,
       slot: WorkspacePaneSlot.left,
     );
-    final hasSubtitle = bridgeLabel != null && bridgeLabel.isNotEmpty;
+    final label = bridgeLabel;
+    final hasSubtitle = label != null && label.isNotEmpty;
     final titleStyle = hasSubtitle
         ? Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
