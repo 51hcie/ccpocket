@@ -96,33 +96,32 @@ class AnyCodingConsoleView extends StatelessWidget {
             ? BrandConfig.anyCodingPrimaryDark
             : cs.surface,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const AnyCodingLogo(size: 26, showContainer: true),
+            const AnyCodingLogo(size: 24, showContainer: true),
             const SizedBox(width: 8),
             Text(
               BrandConfig.appName,
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
-                fontSize: 18,
+                fontSize: 17,
                 letterSpacing: -0.2,
               ),
-            ),
-            const Spacer(),
-            // Mac Online / Offline Status Pill
-            _MacStatusPill(
-              isConnected: isConnected,
-              bridgeLabel: connectedBridgeLabel ?? BrandConfig.defaultBridgeName,
-              onReconnect: onConnect,
             ),
           ],
         ),
         actions: [
+          _MacStatusPill(
+            isConnected: isConnected,
+            bridgeLabel: connectedBridgeLabel ?? BrandConfig.defaultBridgeName,
+            onReconnect: onConnect,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 20),
             tooltip: '刷新状态',
             onPressed: onRefresh,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
         ],
       ),
       body: RefreshIndicator(

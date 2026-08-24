@@ -19,6 +19,15 @@ class MockChatSessionCubit extends Cubit<ChatSessionState> implements ChatSessio
   Provider get provider => Provider.codex;
 
   @override
+  List<String> get codexModels => const ['gpt-5.4'];
+
+  @override
+  Map<String, List<String>> get codexModelReasoningEfforts => const {};
+
+  @override
+  Map<String, List<String>> get codexModelServiceTiers => const {};
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
