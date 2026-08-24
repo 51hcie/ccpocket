@@ -175,7 +175,10 @@ class AnyCodingSettingsView extends StatelessWidget {
                   title: const Text('重新连接 Bridge', style: TextStyle(fontSize: 13)),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () {
-                    bridge.reconnect();
+                    final url = bridge.lastUrl;
+                    if (url != null) {
+                      bridge.connect(url);
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('已触发 Bridge 重新连接')),
                     );
