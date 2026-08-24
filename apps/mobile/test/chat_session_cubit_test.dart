@@ -2610,4 +2610,38 @@ void main() {
       expect(updated.last, 'lib/file_8.dart');
     });
   });
+
+  group('init SystemMessage deduplication', () {
+    test('deduplicates multiple init and session_created messages into a single entry', () async {
+      final mockBridge = MockBridgeService();
+      final streamingCubit = StreamingStateCubit();
+      final cubit = ChatSessionCubit(
+        sessionId: 'test-session-dedup',
+        bridge: mockBridge,
+        streamingCubit: streamingCubit,
+      );
+      addTearDown(cubit.close);
+      addTearDown(streamingCubit.close);
+      await Future.microtask(() {});
+
+      mockBridge.emitMessage(
+        const SystemMessage(subtype: 'init', sessionId: 'test-session-dedup'),
+        sessionId: 'test-session-dedup',
+      );
+      await Future.microtask(() {});
+
+      mockBridge.emitMessage(
+        const SystemMessage(subtype: 'init', sessionId: 'test-session-dedup', projectPath: '/workspace'),
+        sessionId: 'test-session-dedup',
+      );
+      await Future.microtask(() {});
+
+      final systemEntries = cubit.state.entries
+          .whereType<ServerChatEntry>()
+          .where((e) => e.message is SystemMessage && (e.message as SystemMessage).subtype == 'init')
+          .toList();
+
+      expect(systemEntries.length, 1);
+    });
+  });
 }

@@ -4,11 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../models/messages.dart';
 import '../../models/offline_pending_action.dart';
-import '../../providers/bridge_cubits.dart';
-import '../../providers/machine_manager_cubit.dart';
 import '../../services/bridge_service.dart';
 import '../../widgets/new_session_sheet.dart' show NewSessionParams;
-import '../settings/state/settings_cubit.dart';
 import 'services/task_status_classifier.dart';
 import 'views/anycoding_console_view.dart';
 import 'views/anycoding_tasks_view.dart';

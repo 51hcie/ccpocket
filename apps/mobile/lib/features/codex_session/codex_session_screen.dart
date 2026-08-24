@@ -99,6 +99,7 @@ class CodexSessionScreen extends StatefulWidget {
   /// Notifier from the parent that may already hold a [SystemMessage]
   /// with subtype `session_created` (race condition fix).
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+  final String? initialPrompt;
 
   const CodexSessionScreen({
     super.key,
@@ -112,6 +113,7 @@ class CodexSessionScreen extends StatefulWidget {
     this.initialApprovalPolicy,
     this.initialApprovalsReviewer,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -132,6 +134,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
   final String? initialApprovalPolicy;
   final String? initialApprovalsReviewer;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+  final String? initialPrompt;
   final VoidCallback? onBackToSessions;
   final bool hideSessionBackButton;
 
@@ -147,6 +150,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
     this.initialApprovalPolicy,
     this.initialApprovalsReviewer,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -164,6 +168,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
       initialApprovalPolicy: initialApprovalPolicy,
       initialApprovalsReviewer: initialApprovalsReviewer,
       pendingSessionCreated: pendingSessionCreated,
+      initialPrompt: initialPrompt,
       onBackToSessions: onBackToSessions,
       hideSessionBackButton: hideSessionBackButton,
     );
@@ -210,9 +215,26 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
 
     if (_isPending) {
       _listenForSessionCreated();
+    } else {
+      _maybeSendInitialPrompt();
     }
     _listenForSandboxRestart();
     _listenForSessionStopped();
+  }
+
+  bool _initialPromptDispatched = false;
+
+  void _maybeSendInitialPrompt() {
+    if (_initialPromptDispatched) return;
+    final prompt = widget.initialPrompt?.trim();
+    if (prompt == null || prompt.isEmpty) return;
+    if (_isPending) return;
+    _initialPromptDispatched = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ChatSessionCubit>().sendMessage(prompt);
+      }
+    });
   }
 
   @override
@@ -360,6 +382,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     _syncSessionRouteIdentity();
     _pendingSub?.cancel();
     _pendingSub = null;
+    _maybeSendInitialPrompt();
   }
 
   void _listenForSessionStopped() {
@@ -1486,7 +1509,9 @@ class _CodexChatBody extends HookWidget {
                     status: status,
                     onGoToLatest: scroll.goToLatest,
                     inputController: chatInputController,
-                    hintText: l.codexMessagePlaceholder,
+                    hintText: BrandConfig.isAnyCoding
+                        ? '继续下达指令...'
+                        : l.codexMessagePlaceholder,
                     inputBlocked: queuedInput != null,
                     initialDiffSelection: diffSelectionFromNav.value,
                     onDiffSelectionConsumed: () {},

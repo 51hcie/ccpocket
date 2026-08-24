@@ -75,5 +75,53 @@ void main() {
 
       expect(find.text('启动 Antigravity 任务'), findsOneWidget);
     });
+
+    testWidgets('submits NewSessionParams with initialPrompt when prompt is entered', (tester) async {
+      NewSessionParams? resultParams;
+
+      await tester.pumpWidget(
+        buildTestHarness(
+          Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () async {
+                  resultParams = await showModalBottomSheet<NewSessionParams>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AnyCodingNewTaskSheet(
+                      recentProjects: const [
+                        (path: '/Users/test/workspace/my-app', name: 'my-app'),
+                      ],
+                      bridge: BridgeService(),
+                      initialProjectPath: '/Users/test/workspace/my-app',
+                      initialProvider: Provider.codex,
+                    ),
+                  );
+                },
+                child: const Text('Open Sheet'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      // Enter prompt
+      final promptField = find.byType(TextField);
+      expect(promptField, findsOneWidget);
+      await tester.enterText(promptField, 'ANYCODING_PHASE1_CODEX_E2E_read_package_json');
+      await tester.pumpAndSettle();
+
+      // Tap launch button
+      await tester.tap(find.byKey(const ValueKey('anycoding_launch_task_button')));
+      await tester.pumpAndSettle();
+
+      expect(resultParams, isNotNull);
+      expect(resultParams!.projectPath, '/Users/test/workspace/my-app');
+      expect(resultParams!.provider, Provider.codex);
+      expect(resultParams!.initialPrompt, 'ANYCODING_PHASE1_CODEX_E2E_read_package_json');
+    });
   });
 }

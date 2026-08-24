@@ -120,11 +120,11 @@ void main() async {
   } catch (e) {
     logger.error('[main] NotificationService init failed', e);
   }
-  try {
-    await initializeMarkdownSyntaxHighlight();
-  } catch (e) {
-    logger.error('[main] syntax_highlight init failed', e);
-  }
+  unawaited(
+    initializeMarkdownSyntaxHighlight().catchError((e) {
+      logger.error('[main] syntax_highlight init failed', e);
+    }),
+  );
 
   // Initialize SharedPreferences and services
   final prefs = await SharedPreferences.getInstance();
@@ -165,7 +165,7 @@ void main() async {
   final fcmService = FcmService();
   final draftService = DraftService(prefs);
   final inAppReviewService = InAppReviewService(prefs: prefs);
-  await inAppReviewService.attachToBridge(bridge);
+  unawaited(inAppReviewService.attachToBridge(bridge));
   final supportBannerService = SupportBannerService(
     prefs: prefs,
     reviewService: inAppReviewService,
@@ -529,7 +529,7 @@ class _CcpocketAppState extends State<CcpocketApp> {
           _initFcmHandlers();
         }
         final appLocale = settings.appLocaleId.isEmpty
-            ? null
+            ? (BrandConfig.isAnyCoding ? const Locale('zh') : null)
             : Locale(settings.appLocaleId);
         final themeLocale =
             appLocale ?? WidgetsBinding.instance.platformDispatcher.locale;

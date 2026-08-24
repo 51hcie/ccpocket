@@ -128,6 +128,7 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
     String? initialPermissionMode,
     String? initialSandboxMode,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    String? initialPrompt,
     VoidCallback? onBackToSessions,
     bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
@@ -144,6 +145,7 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
            initialPermissionMode: initialPermissionMode,
            initialSandboxMode: initialSandboxMode,
            pendingSessionCreated: pendingSessionCreated,
+           initialPrompt: initialPrompt,
            onBackToSessions: onBackToSessions,
            hideSessionBackButton: hideSessionBackButton,
          ),
@@ -167,6 +169,7 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
         initialPermissionMode: args.initialPermissionMode,
         initialSandboxMode: args.initialSandboxMode,
         pendingSessionCreated: args.pendingSessionCreated,
+        initialPrompt: args.initialPrompt,
         onBackToSessions: args.onBackToSessions,
         hideSessionBackButton: args.hideSessionBackButton,
       );
@@ -186,6 +189,7 @@ class ClaudeSessionRouteArgs {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -210,13 +214,15 @@ class ClaudeSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final String? initialPrompt;
+
   final VoidCallback? onBackToSessions;
 
   final bool hideSessionBackButton;
 
   @override
   String toString() {
-    return 'ClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
+    return 'ClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated, initialPrompt: $initialPrompt, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -232,6 +238,7 @@ class ClaudeSessionRouteArgs {
         initialPermissionMode == other.initialPermissionMode &&
         initialSandboxMode == other.initialSandboxMode &&
         pendingSessionCreated == other.pendingSessionCreated &&
+        initialPrompt == other.initialPrompt &&
         onBackToSessions == other.onBackToSessions &&
         hideSessionBackButton == other.hideSessionBackButton;
   }
@@ -247,6 +254,7 @@ class ClaudeSessionRouteArgs {
       initialPermissionMode.hashCode ^
       initialSandboxMode.hashCode ^
       pendingSessionCreated.hashCode ^
+      initialPrompt.hashCode ^
       onBackToSessions.hashCode ^
       hideSessionBackButton.hashCode;
 }
@@ -266,6 +274,7 @@ class CodexSessionRoute extends PageRouteInfo<CodexSessionRouteArgs> {
     String? initialApprovalPolicy,
     String? initialApprovalsReviewer,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    String? initialPrompt,
     VoidCallback? onBackToSessions,
     bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
@@ -283,6 +292,7 @@ class CodexSessionRoute extends PageRouteInfo<CodexSessionRouteArgs> {
            initialApprovalPolicy: initialApprovalPolicy,
            initialApprovalsReviewer: initialApprovalsReviewer,
            pendingSessionCreated: pendingSessionCreated,
+           initialPrompt: initialPrompt,
            onBackToSessions: onBackToSessions,
            hideSessionBackButton: hideSessionBackButton,
          ),
@@ -307,6 +317,7 @@ class CodexSessionRoute extends PageRouteInfo<CodexSessionRouteArgs> {
         initialApprovalPolicy: args.initialApprovalPolicy,
         initialApprovalsReviewer: args.initialApprovalsReviewer,
         pendingSessionCreated: args.pendingSessionCreated,
+        initialPrompt: args.initialPrompt,
         onBackToSessions: args.onBackToSessions,
         hideSessionBackButton: args.hideSessionBackButton,
       );
@@ -327,6 +338,7 @@ class CodexSessionRouteArgs {
     this.initialApprovalPolicy,
     this.initialApprovalsReviewer,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -353,13 +365,15 @@ class CodexSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final String? initialPrompt;
+
   final VoidCallback? onBackToSessions;
 
   final bool hideSessionBackButton;
 
   @override
   String toString() {
-    return 'CodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, initialApprovalsReviewer: $initialApprovalsReviewer, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
+    return 'CodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, initialApprovalsReviewer: $initialApprovalsReviewer, pendingSessionCreated: $pendingSessionCreated, initialPrompt: $initialPrompt, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -377,6 +391,7 @@ class CodexSessionRouteArgs {
         initialApprovalPolicy == other.initialApprovalPolicy &&
         initialApprovalsReviewer == other.initialApprovalsReviewer &&
         pendingSessionCreated == other.pendingSessionCreated &&
+        initialPrompt == other.initialPrompt &&
         onBackToSessions == other.onBackToSessions &&
         hideSessionBackButton == other.hideSessionBackButton;
   }
@@ -1044,6 +1059,7 @@ class WorkspaceClaudeSessionRoute
     String? initialPermissionMode,
     String? initialSandboxMode,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    String? initialPrompt,
     VoidCallback? onBackToSessions,
     bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
@@ -1060,6 +1076,7 @@ class WorkspaceClaudeSessionRoute
            initialPermissionMode: initialPermissionMode,
            initialSandboxMode: initialSandboxMode,
            pendingSessionCreated: pendingSessionCreated,
+           initialPrompt: initialPrompt,
            onBackToSessions: onBackToSessions,
            hideSessionBackButton: hideSessionBackButton,
          ),
@@ -1083,6 +1100,7 @@ class WorkspaceClaudeSessionRoute
         initialPermissionMode: args.initialPermissionMode,
         initialSandboxMode: args.initialSandboxMode,
         pendingSessionCreated: args.pendingSessionCreated,
+        initialPrompt: args.initialPrompt,
         onBackToSessions: args.onBackToSessions,
         hideSessionBackButton: args.hideSessionBackButton,
       );
@@ -1102,6 +1120,7 @@ class WorkspaceClaudeSessionRouteArgs {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -1126,13 +1145,15 @@ class WorkspaceClaudeSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final String? initialPrompt;
+
   final VoidCallback? onBackToSessions;
 
   final bool hideSessionBackButton;
 
   @override
   String toString() {
-    return 'WorkspaceClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
+    return 'WorkspaceClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated, initialPrompt: $initialPrompt, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -1148,6 +1169,7 @@ class WorkspaceClaudeSessionRouteArgs {
         initialPermissionMode == other.initialPermissionMode &&
         initialSandboxMode == other.initialSandboxMode &&
         pendingSessionCreated == other.pendingSessionCreated &&
+        initialPrompt == other.initialPrompt &&
         onBackToSessions == other.onBackToSessions &&
         hideSessionBackButton == other.hideSessionBackButton;
   }
@@ -1163,6 +1185,7 @@ class WorkspaceClaudeSessionRouteArgs {
       initialPermissionMode.hashCode ^
       initialSandboxMode.hashCode ^
       pendingSessionCreated.hashCode ^
+      initialPrompt.hashCode ^
       onBackToSessions.hashCode ^
       hideSessionBackButton.hashCode;
 }
@@ -1183,6 +1206,7 @@ class WorkspaceCodexSessionRoute
     String? initialApprovalPolicy,
     String? initialApprovalsReviewer,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    String? initialPrompt,
     VoidCallback? onBackToSessions,
     bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
@@ -1200,6 +1224,7 @@ class WorkspaceCodexSessionRoute
            initialApprovalPolicy: initialApprovalPolicy,
            initialApprovalsReviewer: initialApprovalsReviewer,
            pendingSessionCreated: pendingSessionCreated,
+           initialPrompt: initialPrompt,
            onBackToSessions: onBackToSessions,
            hideSessionBackButton: hideSessionBackButton,
          ),
@@ -1224,6 +1249,7 @@ class WorkspaceCodexSessionRoute
         initialApprovalPolicy: args.initialApprovalPolicy,
         initialApprovalsReviewer: args.initialApprovalsReviewer,
         pendingSessionCreated: args.pendingSessionCreated,
+        initialPrompt: args.initialPrompt,
         onBackToSessions: args.onBackToSessions,
         hideSessionBackButton: args.hideSessionBackButton,
       );
@@ -1244,6 +1270,7 @@ class WorkspaceCodexSessionRouteArgs {
     this.initialApprovalPolicy,
     this.initialApprovalsReviewer,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -1270,13 +1297,15 @@ class WorkspaceCodexSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final String? initialPrompt;
+
   final VoidCallback? onBackToSessions;
 
   final bool hideSessionBackButton;
 
   @override
   String toString() {
-    return 'WorkspaceCodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, initialApprovalsReviewer: $initialApprovalsReviewer, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
+    return 'WorkspaceCodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, initialApprovalsReviewer: $initialApprovalsReviewer, pendingSessionCreated: $pendingSessionCreated, initialPrompt: $initialPrompt, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -1294,6 +1323,7 @@ class WorkspaceCodexSessionRouteArgs {
         initialApprovalPolicy == other.initialApprovalPolicy &&
         initialApprovalsReviewer == other.initialApprovalsReviewer &&
         pendingSessionCreated == other.pendingSessionCreated &&
+        initialPrompt == other.initialPrompt &&
         onBackToSessions == other.onBackToSessions &&
         hideSessionBackButton == other.hideSessionBackButton;
   }
@@ -1311,6 +1341,7 @@ class WorkspaceCodexSessionRouteArgs {
       initialApprovalPolicy.hashCode ^
       initialApprovalsReviewer.hashCode ^
       pendingSessionCreated.hashCode ^
+      initialPrompt.hashCode ^
       onBackToSessions.hashCode ^
       hideSessionBackButton.hashCode;
 }

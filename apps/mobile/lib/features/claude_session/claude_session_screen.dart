@@ -95,6 +95,7 @@ class ClaudeSessionScreen extends StatefulWidget {
   /// Notifier from the parent that may already hold a [SystemMessage]
   /// with subtype `session_created` (race condition fix).
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+  final String? initialPrompt;
 
   const ClaudeSessionScreen({
     super.key,
@@ -107,6 +108,7 @@ class ClaudeSessionScreen extends StatefulWidget {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -126,6 +128,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
   final String? initialPermissionMode;
   final String? initialSandboxMode;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+  final String? initialPrompt;
   final VoidCallback? onBackToSessions;
   final bool hideSessionBackButton;
 
@@ -140,6 +143,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -156,6 +160,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
       initialPermissionMode: initialPermissionMode,
       initialSandboxMode: initialSandboxMode,
       pendingSessionCreated: pendingSessionCreated,
+      initialPrompt: initialPrompt,
       onBackToSessions: onBackToSessions,
       hideSessionBackButton: hideSessionBackButton,
     );
@@ -195,9 +200,26 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
 
     if (_isPending) {
       _listenForSessionCreated();
+    } else {
+      _maybeSendInitialPrompt();
     }
     _listenForSessionSwitch();
     _listenForSessionStopped();
+  }
+
+  bool _initialPromptDispatched = false;
+
+  void _maybeSendInitialPrompt() {
+    if (_initialPromptDispatched) return;
+    final prompt = widget.initialPrompt?.trim();
+    if (prompt == null || prompt.isEmpty) return;
+    if (_isPending) return;
+    _initialPromptDispatched = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ChatSessionCubit>().sendMessage(prompt);
+      }
+    });
   }
 
   @override
@@ -315,6 +337,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     _syncSessionRouteIdentity();
     _pendingSub?.cancel();
     _pendingSub = null;
+    _maybeSendInitialPrompt();
   }
 
   void _listenForSessionStopped() {

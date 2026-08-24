@@ -233,6 +233,7 @@ class WorkspaceSessionSelection {
   final String? approvalPolicy;
   final String? approvalsReviewer;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+  final String? initialPrompt;
 
   const WorkspaceSessionSelection({
     required this.sessionId,
@@ -246,6 +247,7 @@ class WorkspaceSessionSelection {
     this.approvalPolicy,
     this.approvalsReviewer,
     this.pendingSessionCreated,
+    this.initialPrompt,
   });
 }
 
@@ -1061,6 +1063,7 @@ class _WorkspaceContentHost extends StatelessWidget {
         initialApprovalPolicy: selection.approvalPolicy,
         initialApprovalsReviewer: selection.approvalsReviewer,
         pendingSessionCreated: selection.pendingSessionCreated,
+        initialPrompt: selection.initialPrompt,
         onBackToSessions: WorkspaceShellScreen.maybeOf(context)
             ?.clearSelectedSession,
         hideSessionBackButton: true,
@@ -1076,6 +1079,7 @@ class _WorkspaceContentHost extends StatelessWidget {
         initialPermissionMode: selection.permissionMode,
         initialSandboxMode: selection.sandboxMode,
         pendingSessionCreated: selection.pendingSessionCreated,
+        initialPrompt: selection.initialPrompt,
         onBackToSessions: WorkspaceShellScreen.maybeOf(context)
             ?.clearSelectedSession,
         hideSessionBackButton: true,
@@ -1091,6 +1095,7 @@ class _WorkspaceContentHost extends StatelessWidget {
         initialPermissionMode: selection.permissionMode,
         initialSandboxMode: selection.sandboxMode,
         pendingSessionCreated: selection.pendingSessionCreated,
+        initialPrompt: selection.initialPrompt,
         onBackToSessions: WorkspaceShellScreen.maybeOf(context)
             ?.clearSelectedSession,
         hideSessionBackButton: true,

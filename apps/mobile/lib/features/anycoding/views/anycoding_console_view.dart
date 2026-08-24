@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
@@ -6,7 +5,6 @@ import '../../../models/offline_pending_action.dart';
 import '../../../services/bridge_service.dart';
 import '../../../widgets/anycoding_logo.dart';
 import '../services/task_status_classifier.dart';
-import '../widgets/anycoding_new_task_sheet.dart';
 
 class AnyCodingConsoleView extends StatelessWidget {
   final BridgeConnectionState connectionState;

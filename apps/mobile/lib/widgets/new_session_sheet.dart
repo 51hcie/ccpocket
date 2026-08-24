@@ -52,11 +52,13 @@ class NewSessionParams {
   final double? claudeMaxBudgetUsd;
   final String? claudeFallbackModel;
   final bool? claudeForkSession;
+  final String? initialPrompt;
   final bool? claudePersistSession;
 
   NewSessionParams({
     required this.projectPath,
     this.provider = Provider.codex,
+    this.initialPrompt,
     PermissionMode? claudePermissionMode,
     ExecutionMode? executionMode,
     CodexPermissionsMode? codexPermissionsMode,

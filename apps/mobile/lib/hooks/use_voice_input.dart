@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../features/settings/state/settings_cubit.dart';
 import '../services/voice_input_service.dart';
+import '../utils/platform_helper.dart';
 
 /// Result record returned by [useVoiceInput].
 typedef VoiceInputResult = ({
@@ -13,43 +15,46 @@ typedef VoiceInputResult = ({
   void Function() toggle,
 });
 
-/// Manages [VoiceInputService] lifecycle: initialization, start/stop, and
-/// disposal.
+/// Manages [VoiceInputService] lifecycle: lazy initialization on click,
+/// start/stop, and disposal.
 ///
 /// The [controller] is updated in real-time with recognized speech text.
 /// Speech locale is read from [SettingsCubit].
 VoiceInputResult useVoiceInput(TextEditingController controller) {
   final context = useContext();
   final voiceInput = useMemoized(() => VoiceInputService());
-  final isAvailable = useState(false);
+  final isAvailable = useState(!kIsWeb && !isDesktopPlatform);
   final isRecording = useState(false);
 
-  useEffect(() {
-    voiceInput.initialize().then((available) {
-      if (context.mounted) isAvailable.value = available;
-    });
-    return voiceInput.dispose;
-  }, const []);
+  useEffect(() => voiceInput.dispose, const []);
 
-  void toggle() {
+  void toggle() async {
     if (isRecording.value) {
       voiceInput.stopListening();
       isRecording.value = false;
-    } else {
-      HapticFeedback.mediumImpact();
-      isRecording.value = true;
-      final localeId = context.read<SettingsCubit>().state.speechLocaleId;
-      final baseInputValue = controller.value;
-      voiceInput.startListening(
-        onResult: (text, _) {
-          controller.value = composeVoiceInputValue(baseInputValue, text);
-        },
-        onDone: () {
-          if (context.mounted) isRecording.value = false;
-        },
-        localeId: localeId.isNotEmpty ? localeId : null,
-      );
+      return;
     }
+
+    if (!voiceInput.isInitialized) {
+      final available = await voiceInput.initialize();
+      if (!context.mounted) return;
+      isAvailable.value = available;
+      if (!available) return;
+    }
+
+    HapticFeedback.mediumImpact();
+    isRecording.value = true;
+    final localeId = context.read<SettingsCubit>().state.speechLocaleId;
+    final baseInputValue = controller.value;
+    voiceInput.startListening(
+      onResult: (text, _) {
+        controller.value = composeVoiceInputValue(baseInputValue, text);
+      },
+      onDone: () {
+        if (context.mounted) isRecording.value = false;
+      },
+      localeId: localeId.isNotEmpty ? localeId : null,
+    );
   }
 
   return (

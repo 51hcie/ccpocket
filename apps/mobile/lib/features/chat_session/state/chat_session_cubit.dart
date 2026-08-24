@@ -1068,6 +1068,9 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         :final sourceSessionId,
         :final tipCode,
       ):
+        if (subtype == 'init' || subtype == 'session_created') {
+          return 'system\u0001init';
+        }
         return [
           'system',
           subtype,

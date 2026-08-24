@@ -8,18 +8,26 @@ class VoiceInputService {
   final SpeechToText _speech = SpeechToText();
   bool _isAvailable = false;
   bool _isListening = false;
+  bool _isInitialized = false;
 
   bool get isAvailable => _isAvailable;
   bool get isListening => _isListening;
+  bool get isInitialized => _isInitialized;
 
   Future<bool> initialize() async {
     if (kIsWeb || isDesktopPlatform) {
       _isAvailable = false;
+      _isInitialized = true;
       return false;
     }
-    _isAvailable = await _speech.initialize(
-      options: [SpeechToText.androidNoBluetooth],
-    );
+    try {
+      _isAvailable = await _speech.initialize(
+        options: [SpeechToText.androidNoBluetooth],
+      );
+    } catch (_) {
+      _isAvailable = false;
+    }
+    _isInitialized = true;
     return _isAvailable;
   }
 

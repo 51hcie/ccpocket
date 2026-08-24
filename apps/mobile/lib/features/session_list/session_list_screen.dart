@@ -221,6 +221,7 @@ class _SessionListScreenState extends State<SessionListScreen>
   // Cache for resume navigation
   String? _pendingResumeProjectPath;
   String? _pendingResumeGitBranch;
+  String? _pendingResumeInitialPrompt;
   NewSessionParams? _pendingClaudeDefaultsCorrection;
 
   // Flag: already navigated to chat for pending session creation
@@ -295,10 +296,12 @@ class _SessionListScreenState extends State<SessionListScreen>
               sandboxMode: msg.sandboxMode,
               approvalPolicy: msg.approvalPolicy,
               approvalsReviewer: msg.approvalsReviewer,
+              initialPrompt: _pendingResumeInitialPrompt,
             );
           }
           _pendingResumeProjectPath = null;
           _pendingResumeGitBranch = null;
+          _pendingResumeInitialPrompt = null;
         }
         return;
       }
@@ -873,6 +876,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     // Navigate immediately to chat with pending state
     final pendingId = 'pending_${DateTime.now().millisecondsSinceEpoch}';
     _pendingNavigation = true;
+    _pendingResumeInitialPrompt = result.initialPrompt;
     _navigateToChat(
       pendingId,
       projectPath: result.projectPath,
@@ -888,6 +892,7 @@ class _SessionListScreenState extends State<SessionListScreen>
       approvalsReviewer: result.provider == Provider.codex
           ? result.codexApprovalsReviewer
           : null,
+      initialPrompt: result.initialPrompt,
     );
   }
 
@@ -1377,6 +1382,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     String? sandboxMode,
     String? approvalPolicy,
     String? approvalsReviewer,
+    String? initialPrompt,
   }) {
     // Mark session as seen when navigating into it.
     _unseenCubit.markSeen(sessionId);
@@ -1399,6 +1405,7 @@ class _SessionListScreenState extends State<SessionListScreen>
           approvalPolicy: approvalPolicy,
           approvalsReviewer: approvalsReviewer,
           pendingSessionCreated: pendingNotifier,
+          initialPrompt: initialPrompt,
         ),
       );
       return;
@@ -1416,6 +1423,7 @@ class _SessionListScreenState extends State<SessionListScreen>
           initialApprovalPolicy: approvalPolicy,
           initialApprovalsReviewer: approvalsReviewer,
           pendingSessionCreated: pendingNotifier,
+          initialPrompt: initialPrompt,
         ),
       _ => ClaudeSessionRoute(
           sessionId: sessionId,
@@ -1427,6 +1435,7 @@ class _SessionListScreenState extends State<SessionListScreen>
           initialPermissionMode: permissionMode,
           initialSandboxMode: sandboxMode,
           pendingSessionCreated: pendingNotifier,
+          initialPrompt: initialPrompt,
         ),
     });
     navigation.then((_) {

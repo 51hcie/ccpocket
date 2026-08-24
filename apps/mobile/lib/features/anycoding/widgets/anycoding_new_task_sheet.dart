@@ -166,9 +166,11 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
 
     _savePreferences();
 
+    final promptText = _promptController.text.trim();
     final params = NewSessionParams(
       projectPath: effectivePath,
       provider: _selectedProvider,
+      initialPrompt: promptText.isNotEmpty ? promptText : null,
       model: _selectedProvider == Provider.codex ? _selectedCodexModel : null,
       modelReasoningEffort: _selectedProvider == Provider.codex ? _selectedReasoningEffort : null,
       codexPermissionsMode: _codexPermissionsMode,

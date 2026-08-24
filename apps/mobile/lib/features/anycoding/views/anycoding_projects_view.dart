@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';

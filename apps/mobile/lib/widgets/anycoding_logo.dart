@@ -53,7 +53,6 @@ class _AnyCodingLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
-    final h = size.height;
     final scale = w / 100.0;
 
     // Paints
