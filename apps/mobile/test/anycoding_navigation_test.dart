@@ -17,8 +17,18 @@ import 'package:ccpocket/providers/bridge_cubits.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ccpocket/models/machine.dart';
+import 'package:ccpocket/models/supporter_status.dart';
 import 'package:ccpocket/providers/machine_manager_cubit.dart';
 import 'package:ccpocket/services/machine_manager_service.dart';
+import 'package:ccpocket/services/revenuecat_service.dart';
+
+class _FakeRevenueCatService extends RevenueCatService {
+  _FakeRevenueCatService()
+    : super(publicApiKey: '', platform: TargetPlatform.android) {
+    supporterState.value = const SupporterState.inactive();
+    catalogState.value = const SupportCatalogState.unavailable();
+  }
+}
 
 class _MockMachineManagerService implements MachineManagerService {
   final _controller = StreamController<List<MachineWithStatus>>.broadcast();
@@ -46,10 +56,12 @@ void main() {
       MachineManagerCubit machineManagerCubit,
     ) {
       final bridge = BridgeService();
+      final revenueCatService = _FakeRevenueCatService();
 
       return provider_pkg.MultiProvider(
         providers: [
           provider_pkg.Provider<BridgeService>.value(value: bridge),
+          provider_pkg.Provider<RevenueCatService>.value(value: revenueCatService),
           BlocProvider<SettingsCubit>.value(value: settingsCubit),
           BlocProvider<MachineManagerCubit>.value(value: machineManagerCubit),
         ],
