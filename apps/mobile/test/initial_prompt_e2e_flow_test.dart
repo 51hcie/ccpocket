@@ -410,9 +410,14 @@ void main() {
         1,
       );
 
-      // Send follow-up via cubit
-      final element = tester.element(find.byType(ClaudeSessionScreen));
-      element.read<ChatSessionCubit>().sendMessage(followUpPrompt);
+      // Send follow-up via input field and send button
+      await tester.enterText(
+        find.byKey(const ValueKey('message_input')),
+        followUpPrompt,
+      );
+      await pumpN(tester);
+
+      await tester.tap(find.byKey(const ValueKey('send_button')));
       await pumpN(tester);
 
       expect(
