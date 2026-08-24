@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:ccpocket/features/claude_session/claude_session_screen.dart';
 import 'package:ccpocket/features/codex_session/codex_session_screen.dart';
+import 'package:ccpocket/features/chat_session/state/chat_session_cubit.dart';
 import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/providers/bridge_cubits.dart';
 import 'package:ccpocket/services/bridge_service.dart';
