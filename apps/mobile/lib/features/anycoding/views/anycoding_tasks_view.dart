@@ -168,7 +168,8 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
               // 4 Category Tabs
               TabBar(
                 controller: _tabController,
-                isScrollable: false,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
                 indicatorColor: BrandConfig.codexAccent,
                 indicatorWeight: 3,
                 labelColor: isDark ? BrandConfig.codexAccent : cs.primary,
@@ -180,7 +181,7 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
                   final cnt = counts[idx];
                   return Tab(
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(cat.label),
                         if (cnt > 0) ...[
@@ -211,30 +212,33 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    _EngineFilterChip(
-                      label: '全部',
-                      isSelected: _engineFilter == AnyCodingEngineFilter.all,
-                      onTap: () => setState(() => _engineFilter = AnyCodingEngineFilter.all),
-                    ),
-                    const SizedBox(width: 6),
-                    _EngineFilterChip(
-                      label: 'Codex',
-                      icon: Icons.bolt,
-                      accentColor: BrandConfig.codexAccent,
-                      isSelected: _engineFilter == AnyCodingEngineFilter.codex,
-                      onTap: () => setState(() => _engineFilter = AnyCodingEngineFilter.codex),
-                    ),
-                    const SizedBox(width: 6),
-                    _EngineFilterChip(
-                      label: 'Antigravity',
-                      icon: Icons.auto_awesome,
-                      accentColor: BrandConfig.antigravityAccent,
-                      isSelected: _engineFilter == AnyCodingEngineFilter.antigravity,
-                      onTap: () => setState(() => _engineFilter = AnyCodingEngineFilter.antigravity),
-                    ),
-                  ],
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _EngineFilterChip(
+                        label: '全部',
+                        isSelected: _engineFilter == AnyCodingEngineFilter.all,
+                        onTap: () => setState(() => _engineFilter = AnyCodingEngineFilter.all),
+                      ),
+                      const SizedBox(width: 6),
+                      _EngineFilterChip(
+                        label: 'Codex',
+                        icon: Icons.bolt,
+                        accentColor: BrandConfig.codexAccent,
+                        isSelected: _engineFilter == AnyCodingEngineFilter.codex,
+                        onTap: () => setState(() => _engineFilter = AnyCodingEngineFilter.codex),
+                      ),
+                      const SizedBox(width: 6),
+                      _EngineFilterChip(
+                        label: 'Antigravity',
+                        icon: Icons.auto_awesome,
+                        accentColor: BrandConfig.antigravityAccent,
+                        isSelected: _engineFilter == AnyCodingEngineFilter.antigravity,
+                        onTap: () => setState(() => _engineFilter = AnyCodingEngineFilter.antigravity),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
