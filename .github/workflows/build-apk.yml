@@ -63,13 +63,15 @@ jobs:
         working-directory: apps/mobile
         run: |
           echo "=== Built APK Signature Fingerprint ==="
-          keytool -printcert -jarfile build/app/outputs/flutter-apk/app-debug.apk | grep -E "Owner:|Issuer:|SHA1:|SHA256:"
-          APK_SHA256=$(keytool -printcert -jarfile build/app/outputs/flutter-apk/app-debug.apk | grep "SHA256:" | tr -d ' :' | tr '[:upper:]' '[:lower:]' | sed 's/sha256//')
+          APKSIGNER=$(which apksigner 2>/dev/null || find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name apksigner | sort -V | tail -n 1)
+          echo "Using apksigner: $APKSIGNER"
+          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-debug.apk
+          APK_SHA256=$("$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-debug.apk | grep -i "SHA-256" | head -n 1 | sed 's/.*: *//' | tr -d ' ' | tr '[:upper:]' '[:lower:]')
           EXPECTED_SHA256="59186b6981215494ee6e21e8a988dc7a434eb7ffa40bfc226e9dbdbc585cb2d2"
           echo "APK Certificate SHA256: $APK_SHA256"
           echo "Expected SHA256:       $EXPECTED_SHA256"
           if [ "$APK_SHA256" != "$EXPECTED_SHA256" ]; then
-            echo "::error::APK certificate SHA256 mismatch! Got $APK_SHA256, expected $EXPECTED_SHA256"
+            echo "::error::APK certificate SHA256 mismatch! Got '$APK_SHA256', expected '$EXPECTED_SHA256'"
             exit 1
           fi
           echo "APK signature successfully verified with stable key!"
