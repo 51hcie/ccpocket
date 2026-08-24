@@ -770,10 +770,20 @@ class _PromptPresetChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-              desc,
-              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-            ),
-          ],
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          '+ $label',
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+          ),
         ),
       ),
     );

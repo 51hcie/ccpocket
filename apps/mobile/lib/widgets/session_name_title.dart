@@ -58,7 +58,7 @@ class SessionNameTitle extends StatelessWidget {
               );
             },
             child: Text(
-              name != null && name.isNotEmpty ? name : fallback,
+              displayName,
               style: TextStyle(
                 fontSize: 14,
                 color: name != null && name.isNotEmpty

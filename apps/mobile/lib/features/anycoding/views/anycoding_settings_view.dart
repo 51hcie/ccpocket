@@ -139,7 +139,7 @@ class AnyCodingSettingsView extends StatelessWidget {
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   ),
                   subtitle: Text(
-                    'Port ${bridge.currentPort} · 零配置自动发现',
+                    'Port 8766 · 零配置自动发现',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
