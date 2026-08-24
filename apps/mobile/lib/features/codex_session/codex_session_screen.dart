@@ -615,21 +615,18 @@ class _CodexChatBody extends HookWidget {
       (SettingsCubit cubit) => cubit.state.showRemoteGitStatusBadge,
     );
 
-    // Initial prompt dispatch (dispatches exactly once in valid Cubit scope)
-    final initialPromptDispatched = useRef(false);
+    // Initial prompt dispatch (session-level idempotent across rebuilds)
     useEffect(() {
-      if (initialPromptDispatched.value) return null;
       final prompt = initialPrompt?.trim();
       if (prompt != null && prompt.isNotEmpty) {
-        initialPromptDispatched.value = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (context.mounted) {
-            context.read<ChatSessionCubit>().sendMessage(prompt);
+            context.read<ChatSessionCubit>().maybeSendInitialPrompt(prompt);
           }
         });
       }
       return null;
-    }, const []);
+    }, [sessionId, initialPrompt]);
 
     // Custom hooks
     final lifecycleState = useAppLifecycleState();

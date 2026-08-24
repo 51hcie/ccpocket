@@ -309,10 +309,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Icons.computer_outlined,
                               color: cs.primary,
                             ),
-                            title: const Text('Bridge machine'),
+                            title: Text(
+                              BrandConfig.isAnyCoding
+                                  ? 'Bridge 主机'
+                                  : 'Bridge machine',
+                            ),
                             subtitle: Text(
                               machine?.displayName ??
-                                  (bridge.lastUrl ?? 'Not connected'),
+                                  (bridge.lastUrl ??
+                                      (BrandConfig.isAnyCoding
+                                          ? '未连接'
+                                          : 'Not connected')),
                             ),
                           ),
                           Divider(

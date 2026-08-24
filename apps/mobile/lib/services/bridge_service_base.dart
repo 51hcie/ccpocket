@@ -26,4 +26,9 @@ abstract class BridgeServiceBase {
   /// Returns a stream of messages filtered to only include messages
   /// belonging to the given [sessionId] (or messages with no sessionId).
   Stream<ServerMessage> messagesForSession(String sessionId);
+
+  /// Tracks initial prompt dispatch to guarantee session-level idempotency
+  /// across widget rebuilds, route switches, and pending->resolved transitions.
+  bool tryMarkInitialPromptDispatched(String sessionId, String prompt);
+  bool isInitialPromptDispatched(String sessionId, String prompt);
 }

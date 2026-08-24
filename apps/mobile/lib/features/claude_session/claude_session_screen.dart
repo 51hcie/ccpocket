@@ -566,21 +566,18 @@ class _ChatScreenBody extends HookWidget {
     final shell = WorkspaceShellScreen.maybeOf(context);
     final presentationListenable = shell?.presentationListenable;
 
-    // Initial prompt dispatch (dispatches exactly once in valid Cubit scope)
-    final initialPromptDispatched = useRef(false);
+    // Initial prompt dispatch (session-level idempotent across rebuilds)
     useEffect(() {
-      if (initialPromptDispatched.value) return null;
       final prompt = initialPrompt?.trim();
       if (prompt != null && prompt.isNotEmpty) {
-        initialPromptDispatched.value = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (context.mounted) {
-            context.read<ChatSessionCubit>().sendMessage(prompt);
+            context.read<ChatSessionCubit>().maybeSendInitialPrompt(prompt);
           }
         });
       }
       return null;
-    }, const []);
+    }, [sessionId, initialPrompt]);
 
     // Mutable branch state (refreshed from Bridge)
     final currentBranch = useState(gitBranch);

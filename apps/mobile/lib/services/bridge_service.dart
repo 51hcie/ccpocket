@@ -147,6 +147,7 @@ class BridgeService implements BridgeServiceBase {
   _pendingSessionLinkResolutions = {};
   int _nextSessionLinkRequestId = 0;
   final Map<String, Set<String>> _respondedToolUseIds = {};
+  final Set<String> _dispatchedInitialPromptTokens = <String>{};
   List<OfflinePendingAction> _offlinePendingActions = const [];
 
   // Diff image cache: survives screen navigation, cleared on session stop.
@@ -333,6 +334,26 @@ class BridgeService implements BridgeServiceBase {
     if (_sessions[idx].queuedInput?.itemId == pending.item.itemId) {
       _patchSessionQueuedInput(sessionId, null);
     }
+  }
+
+  @override
+  bool tryMarkInitialPromptDispatched(String sessionId, String prompt) {
+    final cleanPrompt = prompt.trim();
+    if (cleanPrompt.isEmpty) return false;
+    final token = '$sessionId:$cleanPrompt';
+    if (_dispatchedInitialPromptTokens.contains(token)) {
+      return false;
+    }
+    _dispatchedInitialPromptTokens.add(token);
+    return true;
+  }
+
+  @override
+  bool isInitialPromptDispatched(String sessionId, String prompt) {
+    final cleanPrompt = prompt.trim();
+    if (cleanPrompt.isEmpty) return false;
+    final token = '$sessionId:$cleanPrompt';
+    return _dispatchedInitialPromptTokens.contains(token);
   }
 
   /// Derive HTTP base URL from the WebSocket URL.

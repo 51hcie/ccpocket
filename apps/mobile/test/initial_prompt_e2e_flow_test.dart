@@ -117,7 +117,7 @@ Map<String, dynamic> _toMap(ClientMessage m) => jsonDecode(m.toJson()) as Map<St
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('Initial Prompt Dispatch in Real Provider Tree', () {
+  group('Initial Prompt Dispatch and Rebuild Idempotency', () {
     late MockTestBridgeService bridge;
 
     setUp(() {
@@ -208,6 +208,58 @@ void main() {
       await tester.pump(const Duration(milliseconds: 700));
     });
 
+    testWidgets('Codex: disposing and rebuilding screen does NOT re-dispatch initial prompt', (tester) async {
+      const sessionId = 'codex-rebuild-session-id';
+      const prompt = 'CODEX_REBUILD_IDEMPOTENCY_PROMPT';
+
+      // 1. First mount
+      final widget1 = await buildTestHarness(
+        bridge: bridge,
+        child: const CodexSessionScreen(
+          sessionId: sessionId,
+          projectPath: '/workspace',
+          initialPrompt: prompt,
+        ),
+      );
+      await tester.pumpWidget(widget1);
+      await pumpN(tester);
+
+      expect(
+        bridge.sentMessages
+            .where((m) => _toMap(m)['type'] == 'input')
+            .where((m) => _toMap(m)['text'] == prompt)
+            .length,
+        1,
+      );
+
+      // 2. Unmount (dispose)
+      await tester.pumpWidget(Container());
+      await pumpN(tester);
+
+      // 3. Mount second instance of CodexSessionScreen for same resolved session
+      final widget2 = await buildTestHarness(
+        bridge: bridge,
+        child: const CodexSessionScreen(
+          sessionId: sessionId,
+          projectPath: '/workspace',
+          initialPrompt: prompt,
+        ),
+      );
+      await tester.pumpWidget(widget2);
+      await pumpN(tester);
+
+      // Bridge outbound must still be exactly 1
+      expect(
+        bridge.sentMessages
+            .where((m) => _toMap(m)['type'] == 'input')
+            .where((m) => _toMap(m)['text'] == prompt)
+            .length,
+        1,
+      );
+
+      await tester.pump(const Duration(milliseconds: 700));
+    });
+
     testWidgets('Antigravity (Claude): ready session dispatches initialPrompt exactly once', (tester) async {
       final widget = await buildTestHarness(
         bridge: bridge,
@@ -275,6 +327,101 @@ void main() {
       expect(_toMap(inputMessages.first)['sessionId'], 'antigravity-resolved-real-id');
 
       // Drain delivery pending timer
+      await tester.pump(const Duration(milliseconds: 700));
+    });
+
+    testWidgets('Antigravity (Claude): disposing and rebuilding screen does NOT re-dispatch initial prompt', (tester) async {
+      const sessionId = 'antigravity-rebuild-session-id';
+      const prompt = 'ANTIGRAVITY_REBUILD_IDEMPOTENCY_PROMPT';
+
+      // 1. First mount
+      final widget1 = await buildTestHarness(
+        bridge: bridge,
+        child: const ClaudeSessionScreen(
+          sessionId: sessionId,
+          provider: Provider.antigravity,
+          projectPath: '/workspace',
+          initialPrompt: prompt,
+        ),
+      );
+      await tester.pumpWidget(widget1);
+      await pumpN(tester);
+
+      expect(
+        bridge.sentMessages
+            .where((m) => _toMap(m)['type'] == 'input')
+            .where((m) => _toMap(m)['text'] == prompt)
+            .length,
+        1,
+      );
+
+      // 2. Unmount (dispose)
+      await tester.pumpWidget(Container());
+      await pumpN(tester);
+
+      // 3. Mount second instance of ClaudeSessionScreen for same resolved session
+      final widget2 = await buildTestHarness(
+        bridge: bridge,
+        child: const ClaudeSessionScreen(
+          sessionId: sessionId,
+          provider: Provider.antigravity,
+          projectPath: '/workspace',
+          initialPrompt: prompt,
+        ),
+      );
+      await tester.pumpWidget(widget2);
+      await pumpN(tester);
+
+      // Bridge outbound must still be exactly 1
+      expect(
+        bridge.sentMessages
+            .where((m) => _toMap(m)['type'] == 'input')
+            .where((m) => _toMap(m)['text'] == prompt)
+            .length,
+        1,
+      );
+
+      await tester.pump(const Duration(milliseconds: 700));
+    });
+
+    testWidgets('Antigravity: follow-up messages are NOT blocked by initial prompt tracking', (tester) async {
+      const sessionId = 'antigravity-followup-test-session';
+      const initialPrompt = 'ANYCODING_INITIAL_PROMPT';
+      const followUpPrompt = 'FOLLOWUP_REPLY_OK_ONLY';
+
+      final widget = await buildTestHarness(
+        bridge: bridge,
+        child: const ClaudeSessionScreen(
+          sessionId: sessionId,
+          provider: Provider.antigravity,
+          projectPath: '/workspace',
+          initialPrompt: initialPrompt,
+        ),
+      );
+      await tester.pumpWidget(widget);
+      await pumpN(tester);
+
+      expect(
+        bridge.sentMessages
+            .where((m) => _toMap(m)['type'] == 'input')
+            .where((m) => _toMap(m)['text'] == initialPrompt)
+            .length,
+        1,
+      );
+
+      // Send follow-up via cubit
+      final element = tester.element(find.byType(ClaudeSessionScreen));
+      element.read<ChatSessionCubit>().sendMessage(followUpPrompt);
+      await pumpN(tester);
+
+      expect(
+        bridge.sentMessages
+            .where((m) => _toMap(m)['type'] == 'input')
+            .where((m) => _toMap(m)['text'] == followUpPrompt)
+            .length,
+        1,
+      );
+
       await tester.pump(const Duration(milliseconds: 700));
     });
 

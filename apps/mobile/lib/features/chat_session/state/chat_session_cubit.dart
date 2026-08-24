@@ -1369,6 +1369,18 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     }
   }
 
+  /// Safely attempts to send the initial prompt for this session.
+  /// Guarantees that even if called multiple times across widget rebuilds,
+  /// route transitions, or pending->resolved lifecycle changes, the outbound
+  /// prompt will only ever be dispatched to the bridge once for this resolved session.
+  void maybeSendInitialPrompt(String? prompt) {
+    final cleanPrompt = prompt?.trim();
+    if (cleanPrompt == null || cleanPrompt.isEmpty) return;
+    if (_bridge.tryMarkInitialPromptDispatched(sessionId, cleanPrompt)) {
+      sendMessage(cleanPrompt);
+    }
+  }
+
   void requestGoal() {
     if (!isCodex) return;
     _bridge.send(ClientMessage.getGoal(sessionId));
