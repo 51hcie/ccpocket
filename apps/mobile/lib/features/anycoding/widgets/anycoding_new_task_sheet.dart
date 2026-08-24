@@ -198,16 +198,19 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
         ? BrandConfig.anyCodingBorderDark
         : cs.outlineVariant.withValues(alpha: 0.35);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: sheetBgColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Material(
+      color: sheetBgColor,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // Drag handle & Header
           Center(
             child: Container(
