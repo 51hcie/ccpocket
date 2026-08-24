@@ -68,6 +68,12 @@ class MockTestBridgeService extends BridgeService {
   }
 }
 
+Future<void> pumpN(WidgetTester tester, {int count = 5}) async {
+  for (var i = 0; i < count; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
 Future<Widget> buildTestHarness({
   required MockTestBridgeService bridge,
   required Widget child,
@@ -133,7 +139,7 @@ void main() {
       );
 
       await tester.pumpWidget(widget);
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // Verify that the prompt was sent over bridge
       final inputMessages = bridge.sentMessages
@@ -145,8 +151,7 @@ void main() {
       expect(_toMap(inputMessages.first)['sessionId'], 'codex-ready-session');
 
       // Rebuild / pump multiple frames and verify it does NOT send a second time
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await pumpN(tester);
 
       final countAfterPumps = bridge.sentMessages
           .where((m) => _toMap(m)['type'] == 'input')
@@ -185,7 +190,7 @@ void main() {
         projectPath: '/workspace',
       );
 
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // After resolution, initial prompt should be sent to the resolved sessionId
       final inputMessages = bridge.sentMessages
@@ -209,7 +214,7 @@ void main() {
       );
 
       await tester.pumpWidget(widget);
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       final inputMessages = bridge.sentMessages
           .where((m) => _toMap(m)['type'] == 'input')
@@ -250,7 +255,7 @@ void main() {
         projectPath: '/workspace',
       );
 
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       final inputMessages = bridge.sentMessages
           .where((m) => _toMap(m)['type'] == 'input')
@@ -271,20 +276,20 @@ void main() {
       );
 
       await tester.pumpWidget(widget);
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // Emit two init system messages
       bridge.emitMessage(
         const SystemMessage(subtype: 'init', sessionId: 'session-dedup-ui'),
         sessionId: 'session-dedup-ui',
       );
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       bridge.emitMessage(
         const SystemMessage(subtype: 'init', sessionId: 'session-dedup-ui', projectPath: '/workspace'),
         sessionId: 'session-dedup-ui',
       );
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // Only one "Session started" should be in the tree
       expect(find.text('Session started'), findsOneWidget);
