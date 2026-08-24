@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -105,6 +106,8 @@ Future<Widget> buildTestHarness({
   );
 }
 
+Map<String, dynamic> _toMap(ClientMessage m) => jsonDecode(m.toJson()) as Map<String, dynamic>;
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -134,20 +137,20 @@ void main() {
 
       // Verify that the prompt was sent over bridge
       final inputMessages = bridge.sentMessages
-          .where((m) => m.toJson()['type'] == 'input')
-          .where((m) => m.toJson()['text'] == 'ANYCODING_PHASE1_CODEX_E2E_read_package_json')
+          .where((m) => _toMap(m)['type'] == 'input')
+          .where((m) => _toMap(m)['text'] == 'ANYCODING_PHASE1_CODEX_E2E_read_package_json')
           .toList();
 
       expect(inputMessages.length, 1);
-      expect(inputMessages.first.toJson()['sessionId'], 'codex-ready-session');
+      expect(_toMap(inputMessages.first)['sessionId'], 'codex-ready-session');
 
       // Rebuild / pump multiple frames and verify it does NOT send a second time
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
       final countAfterPumps = bridge.sentMessages
-          .where((m) => m.toJson()['type'] == 'input')
-          .where((m) => m.toJson()['text'] == 'ANYCODING_PHASE1_CODEX_E2E_read_package_json')
+          .where((m) => _toMap(m)['type'] == 'input')
+          .where((m) => _toMap(m)['text'] == 'ANYCODING_PHASE1_CODEX_E2E_read_package_json')
           .length;
       expect(countAfterPumps, 1);
     });
@@ -171,7 +174,7 @@ void main() {
 
       // Pending state: should not have sent any prompt yet
       expect(
-        bridge.sentMessages.where((m) => m.toJson()['type'] == 'input').length,
+        bridge.sentMessages.where((m) => _toMap(m)['type'] == 'input').length,
         0,
       );
 
@@ -186,12 +189,12 @@ void main() {
 
       // After resolution, initial prompt should be sent to the resolved sessionId
       final inputMessages = bridge.sentMessages
-          .where((m) => m.toJson()['type'] == 'input')
-          .where((m) => m.toJson()['text'] == 'ANYCODING_PHASE1_CODEX_PENDING_PROMPT')
+          .where((m) => _toMap(m)['type'] == 'input')
+          .where((m) => _toMap(m)['text'] == 'ANYCODING_PHASE1_CODEX_PENDING_PROMPT')
           .toList();
 
       expect(inputMessages.length, 1);
-      expect(inputMessages.first.toJson()['sessionId'], 'codex-resolved-real-id');
+      expect(_toMap(inputMessages.first)['sessionId'], 'codex-resolved-real-id');
     });
 
     testWidgets('Antigravity (Claude): ready session dispatches initialPrompt exactly once', (tester) async {
@@ -209,12 +212,12 @@ void main() {
       await tester.pumpAndSettle();
 
       final inputMessages = bridge.sentMessages
-          .where((m) => m.toJson()['type'] == 'input')
-          .where((m) => m.toJson()['text'] == 'ANYCODING_PHASE1_ANTIGRAVITY_PROMPT')
+          .where((m) => _toMap(m)['type'] == 'input')
+          .where((m) => _toMap(m)['text'] == 'ANYCODING_PHASE1_ANTIGRAVITY_PROMPT')
           .toList();
 
       expect(inputMessages.length, 1);
-      expect(inputMessages.first.toJson()['sessionId'], 'antigravity-ready-session');
+      expect(_toMap(inputMessages.first)['sessionId'], 'antigravity-ready-session');
     });
 
     testWidgets('Antigravity (Claude): pending session dispatches initialPrompt only after session is resolved', (tester) async {
@@ -236,7 +239,7 @@ void main() {
       await tester.pump();
 
       expect(
-        bridge.sentMessages.where((m) => m.toJson()['type'] == 'input').length,
+        bridge.sentMessages.where((m) => _toMap(m)['type'] == 'input').length,
         0,
       );
 
@@ -250,12 +253,12 @@ void main() {
       await tester.pumpAndSettle();
 
       final inputMessages = bridge.sentMessages
-          .where((m) => m.toJson()['type'] == 'input')
-          .where((m) => m.toJson()['text'] == 'ANYCODING_PHASE1_ANTIGRAVITY_PENDING_PROMPT')
+          .where((m) => _toMap(m)['type'] == 'input')
+          .where((m) => _toMap(m)['text'] == 'ANYCODING_PHASE1_ANTIGRAVITY_PENDING_PROMPT')
           .toList();
 
       expect(inputMessages.length, 1);
-      expect(inputMessages.first.toJson()['sessionId'], 'antigravity-resolved-real-id');
+      expect(_toMap(inputMessages.first)['sessionId'], 'antigravity-resolved-real-id');
     });
 
     testWidgets('Session started chip is not duplicated when multiple init events arrive', (tester) async {
