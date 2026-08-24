@@ -1783,7 +1783,7 @@ class _SessionListScreenState extends State<SessionListScreen>
               approvalPolicy: approvalPolicy,
               approvalsReviewer: approvalsReviewer,
             ),
-            onResumeRecentSession: _resumeRecentSession,
+            onResumeRecentSession: _resumeSession,
             onArchiveSession: _archiveSession,
             onStopSession: _stopSession,
             onApprovePermission: (sessionId, toolUseId,

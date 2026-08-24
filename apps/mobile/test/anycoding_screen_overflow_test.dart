@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 
 import 'package:ccpocket/features/anycoding/views/anycoding_console_view.dart';
 import 'package:ccpocket/features/anycoding/views/anycoding_projects_view.dart';
@@ -16,7 +16,7 @@ void main() {
   group('AnyCoding Screen Overflow & Small Display Tests', () {
     Widget buildTestHarness(Widget child) {
       final bridge = BridgeService();
-      return Provider<BridgeService>.value(
+      return provider_pkg.Provider<BridgeService>.value(
         value: bridge,
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -43,6 +43,7 @@ void main() {
                 provider: 'codex',
                 projectPath: '/Users/test/workspace/my-extra-long-project-name-that-might-overflow',
                 status: 'running',
+                createdAt: '2026-08-24T00:00:00Z',
                 lastMessage: 'Running a long descriptive task command with extra details and parameters',
               ),
             ],
@@ -81,6 +82,7 @@ void main() {
                   provider: 'antigravity',
                   projectPath: '/Users/test/workspace/app',
                   status: 'running',
+                  createdAt: '2026-08-24T00:00:00Z',
                   lastMessage: 'Streaming agent steps...',
                 ),
               ],

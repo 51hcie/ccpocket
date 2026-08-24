@@ -11,6 +11,7 @@ void main() {
         provider: 'codex',
         projectPath: '/Users/test/workspace/app',
         status: 'running',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(runningSession),
@@ -22,6 +23,7 @@ void main() {
         provider: 'antigravity',
         projectPath: '/Users/test/workspace/app',
         status: 'starting',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(startingSession),
@@ -35,6 +37,7 @@ void main() {
         provider: 'codex',
         projectPath: '/Users/test/workspace/app',
         status: 'idle',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       // Active idle session is awaiting user next command -> inProgress
       expect(
@@ -53,6 +56,7 @@ void main() {
         provider: 'codex',
         projectPath: '/Users/test/workspace/app',
         status: 'running',
+        createdAt: '2026-08-24T00:00:00Z',
         pendingPermission: PermissionRequestMessage(
           toolUseId: 't1',
           toolName: 'Bash',
@@ -69,6 +73,7 @@ void main() {
         provider: 'antigravity',
         projectPath: '/Users/test/workspace/app',
         status: 'waiting_for_input',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(waitingSession),
@@ -82,6 +87,7 @@ void main() {
         provider: 'codex',
         projectPath: '/Users/test/workspace/app',
         status: 'failed',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(failedSession),
@@ -93,6 +99,7 @@ void main() {
         provider: 'antigravity',
         projectPath: '/Users/test/workspace/app',
         status: 'error',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(errorSession),
@@ -106,6 +113,7 @@ void main() {
         provider: 'codex',
         projectPath: '/Users/test/workspace/app',
         status: 'some_weird_unrecognized_status',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(unknownSession1),
@@ -121,6 +129,7 @@ void main() {
         provider: 'antigravity',
         projectPath: '/Users/test/workspace/app',
         status: 'unspecified_state',
+        createdAt: '2026-08-24T00:00:00Z',
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(unknownSession2),

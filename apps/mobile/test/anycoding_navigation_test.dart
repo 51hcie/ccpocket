@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 
 import 'package:ccpocket/constants/brand_config.dart';
 import 'package:ccpocket/features/anycoding/anycoding_main_screen.dart';
@@ -20,11 +20,11 @@ void main() {
   group('AnyCoding 4-Tab Navigation & Shell Tests', () {
     Widget buildTestHarness(Widget child) {
       final bridge = BridgeService();
-      final settingsCubit = SettingsCubit(PlatformEnvironmentService());
+      final settingsCubit = SettingsCubit(PlatformEnvironmentService.instance);
 
-      return MultiProvider(
+      return provider_pkg.MultiProvider(
         providers: [
-          Provider<BridgeService>.value(value: bridge),
+          provider_pkg.Provider<BridgeService>.value(value: bridge),
           BlocProvider<SettingsCubit>.value(value: settingsCubit),
         ],
         child: MaterialApp(
@@ -75,6 +75,7 @@ void main() {
                 provider: 'codex',
                 projectPath: '/Users/test/workspace/repo-a',
                 status: 'running',
+                createdAt: '2026-08-24T00:00:00Z',
                 lastMessage: 'Running unit test suite',
               ),
             ],

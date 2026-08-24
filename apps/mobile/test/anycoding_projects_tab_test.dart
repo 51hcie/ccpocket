@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 
 import 'package:ccpocket/features/anycoding/views/anycoding_projects_view.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
@@ -13,7 +13,7 @@ void main() {
   group('AnyCoding Projects Tab Tests', () {
     Widget buildTestHarness(Widget child) {
       final bridge = BridgeService();
-      return Provider<BridgeService>.value(
+      return provider_pkg.Provider<BridgeService>.value(
         value: bridge,
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -37,6 +37,7 @@ void main() {
                 provider: 'codex',
                 projectPath: '/Users/developer/projects/antigravity-hub',
                 status: 'running',
+                createdAt: '2026-08-24T00:00:00Z',
               ),
             ],
             recentSessions: const [

@@ -138,13 +138,11 @@ class TaskStatusClassifier {
     }
     final prompt = firstPrompt.trim();
     if (prompt.isNotEmpty) {
-      return prompt.replaceAll('
-', ' ');
+      return prompt.split(RegExp(r'[\r\n]+')).join(' ');
     }
     final last = lastPrompt?.trim();
     if (last != null && last.isNotEmpty) {
-      return last.replaceAll('
-', ' ');
+      return last.split(RegExp(r'[\r\n]+')).join(' ');
     }
     return '新建任务';
   }
