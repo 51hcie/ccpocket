@@ -64,6 +64,8 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+
       // Primary project directory name
       expect(find.text('antigravity-hub'), findsOneWidget);
 
