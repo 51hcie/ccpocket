@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../constants/brand_config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/messages.dart';
 import '../../../theme/app_theme.dart';
@@ -12,7 +13,7 @@ import '../state/chat_session_state.dart';
 import '../state/chat_session_cubit.dart';
 import 'codex_settings_sheet.dart';
 
-class SessionModeBar extends StatelessWidget {
+class SessionModeBar extends StatefulWidget {
   final Future<void> Function()? onBeforeRestart;
   final bool showExtendedCodexEfforts;
 
@@ -21,6 +22,13 @@ class SessionModeBar extends StatelessWidget {
     this.onBeforeRestart,
     this.showExtendedCodexEfforts = false,
   });
+
+  @override
+  State<SessionModeBar> createState() => _SessionModeBarState();
+}
+
+class _SessionModeBarState extends State<SessionModeBar> {
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +54,53 @@ class SessionModeBar extends StatelessWidget {
 
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // In AnyCoding mode, default to compact collapsed pill
+    if (BrandConfig.isAnyCoding && !_isExpanded) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            key: const ValueKey('anycoding_advanced_options_collapsed'),
+            onTap: () => setState(() => _isExpanded = true),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? BrandConfig.anyCodingCardDark.withValues(alpha: 0.8)
+                    : cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark
+                      ? BrandConfig.anyCodingBorderDark
+                      : cs.outlineVariant.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune, size: 14, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 5),
+                  Text(
+                    '高级选项',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Icon(Icons.expand_more, size: 16, color: cs.onSurfaceVariant),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final bar = ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
@@ -111,7 +166,7 @@ class SessionModeBar extends StatelessWidget {
                     onTap: () => togglePlanMode(
                       context,
                       chatCubit,
-                      onBeforeRestart: onBeforeRestart,
+                      onBeforeRestart: widget.onBeforeRestart,
                     ),
                   ),
                 ] else if (isCodex) ...[
@@ -122,7 +177,7 @@ class SessionModeBar extends StatelessWidget {
                     onTap: () => showCodexModelMenu(
                       context,
                       chatCubit,
-                      showExtendedEfforts: showExtendedCodexEfforts,
+                      showExtendedEfforts: widget.showExtendedCodexEfforts,
                     ),
                   ),
                   Padding(
@@ -139,7 +194,7 @@ class SessionModeBar extends StatelessWidget {
                     onTap: () => togglePlanMode(
                       context,
                       chatCubit,
-                      onBeforeRestart: onBeforeRestart,
+                      onBeforeRestart: widget.onBeforeRestart,
                     ),
                   ),
                   Padding(
@@ -160,7 +215,7 @@ class SessionModeBar extends StatelessWidget {
                     onTap: () => showCodexPermissionsMenu(
                       context,
                       chatCubit,
-                      onBeforeRestart: onBeforeRestart,
+                      onBeforeRestart: widget.onBeforeRestart,
                     ),
                   ),
                 ] else ...[
@@ -169,7 +224,7 @@ class SessionModeBar extends StatelessWidget {
                     onTap: () => showPermissionModeMenu(
                       context,
                       chatCubit,
-                      onBeforeRestart: onBeforeRestart,
+                      onBeforeRestart: widget.onBeforeRestart,
                     ),
                   ),
                 ],
@@ -188,8 +243,26 @@ class SessionModeBar extends StatelessWidget {
                     onTap: () => showSandboxModeMenu(
                       context,
                       chatCubit,
-                      onBeforeRestart: onBeforeRestart,
+                      onBeforeRestart: widget.onBeforeRestart,
                     ),
+                  ),
+                ],
+                if (BrandConfig.isAnyCoding && _isExpanded) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.expand_less, size: 16),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    tooltip: '收起高级选项',
+                    onPressed: () => setState(() => _isExpanded = false),
                   ),
                 ],
               ],

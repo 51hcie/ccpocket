@@ -41,6 +41,7 @@ import 'widgets/machine_edit_sheet.dart';
 import 'widgets/session_list_app_bar.dart';
 import 'widgets/session_list_loading_view.dart';
 import 'workspace_shell_screen.dart';
+import '../anycoding/anycoding_main_screen.dart';
 
 export 'services/session_resume_coordinator.dart'
     show CodexRecentResumeSettings, factualCodexResumeSettings;
@@ -1741,6 +1742,87 @@ class _SessionListScreenState extends State<SessionListScreen>
       isLeftPaneVisible: true,
       slot: WorkspacePaneSlot.center,
     );
+
+    if (BrandConfig.isAnyCoding && !widget.embedded) {
+      final bridge = context.read<BridgeService>();
+      return StreamBuilder<List<OfflinePendingAction>>(
+        stream: bridge.offlinePendingActionsStream,
+        initialData: bridge.offlinePendingActions,
+        builder: (context, snapshot) {
+          final offlinePendingActions =
+              snapshot.data ?? const <OfflinePendingAction>[];
+          return AnyCodingMainScreen(
+            connectionState: connectionState,
+            connectedBridgeLabel: connectedBridgeLabel,
+            activeSessions: sessions,
+            recentSessions: recentSessionsList,
+            offlinePendingActions: offlinePendingActions,
+            projectPaths: slState.accumulatedProjectPaths.toSet(),
+            pinnedKeys: slState.pinnedSessionKeys,
+            onTapRunning: (
+              sessionId, {
+              String? projectPath,
+              String? gitBranch,
+              String? worktreePath,
+              String? provider,
+              String? permissionMode,
+              String? sandboxMode,
+              String? approvalPolicy,
+              String? approvalsReviewer,
+            }) =>
+                _navigateToChat(
+              sessionId,
+              projectPath: projectPath,
+              gitBranch: gitBranch,
+              worktreePath: worktreePath,
+              provider: provider == 'antigravity'
+                  ? Provider.antigravity
+                  : (provider == 'codex' ? Provider.codex : null),
+              permissionMode: permissionMode,
+              sandboxMode: sandboxMode,
+              approvalPolicy: approvalPolicy,
+              approvalsReviewer: approvalsReviewer,
+            ),
+            onResumeRecentSession: _resumeRecentSession,
+            onArchiveSession: _archiveSession,
+            onStopSession: _stopSession,
+            onApprovePermission: (sessionId, toolUseId,
+                {bool clearContext = false}) {
+              final bridge = context.read<BridgeService>();
+              bridge.markToolUseResponded(sessionId, toolUseId);
+              bridge.send(
+                ClientMessage.approve(
+                  toolUseId,
+                  sessionId: sessionId,
+                  clearContext: clearContext,
+                ),
+              );
+              bridge.clearSessionPermission(sessionId);
+            },
+            onRejectPermission: (sessionId, toolUseId, {String? message}) {
+              final bridge = context.read<BridgeService>();
+              bridge.markToolUseResponded(sessionId, toolUseId);
+              bridge.send(
+                ClientMessage.reject(
+                  toolUseId,
+                  sessionId: sessionId,
+                  message: message,
+                ),
+              );
+              bridge.clearSessionPermission(sessionId);
+            },
+            onRefresh: _refresh,
+            onConnect: _openBridgeSettings,
+            onStartNewSession: (params) {
+              _saveSessionStartDefaults(params);
+              _saveProjectCodexProfileFromParams(params);
+              _startNewSession(params);
+            },
+          );
+        },
+      );
+    }
+
     final body = _buildBodyContent(
       context: context,
       showConnectedUI: showConnectedUI,

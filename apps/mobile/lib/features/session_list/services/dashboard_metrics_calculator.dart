@@ -1,3 +1,4 @@
+import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
 import '../../../models/offline_pending_action.dart';
 
@@ -65,6 +66,7 @@ EngineAvailabilityStatus resolveAntigravityStatus({
 
 /// Resolves provider-specific chat input placeholder text.
 ///
+/// When in AnyCoding mode, returns '继续下达指令...'
 /// Antigravity: 'Message Antigravity...'
 /// Codex: 'Message Codex...' (or localized [codexPlaceholder])
 /// Claude: 'Message Claude...' (or localized [claudePlaceholder])
@@ -73,7 +75,12 @@ String resolveMessagePlaceholder({
   String? claudePlaceholder,
   String? codexPlaceholder,
   String? antigravityPlaceholder,
+  String? anycodingPlaceholder,
+  bool? isAnyCoding,
 }) {
+  if (isAnyCoding ?? BrandConfig.isAnyCoding) {
+    return anycodingPlaceholder ?? '继续下达指令...';
+  }
   if (provider == Provider.antigravity) {
     return antigravityPlaceholder ?? 'Message Antigravity...';
   }
