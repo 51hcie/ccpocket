@@ -38,6 +38,7 @@ void main() {
                 projectPath: '/Users/developer/projects/antigravity-hub',
                 status: 'running',
                 createdAt: '2026-08-24T00:00:00Z',
+                lastActivityAt: '2026-08-24T00:00:00Z',
               ),
             ],
             recentSessions: const [

@@ -76,6 +76,7 @@ void main() {
                 projectPath: '/Users/test/workspace/repo-a',
                 status: 'running',
                 createdAt: '2026-08-24T00:00:00Z',
+                lastActivityAt: '2026-08-24T00:00:00Z',
                 lastMessage: 'Running unit test suite',
               ),
             ],

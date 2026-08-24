@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 
 import 'package:ccpocket/constants/brand_config.dart';
 import 'package:ccpocket/features/chat_session/state/chat_session_cubit.dart';
@@ -28,7 +28,7 @@ void main() {
   group('AnyCoding Advanced Options Tests', () {
     Widget buildTestHarness({required Widget child, required ChatSessionCubit cubit}) {
       final bridge = BridgeService();
-      return Provider<BridgeService>.value(
+      return provider_pkg.Provider<BridgeService>.value(
         value: bridge,
         child: BlocProvider<ChatSessionCubit>.value(
           value: cubit,
