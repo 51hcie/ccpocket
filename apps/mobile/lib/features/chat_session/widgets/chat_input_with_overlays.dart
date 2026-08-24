@@ -1056,6 +1056,7 @@ class ChatInputWithOverlays extends HookWidget {
                       provider: chatCubit.provider,
                       claudePlaceholder: l.messagePlaceholder,
                       codexPlaceholder: l.codexMessagePlaceholder,
+                      anycodingPlaceholder: BrandConfig.isAnyCoding ? '继续下达指令...' : null,
                     ),
                 onPasteImage: isDesktopPlatform ? tryPasteImage : null,
                 imagePasteShortcut: context

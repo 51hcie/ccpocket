@@ -347,5 +347,23 @@ void main() {
         'Claude にメッセージ...',
       );
     });
+
+    test('resolves AnyCoding message placeholder when isAnyCoding is true', () {
+      expect(
+        resolveMessagePlaceholder(
+          provider: Provider.codex,
+          isAnyCoding: true,
+        ),
+        '继续下达指令...',
+      );
+      expect(
+        resolveMessagePlaceholder(
+          provider: Provider.antigravity,
+          isAnyCoding: true,
+          anycodingPlaceholder: '自定义下达指令...',
+        ),
+        '自定义下达指令...',
+      );
+    });
   });
 }

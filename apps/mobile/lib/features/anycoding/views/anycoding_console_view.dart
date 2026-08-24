@@ -96,11 +96,11 @@ class AnyCodingConsoleView extends StatelessWidget {
         backgroundColor: isDark
             ? BrandConfig.anyCodingPrimaryDark
             : cs.surface,
-        title: const Row(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnyCodingLogo(size: 22, showContainer: true),
-            SizedBox(width: 6),
+            const AnyCodingLogo(size: 22, showContainer: true),
+            const SizedBox(width: 6),
             Flexible(
               child: Text(
                 BrandConfig.appName,

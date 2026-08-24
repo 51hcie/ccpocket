@@ -14,13 +14,14 @@ import 'package:ccpocket/services/bridge_service.dart';
 import 'package:ccpocket/services/platform_environment_service.dart';
 import 'package:ccpocket/providers/bridge_cubits.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AnyCoding 4-Tab Navigation & Shell Tests', () {
-    Widget buildTestHarness(Widget child) {
+    Widget buildTestHarness(Widget child, SettingsCubit settingsCubit) {
       final bridge = BridgeService();
-      final settingsCubit = SettingsCubit(PlatformEnvironmentService.instance);
 
       return provider_pkg.MultiProvider(
         providers: [
@@ -37,6 +38,10 @@ void main() {
     }
 
     testWidgets('renders 4 navigation tabs: 控制台, 任务, 项目, 设置', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final settingsCubit = SettingsCubit(prefs);
+
       await tester.pumpWidget(
         buildTestHarness(
           AnyCodingMainScreen(
@@ -53,6 +58,7 @@ void main() {
             onConnect: () {},
             onStartNewSession: (_) {},
           ),
+          settingsCubit,
         ),
       );
 
@@ -64,6 +70,10 @@ void main() {
     });
 
     testWidgets('switching tabs switches view in IndexedStack and preserves page hierarchy', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final settingsCubit = SettingsCubit(prefs);
+
       await tester.pumpWidget(
         buildTestHarness(
           AnyCodingMainScreen(
@@ -90,6 +100,7 @@ void main() {
             onConnect: () {},
             onStartNewSession: (_) {},
           ),
+          settingsCubit,
         ),
       );
 

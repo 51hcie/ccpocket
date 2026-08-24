@@ -78,7 +78,8 @@ String resolveMessagePlaceholder({
   String? anycodingPlaceholder,
   bool? isAnyCoding,
 }) {
-  if (isAnyCoding ?? BrandConfig.isAnyCoding) {
+  final anyCoding = isAnyCoding ?? (BrandConfig.isAnyCoding && anycodingPlaceholder != null);
+  if (anyCoding) {
     return anycodingPlaceholder ?? '继续下达指令...';
   }
   if (provider == Provider.antigravity) {
