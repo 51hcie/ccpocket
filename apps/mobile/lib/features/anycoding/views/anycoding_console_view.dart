@@ -799,22 +799,28 @@ class _ProjectQuickLaunchCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onLaunchCodex,
                   icon: const Icon(Icons.bolt, size: 14, color: BrandConfig.codexAccent),
-                  label: const Text('启动 Codex', style: TextStyle(fontSize: 11)),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('启动 Codex', style: TextStyle(fontSize: 11)),
+                  ),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: onLaunchAntigravity,
                   icon: const Icon(Icons.auto_awesome, size: 14, color: BrandConfig.antigravityAccent),
-                  label: const Text('启动 Antigravity', style: TextStyle(fontSize: 11)),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('启动 Antigravity', style: TextStyle(fontSize: 11)),
+                  ),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   ),
                 ),
               ),

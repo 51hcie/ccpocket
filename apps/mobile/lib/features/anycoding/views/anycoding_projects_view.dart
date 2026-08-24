@@ -256,23 +256,29 @@ class _ProjectListItem extends StatelessWidget {
                 child: FilledButton.tonalIcon(
                   onPressed: onLaunchCodex,
                   icon: const Icon(Icons.bolt, size: 16, color: BrandConfig.codexAccent),
-                  label: const Text('启动 Codex', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('启动 Codex', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: FilledButton.tonalIcon(
                   onPressed: onLaunchAntigravity,
                   icon: const Icon(Icons.auto_awesome, size: 16, color: BrandConfig.antigravityAccent),
-                  label: const Text('启动 Antigravity', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('启动 Antigravity', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
