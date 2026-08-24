@@ -481,6 +481,7 @@ void main() {
         message: AssistantMessage(
           id: 'antigravity-response-msg-1',
           role: 'assistant',
+          model: 'gemini-3.7-flash-high',
           content: [
             TextContent(text: 'REPLY_EXACTLY_AE0549E_ONCE_RESULT'),
           ],
@@ -524,6 +525,7 @@ void main() {
         message: AssistantMessage(
           id: 'antigravity-turn-1-msg',
           role: 'assistant',
+          model: 'gemini-3.7-flash-high',
           content: [
             TextContent(text: 'OK'),
           ],
@@ -537,6 +539,7 @@ void main() {
         message: AssistantMessage(
           id: 'antigravity-turn-2-msg',
           role: 'assistant',
+          model: 'gemini-3.7-flash-high',
           content: [
             TextContent(text: 'OK'),
           ],
@@ -568,6 +571,7 @@ void main() {
         message: AssistantMessage(
           id: 'tool-use-list-dir-123',
           role: 'assistant',
+          model: 'gemini-3.7-flash-high',
           content: [
             ToolUseContent(
               id: 'tool-use-list-dir-123',
