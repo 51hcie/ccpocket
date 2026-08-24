@@ -225,13 +225,15 @@ class AnyCodingSettingsView extends StatelessWidget {
                   leading: Icon(Icons.language_rounded, size: 20, color: cs.primary),
                   title: const Text('界面语言', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                   subtitle: Text(
-                    settingsState.locale?.languageCode == 'zh' ? '简体中文' : '跟随系统',
+                    settingsState.appLocaleId == 'zh'
+                        ? '简体中文'
+                        : (settingsState.appLocaleId.isNotEmpty ? settingsState.appLocaleId : '跟随系统'),
                     style: TextStyle(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                   ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () => showAppLocaleBottomSheet(
                     context: context,
-                    current: settingsState.locale,
+                    current: settingsState.appLocaleId.isNotEmpty ? Locale(settingsState.appLocaleId) : null,
                     onChanged: (loc) => context.read<SettingsCubit>().setLocale(loc),
                   ),
                 ),
@@ -241,13 +243,13 @@ class AnyCodingSettingsView extends StatelessWidget {
                   leading: Icon(Icons.mic_none_rounded, size: 20, color: cs.primary),
                   title: const Text('语音输入识别语言', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                   subtitle: Text(
-                    settingsState.speechLocale ?? '自动识别',
+                    settingsState.speechLocaleId.isNotEmpty ? settingsState.speechLocaleId : '自动识别',
                     style: TextStyle(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                   ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () => showSpeechLocaleBottomSheet(
                     context: context,
-                    current: settingsState.speechLocale,
+                    current: settingsState.speechLocaleId.isNotEmpty ? Locale(settingsState.speechLocaleId) : null,
                     onChanged: (loc) => context.read<SettingsCubit>().setSpeechLocale(loc),
                   ),
                 ),
