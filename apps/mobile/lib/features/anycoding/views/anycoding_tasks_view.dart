@@ -403,10 +403,26 @@ class _TaskListItem extends StatelessWidget {
 
     final cardBg = isDark
         ? BrandConfig.anyCodingCardDark
-        : cs.surfaceContainerLow;
+        : cs.surface;
     final borderColor = isDark
         ? BrandConfig.anyCodingBorderDark
         : cs.outlineVariant.withValues(alpha: 0.35);
+
+    Color trackColor;
+    switch (task.category) {
+      case AnyCodingTaskCategory.inProgress:
+        trackColor = const Color(0xFF3B82F6);
+        break;
+      case AnyCodingTaskCategory.pending:
+        trackColor = const Color(0xFFF59E0B);
+        break;
+      case AnyCodingTaskCategory.completed:
+        trackColor = const Color(0xFF10B981);
+        break;
+      case AnyCodingTaskCategory.failed:
+        trackColor = const Color(0xFFEF4444);
+        break;
+    }
 
     Widget content = Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -415,89 +431,185 @@ class _TaskListItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top line: Engine badge, project name, status pill
-              Row(
-                children: [
-                  _EnginePill(provider: task.provider),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(6),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left Status Rail Track
+            Container(
+              width: 4,
+              color: trackColor,
+            ),
+            // Main Content Area
+            Expanded(
+              child: InkWell(
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header: Engine Badge + Project Name + Status Pill
+                      Row(
+                        children: [
+                          _EnginePill(provider: task.provider),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                task.projectName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _StatusPill(category: task.category, label: task.statusLabel),
+                        ],
                       ),
-                      child: Text(
-                        task.projectName,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant),
-                        maxLines: 1,
+                      const SizedBox(height: 6),
+
+                      // Task Title
+                      Text(
+                        task.title,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+
+                      const SizedBox(height: 6),
+
+                      // Footer metadata + Next Action Pill
+                      Row(
+                        children: [
+                          if (task.gitBranch != null && task.gitBranch!.isNotEmpty) ...[
+                            Icon(Icons.fork_right, size: 12, color: cs.onSurfaceVariant),
+                            const SizedBox(width: 2),
+                            Text(
+                              task.gitBranch!,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontFamily: 'monospace',
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            task.updatedAt != null ? _formatRelativeTime(task.updatedAt!) : '刚刚',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const Spacer(),
+                          // Action Button based on category
+                          if (task.category == AnyCodingTaskCategory.inProgress) ...[
+                            InkWell(
+                              onTap: onTap,
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '进入会话',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF3B82F6)),
+                                ),
+                              ),
+                            ),
+                            if (onStop != null) ...[
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.stop_circle_outlined, size: 18, color: Colors.redAccent),
+                                tooltip: '停止任务',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                onPressed: onStop,
+                              ),
+                            ],
+                          ] else if (task.category == AnyCodingTaskCategory.pending) ...[
+                            InkWell(
+                              onTap: onTap,
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '立即处理',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                                ),
+                              ),
+                            ),
+                          ] else if (task.category == AnyCodingTaskCategory.completed) ...[
+                            InkWell(
+                              onTap: onTap,
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '查看/追问',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF10B981)),
+                                ),
+                              ),
+                            ),
+                            if (onArchive != null) ...[
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: Icon(Icons.archive_outlined, size: 16, color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+                                tooltip: '归档任务',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                onPressed: onArchive,
+                              ),
+                            ],
+                          ] else if (task.category == AnyCodingTaskCategory.failed) ...[
+                            InkWell(
+                              onTap: onTap,
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '查看报错',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFEF4444)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  _StatusPill(category: task.category, label: task.statusLabel),
-                ],
+                ),
               ),
-              const SizedBox(height: 8),
-
-              // Task Title (never absolute path)
-              Text(
-                task.title,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 6),
-
-              // Bottom line: branch & relative time
-              Row(
-                children: [
-                  if (task.gitBranch != null && task.gitBranch!.isNotEmpty) ...[
-                    Icon(Icons.fork_right, size: 12, color: cs.onSurfaceVariant),
-                    const SizedBox(width: 3),
-                    Text(
-                      task.gitBranch!,
-                      style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: cs.onSurfaceVariant),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    task.updatedAt != null ? _formatRelativeTime(task.updatedAt!) : '刚刚',
-                    style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
-                  ),
-                  const Spacer(),
-                  if (onStop != null)
-                    IconButton(
-                      icon: const Icon(Icons.stop_circle_outlined, size: 18, color: Colors.redAccent),
-                      tooltip: '停止任务',
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                      onPressed: onStop,
-                    )
-                  else if (onArchive != null)
-                    IconButton(
-                      icon: Icon(Icons.archive_outlined, size: 16, color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
-                      tooltip: '归档任务',
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                      onPressed: onArchive,
-                    ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

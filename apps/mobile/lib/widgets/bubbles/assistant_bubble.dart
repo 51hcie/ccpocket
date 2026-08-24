@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../constants/brand_config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../models/messages.dart';
@@ -266,44 +267,104 @@ class _DefaultLayout extends StatelessWidget {
       return TodoWriteWidget(input: planInput);
     }
 
+    final isAnyCoding = BrandConfig.isAnyCoding;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Widget body = plainTextMode
+        ? SelectableText(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium,
+            contextMenuBuilder: googleSearchSelectableTextContextMenuBuilder,
+          )
+        : GoogleSearchSelectionArea(
+            child: MarkdownBody(
+              data: text,
+              selectable: !googleSearchSelectionMenuEnabled,
+              styleSheet: buildMarkdownStyle(context),
+              onTapLink: buildChatMarkdownLinkHandler(
+                context,
+                onFileTap: onFileTap,
+                knownPathSuffixes: fileSuffixes,
+              ),
+              inlineSyntaxes: [
+                if (onFileTap != null) ...[
+                  FilePathSyntax(knownPathSuffixes: fileSuffixes),
+                  BareFilePathSyntax(knownPathSuffixes: fileSuffixes),
+                ],
+                ...colorCodeInlineSyntaxes,
+              ],
+              builders: {
+                if (onFileTap != null)
+                  'filePath': FilePathBuilder(onTap: onFileTap),
+                ...markdownBuilders,
+              },
+            ),
+          );
+
+    if (isAnyCoding) {
+      return Container(
+        margin: const EdgeInsets.symmetric(
+          vertical: AppSpacing.bubbleMarginV,
+          horizontal: AppSpacing.bubbleMarginH,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111827) : const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB),
+          ),
+          boxShadow: !isDark
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF10B981),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'AI 回复',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            body,
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.bubbleMarginV,
         horizontal: AppSpacing.bubbleMarginH,
       ),
-      child: plainTextMode
-          ? SelectableText(
-              text,
-              style: Theme.of(context).textTheme.bodyMedium,
-              contextMenuBuilder: googleSearchSelectableTextContextMenuBuilder,
-            )
-          : GoogleSearchSelectionArea(
-              child: MarkdownBody(
-                data: text,
-                selectable: !googleSearchSelectionMenuEnabled,
-                styleSheet: buildMarkdownStyle(context),
-                onTapLink: buildChatMarkdownLinkHandler(
-                  context,
-                  onFileTap: onFileTap,
-                  knownPathSuffixes: fileSuffixes,
-                ),
-                inlineSyntaxes: [
-                  if (onFileTap != null) ...[
-                    FilePathSyntax(knownPathSuffixes: fileSuffixes),
-                    BareFilePathSyntax(knownPathSuffixes: fileSuffixes),
-                  ],
-                  ...colorCodeInlineSyntaxes,
-                ],
-                builders: {
-                  if (onFileTap != null)
-                    'filePath': FilePathBuilder(onTap: onFileTap),
-                  ...markdownBuilders,
-                },
-              ),
-            ),
+      child: body,
     );
   }
 }
+
 
 class ToolUseTile extends StatefulWidget {
   final String toolUseId;

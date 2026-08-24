@@ -34,10 +34,12 @@ class SessionNameTitle extends StatelessWidget {
         final sessions = snapshot.data ?? [];
         final session = sessions.where((s) => s.id == sessionId).firstOrNull;
         final name = session?.name;
-        final fallback = projectPath != null && projectPath!.isNotEmpty
+        final projectName = projectPath != null && projectPath!.isNotEmpty
             ? TaskStatusClassifier.extractProjectShortName(projectPath!)
-            : '';
-        final displayName = name != null && name.isNotEmpty ? name : fallback;
+            : (session?.projectPath != null && session!.projectPath.isNotEmpty
+                ? TaskStatusClassifier.extractProjectShortName(session.projectPath)
+                : (name != null && name.isNotEmpty ? name : 'AnyCoding'));
+        final displayName = projectName;
         final resolvedProvider = session != null
             ? TaskStatusClassifier.resolveProvider(session.provider)
             : (provider ?? Provider.codex);
@@ -88,27 +90,38 @@ class SessionNameTitle extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  isAntigravity ? 'Antigravity' : 'Codex',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: accentColor,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isAntigravity ? Icons.auto_awesome : Icons.bolt,
+                      size: 11,
+                      color: accentColor,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      isAntigravity ? 'Antigravity' : 'Codex',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: accentColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   displayName,
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
                     color: cs.onSurface,
                   ),
                   maxLines: 1,
@@ -122,3 +135,4 @@ class SessionNameTitle extends StatelessWidget {
     );
   }
 }
+

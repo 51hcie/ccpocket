@@ -9,8 +9,8 @@ import '../../../widgets/directory_browser_sheet.dart' show showDirectoryBrowser
 import '../../../widgets/new_session_sheet.dart';
 import '../services/task_status_classifier.dart';
 
-/// Shows the AnyCoding 4-step New Task sheet:
-/// `选择项目 -> 选择引擎 -> 输入任务 -> 启动`
+/// Shows the AnyCoding V2 Command Composer sheet:
+/// Compact project bar -> Segmented Engine Switch -> Focal Prompt Editor -> Collapsed Advanced -> Launch
 Future<NewSessionParams?> showAnyCodingNewTaskSheet({
   required BuildContext context,
   required List<({String path, String name})> recentProjects,
@@ -188,17 +188,18 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
+    final isAntigravity = _selectedProvider == Provider.antigravity;
+    final activeAccent = isAntigravity ? BrandConfig.antigravityAccent : BrandConfig.codexAccent;
 
     final sheetBgColor = isDark
         ? BrandConfig.anyCodingPrimaryDark
-        : cs.surface;
+        : Colors.white;
     final cardBgColor = isDark
         ? BrandConfig.anyCodingCardDark
-        : cs.surfaceContainerLow;
+        : const Color(0xFFF8FAFC);
     final borderColor = isDark
         ? BrandConfig.anyCodingBorderDark
-        : cs.outlineVariant.withValues(alpha: 0.35);
+        : const Color(0xFFE2E8F0);
 
     return Material(
       color: sheetBgColor,
@@ -209,483 +210,566 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           border: Border.all(color: borderColor, width: 1),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-          // Drag handle & Header
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.onSurfaceVariant.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 6),
+                  width: 36,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: (_selectedProvider == Provider.antigravity
-                            ? BrandConfig.antigravityAccent
-                            : BrandConfig.codexAccent)
-                        .withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    _selectedProvider == Provider.antigravity
-                        ? Icons.auto_awesome
-                        : Icons.bolt,
-                    size: 18,
-                    color: _selectedProvider == Provider.antigravity
-                        ? BrandConfig.antigravityAccent
-                        : BrandConfig.codexAccent,
+                    color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  '新建任务',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: '关闭',
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
+              ),
 
-          // Scrollable Flow Content
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Step 1: 选择项目
-                  const _SectionTitle(
-                    stepNumber: '1',
-                    title: '选择项目',
-                    subtitle: '在指定代码仓库或目录中启动 AI 任务',
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Selected Project Banner
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cardBgColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: borderColor),
+              // Compact Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: activeAccent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        isAntigravity ? Icons.auto_awesome : Icons.bolt,
+                        size: 16,
+                        color: activeAccent,
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                    const SizedBox(width: 8),
+                    Text(
+                      '指令编辑器',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: const Text(
+                        'V2',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: '关闭',
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: borderColor),
+
+              // Scrollable Composer Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Compact Target Project Bar
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: cardBgColor,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.folder, size: 18, color: cs.primary),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _projectPath.isNotEmpty
-                                    ? TaskStatusClassifier.extractProjectShortName(_projectPath)
-                                    : '请选择项目目录',
+                            Row(
+                              children: [
+                                const Icon(Icons.folder_open_rounded, size: 16, color: Color(0xFF3B82F6)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _projectPath.isNotEmpty
+                                        ? TaskStatusClassifier.extractProjectShortName(_projectPath)
+                                        : '选择目标项目目录',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: _browseDirectory,
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '浏览',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: cs.primary,
+                                          ),
+                                        ),
+                                        Icon(Icons.chevron_right_rounded, size: 14, color: cs.primary),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_projectPath.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                TaskStatusClassifier.formatMiddleEllipsisPath(_projectPath, maxLength: 42),
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: _projectPath.isNotEmpty
-                                      ? cs.onSurface
-                                      : cs.onSurfaceVariant,
+                                  fontSize: 10.5,
+                                  fontFamily: 'monospace',
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      // Quick Recent Project Chips
+                      if (widget.recentProjects.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          height: 28,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: widget.recentProjects.take(5).length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 6),
+                            itemBuilder: (context, index) {
+                              final p = widget.recentProjects[index];
+                              final isSelected = _projectPath == p.path;
+                              return InkWell(
+                                onTap: () => _selectProject(p.path),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? cs.primary.withValues(alpha: isDark ? 0.25 : 0.12)
+                                        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected ? cs.primary : borderColor,
+                                      width: isSelected ? 1.2 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isSelected) ...[
+                                        Icon(Icons.check_rounded, size: 11, color: cs.primary),
+                                        const SizedBox(width: 3),
+                                      ],
+                                      Text(
+                                        p.name,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                          color: isSelected
+                                              ? cs.primary
+                                              : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 10),
+
+                      // 2. Segmented Engine Selector
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            // Codex Segment
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setState(() => _selectedProvider = Provider.codex),
+                                borderRadius: BorderRadius.circular(8),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  padding: const EdgeInsets.symmetric(vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: !isAntigravity
+                                        ? (isDark ? BrandConfig.codexAccent.withValues(alpha: 0.2) : Colors.white)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: !isAntigravity ? BrandConfig.codexAccent : Colors.transparent,
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: !isAntigravity && !isDark
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.05),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.bolt,
+                                        size: 15,
+                                        color: !isAntigravity
+                                            ? BrandConfig.codexAccent
+                                            : (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Codex',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: !isAntigravity ? FontWeight.w800 : FontWeight.w600,
+                                          color: !isAntigravity
+                                              ? (isDark ? BrandConfig.codexAccent : const Color(0xFF0D9488))
+                                              : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'GPT',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                            TextButton.icon(
-                              onPressed: _browseDirectory,
-                              icon: const Icon(Icons.folder_open, size: 16),
-                              label: const Text('浏览', style: TextStyle(fontSize: 12)),
-                              style: TextButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                            const SizedBox(width: 4),
+
+                            // Antigravity Segment
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setState(() => _selectedProvider = Provider.antigravity),
+                                borderRadius: BorderRadius.circular(8),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  padding: const EdgeInsets.symmetric(vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: isAntigravity
+                                        ? (isDark ? BrandConfig.antigravityAccent.withValues(alpha: 0.2) : Colors.white)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isAntigravity ? BrandConfig.antigravityAccent : Colors.transparent,
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: isAntigravity && !isDark
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.05),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        size: 14,
+                                        color: isAntigravity
+                                            ? BrandConfig.antigravityAccent
+                                            : (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Antigravity',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: isAntigravity ? FontWeight.w800 : FontWeight.w600,
+                                          color: isAntigravity
+                                              ? (isDark ? BrandConfig.antigravityAccent : const Color(0xFFEA580C))
+                                              : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Gemini',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        if (_projectPath.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            TaskStatusClassifier.formatMiddleEllipsisPath(_projectPath, maxLength: 40),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                              color: cs.onSurfaceVariant,
-                            ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // 3. Focal Command Prompt Editor
+                      Container(
+                        decoration: BoxDecoration(
+                          color: cardBgColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: activeAccent.withValues(alpha: isDark ? 0.5 : 0.35),
+                            width: 1.2,
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Recent project chips
-                  if (widget.recentProjects.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: widget.recentProjects.take(4).map((p) {
-                        final isSelected = _projectPath == p.path;
-                        return ChoiceChip(
-                          label: Text(
-                            p.name,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Composer Inner Header
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.terminal_rounded, size: 14, color: activeAccent),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '指令输入 (Prompt)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    isAntigravity ? 'DeepMind Agent' : 'OpenAI Agent',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: activeAccent,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          selected: isSelected,
-                          onSelected: (_) => _selectProject(p.path),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-
-                  const SizedBox(height: 18),
-
-                  // Step 2: 选择引擎
-                  const _SectionTitle(
-                    stepNumber: '2',
-                    title: '选择执行引擎',
-                    subtitle: '选择由 Codex (GPT) 还是 Antigravity (Gemini) 执行',
-                  ),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      // Codex Engine
-                      Expanded(
-                        child: _EngineSelectCard(
-                          name: 'Codex',
-                          desc: 'OpenAI 编程代理',
-                          icon: Icons.bolt,
-                          accentColor: BrandConfig.codexAccent,
-                          isSelected: _selectedProvider == Provider.codex,
-                          onTap: () => setState(() => _selectedProvider = Provider.codex),
+                            // Text Input Area
+                            TextField(
+                              controller: _promptController,
+                              maxLines: 4,
+                              minLines: 3,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                              decoration: InputDecoration(
+                                hintText: '输入 AI 执行指令、代码需求或任务步骤...',
+                                hintStyle: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                ),
+                                filled: false,
+                                contentPadding: const EdgeInsets.all(10),
+                                border: InputBorder.none,
+                              ),
+                            ),
+                            // Quick Action Chips inside composer
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                              child: Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: [
+                                  _PromptPresetChip(
+                                    label: '代码审查',
+                                    onTap: () => _promptController.text = '审查最近的改动并指出潜在隐患与改进点',
+                                    isDark: isDark,
+                                  ),
+                                  _PromptPresetChip(
+                                    label: '修复报错',
+                                    onTap: () => _promptController.text = '分析最近失败的测试用例并进行修复',
+                                    isDark: isDark,
+                                  ),
+                                  _PromptPresetChip(
+                                    label: '运行测试',
+                                    onTap: () => _promptController.text = '运行所有单元测试并输出报告',
+                                    isDark: isDark,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      // Antigravity Engine
-                      Expanded(
-                        child: _EngineSelectCard(
-                          name: 'Antigravity',
-                          desc: 'DeepMind 任务代理',
-                          icon: Icons.auto_awesome,
-                          accentColor: BrandConfig.antigravityAccent,
-                          isSelected: _selectedProvider == Provider.antigravity,
-                          onTap: () => setState(() => _selectedProvider = Provider.antigravity),
+
+                      const SizedBox(height: 8),
+
+                      // 4. Collapsible Advanced Options
+                      Theme(
+                        data: theme.copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          key: const ValueKey('new_task_advanced_options'),
+                          initiallyExpanded: _showAdvancedOptions,
+                          tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+                          visualDensity: VisualDensity.compact,
+                          title: Row(
+                            children: [
+                              Icon(Icons.tune_rounded, size: 14, color: cs.onSurfaceVariant),
+                              const SizedBox(width: 6),
+                              Text(
+                                '高级选项',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: cardBgColor,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: borderColor),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Worktree toggle
+                                  SwitchListTile.adaptive(
+                                    contentPadding: EdgeInsets.zero,
+                                    dense: true,
+                                    title: const Text('独立 Worktree 分支', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    subtitle: const Text('在隔离分支中执行，不影响当前工作区', style: TextStyle(fontSize: 10.5)),
+                                    value: _useWorktree,
+                                    onChanged: (val) => setState(() => _useWorktree = val),
+                                  ),
+                                  if (_useWorktree) ...[
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _worktreeBranchController,
+                                      style: const TextStyle(fontSize: 12),
+                                      decoration: InputDecoration(
+                                        labelText: '分支名称 (可选)',
+                                        labelStyle: const TextStyle(fontSize: 11),
+                                        isDense: true,
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
+                ),
+              ),
 
-                  const SizedBox(height: 18),
-
-                  // Step 3: 输入任务
-                  const _SectionTitle(
-                    stepNumber: '3',
-                    title: '输入初始指令',
-                    subtitle: '简明描述需要 AI 执行的目标或需求',
-                  ),
-                  const SizedBox(height: 8),
-
-                  TextField(
-                    controller: _promptController,
-                    maxLines: 3,
-                    minLines: 2,
-                    decoration: InputDecoration(
-                      hintText: '例如: 检查未提交的更改并生成详细代码审查报告...',
-                      hintStyle: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                      ),
-                      filled: true,
-                      fillColor: cardBgColor,
-                      contentPadding: const EdgeInsets.all(12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: _selectedProvider == Provider.antigravity
-                              ? BrandConfig.antigravityAccent
-                              : BrandConfig.codexAccent,
-                          width: 1.5,
-                        ),
-                      ),
+              // Fixed Bottom Launch Button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                child: SizedBox(
+                  height: 44,
+                  child: FilledButton(
+                    key: const ValueKey('anycoding_launch_task_button'),
+                    onPressed: _submit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isAntigravity ? BrandConfig.antigravityAccent : BrandConfig.codexAccent,
+                      foregroundColor: isAntigravity ? Colors.white : Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
                     ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Step 4: 高级选项 (Default Collapsed)
-                  Theme(
-                    data: theme.copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      key: const ValueKey('new_task_advanced_options'),
-                      initiallyExpanded: _showAdvancedOptions,
-                      onExpansionChanged: (exp) => setState(() => _showAdvancedOptions = exp),
-                      tilePadding: EdgeInsets.zero,
-                      title: Row(
-                        children: [
-                          Icon(Icons.tune, size: 16, color: cs.onSurfaceVariant),
-                          const SizedBox(width: 6),
-                          Text(
-                            '高级选项',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: cardBgColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: borderColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Git Worktree isolation toggle
-                              SwitchListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text('独立 Worktree 分支隔离', style: TextStyle(fontSize: 13)),
-                                subtitle: const Text('在单独的工作树分支中执行，不干扰当前工作区', style: TextStyle(fontSize: 11)),
-                                value: _useWorktree,
-                                onChanged: (v) => setState(() => _useWorktree = v),
-                              ),
-                              if (_useWorktree) ...[
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: _worktreeBranchController,
-                                  decoration: InputDecoration(
-                                    labelText: '分支名称 (可选)',
-                                    labelStyle: const TextStyle(fontSize: 12),
-                                    hintText: 'feat/ai-task-branch',
-                                    isDense: true,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                ),
-                              ],
-
-                              if (_selectedProvider == Provider.codex) ...[
-                                const SizedBox(height: 10),
-                                const Text('权限模式', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 6),
-                                DropdownButtonFormField<CodexPermissionsMode>(
-                                  value: _codexPermissionsMode,
-                                  isDense: true,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                  ),
-                                  items: CodexPermissionsMode.values.map((mode) {
-                                    return DropdownMenuItem(
-                                      value: mode,
-                                      child: Text(mode.label, style: const TextStyle(fontSize: 12)),
-                                    );
-                                  }).toList(),
-                                  onChanged: (mode) {
-                                    if (mode != null) setState(() => _codexPermissionsMode = mode);
-                                  },
-                                ),
-                              ],
-                            ],
+                        Icon(
+                          isAntigravity ? Icons.auto_awesome : Icons.play_arrow_rounded,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isAntigravity ? '启动 Antigravity 任务' : '启动 Codex 任务',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // Fixed Launch Action Bar at Bottom
-          Container(
-            padding: EdgeInsets.fromLTRB(18, 10, 18, 12 + keyboardHeight),
-            decoration: BoxDecoration(
-              color: sheetBgColor,
-              border: Border(top: BorderSide(color: borderColor, width: 1)),
-            ),
-            child: FilledButton.icon(
-              key: const ValueKey('anycoding_launch_task_button'),
-              onPressed: _submit,
-              icon: Icon(
-                _selectedProvider == Provider.antigravity
-                    ? Icons.auto_awesome
-                    : Icons.play_arrow_rounded,
-                size: 20,
-              ),
-              label: Text(
-                '启动 ${_selectedProvider == Provider.antigravity ? "Antigravity" : "Codex"} 任务',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: _selectedProvider == Provider.antigravity
-                    ? BrandConfig.antigravityAccent
-                    : BrandConfig.codexAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String stepNumber;
-  final String title;
-  final String subtitle;
-
-  const _SectionTitle({
-    required this.stepNumber,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                stepNumber,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: cs.onPrimaryContainer,
                 ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Padding(
-          padding: const EdgeInsets.only(left: 24),
-          child: Text(
-            subtitle,
-            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-class _EngineSelectCard extends StatelessWidget {
-  final String name;
-  final String desc;
-  final IconData icon;
-  final Color accentColor;
-  final bool isSelected;
+class _PromptPresetChip extends StatelessWidget {
+  final String label;
   final VoidCallback onTap;
+  final bool isDark;
 
-  const _EngineSelectCard({
-    required this.name,
-    required this.desc,
-    required this.icon,
-    required this.accentColor,
-    required this.isSelected,
+  const _PromptPresetChip({
+    required this.label,
     required this.onTap,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
-    final bgColor = isSelected
-        ? accentColor.withValues(alpha: isDark ? 0.18 : 0.12)
-        : (isDark ? BrandConfig.anyCodingCardDark : cs.surfaceContainerLow);
-    final borderColor = isSelected
-        ? accentColor
-        : (isDark ? BrandConfig.anyCodingBorderDark : cs.outlineVariant.withValues(alpha: 0.35));
-
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: isSelected ? 1.8 : 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: accentColor),
-                const SizedBox(width: 6),
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected ? accentColor : cs.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                if (isSelected)
-                  Icon(Icons.check_circle, size: 16, color: accentColor),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
               desc,
               style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../constants/brand_config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
 import '../../theme/app_spacing.dart';
@@ -121,6 +122,21 @@ class _StandardBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
+    final isAnyCoding = BrandConfig.isAnyCoding;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bubbleBg = isAnyCoding
+        ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
+        : appColors.userBubble;
+    final textColor = isAnyCoding
+        ? (isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A))
+        : appColors.userBubbleText;
+    final border = isAnyCoding
+        ? Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+            width: 1,
+          )
+        : null;
 
     return Align(
       alignment: Alignment.centerRight,
@@ -146,12 +162,41 @@ class _StandardBubble extends StatelessWidget {
                       AppSpacing.maxBubbleWidthFraction,
                 ),
                 decoration: BoxDecoration(
-                  color: appColors.userBubble,
-                  borderRadius: AppSpacing.userBubbleBorderRadius,
+                  color: bubbleBg,
+                  borderRadius: isAnyCoding
+                      ? BorderRadius.circular(12)
+                      : AppSpacing.userBubbleBorderRadius,
+                  border: border,
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (isAnyCoding) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.terminal_rounded,
+                            size: 13,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '指令 (Command)',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     if (imageBytesList.isNotEmpty ||
                         (imageUrls.isNotEmpty && httpBaseUrl != null))
                       Padding(
@@ -206,7 +251,12 @@ class _StandardBubble extends StatelessWidget {
                     if (displayText.isNotEmpty)
                       Text(
                         displayText,
-                        style: TextStyle(color: appColors.userBubbleText),
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 14,
+                          fontWeight: isAnyCoding ? FontWeight.w500 : FontWeight.normal,
+                          height: 1.4,
+                        ),
                       ),
                   ],
                 ),
@@ -244,7 +294,22 @@ class _CommandBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
+    final isAnyCoding = BrandConfig.isAnyCoding;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasArgs = command.args != null && command.args!.isNotEmpty;
+
+    final bubbleBg = isAnyCoding
+        ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
+        : appColors.userBubble;
+    final textColor = isAnyCoding
+        ? (isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A))
+        : appColors.userBubbleText;
+    final border = isAnyCoding
+        ? Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+            width: 1,
+          )
+        : null;
 
     return Align(
       alignment: Alignment.centerRight,
@@ -270,8 +335,11 @@ class _CommandBubble extends StatelessWidget {
                       AppSpacing.maxBubbleWidthFraction,
                 ),
                 decoration: BoxDecoration(
-                  color: appColors.userBubble,
-                  borderRadius: AppSpacing.userBubbleBorderRadius,
+                  color: bubbleBg,
+                  borderRadius: isAnyCoding
+                      ? BorderRadius.circular(12)
+                      : AppSpacing.userBubbleBorderRadius,
+                  border: border,
                 ),
                 child: Text.rich(
                   TextSpan(
@@ -279,15 +347,15 @@ class _CommandBubble extends StatelessWidget {
                       TextSpan(
                         text: command.commandName,
                         style: TextStyle(
-                          color: appColors.userBubbleText,
-                          fontWeight: FontWeight.w600,
+                          color: textColor,
+                          fontWeight: FontWeight.w700,
                           fontFamily: 'monospace',
                         ),
                       ),
                       if (hasArgs) ...[
                         TextSpan(
                           text: ' ${command.args}',
-                          style: TextStyle(color: appColors.userBubbleText),
+                          style: TextStyle(color: textColor),
                         ),
                       ],
                     ],
@@ -305,6 +373,7 @@ class _CommandBubble extends StatelessWidget {
     );
   }
 }
+
 
 class _StatusIndicator extends StatelessWidget {
   final MessageStatus status;
