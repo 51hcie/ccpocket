@@ -1044,6 +1044,11 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         return 'permission_request:$toolUseId';
       case PermissionResolvedMessage(:final toolUseId):
         return 'permission_resolved:$toolUseId';
+      case SystemMessage(:final subtype):
+        if (subtype == 'init' || subtype == 'session_created') {
+          return 'system:init';
+        }
+        return null;
       default:
         return null;
     }
