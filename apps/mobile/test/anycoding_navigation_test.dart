@@ -17,7 +17,6 @@ import 'package:ccpocket/providers/bridge_cubits.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ccpocket/models/machine.dart';
-import 'package:ccpocket/models/supporter_status.dart';
 import 'package:ccpocket/providers/machine_manager_cubit.dart';
 import 'package:ccpocket/services/machine_manager_service.dart';
 import 'package:ccpocket/services/revenuecat_service.dart';
