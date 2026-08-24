@@ -117,12 +117,13 @@ class AnyCodingSettingsView extends StatelessWidget {
 
           // 2. Section: Bridge 主机状态
           const _SettingsSectionHeader(title: 'BRIDGE 主机连接'),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBgColor,
+          Material(
+            color: cardBgColor,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderColor),
+              side: BorderSide(color: borderColor),
             ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 ListTile(
@@ -192,12 +193,13 @@ class AnyCodingSettingsView extends StatelessWidget {
 
           // 3. Section: 偏好设置
           const _SettingsSectionHeader(title: '外观与偏好'),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBgColor,
+          Material(
+            color: cardBgColor,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderColor),
+              side: BorderSide(color: borderColor),
             ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 // Theme
@@ -259,12 +261,13 @@ class AnyCodingSettingsView extends StatelessWidget {
 
           // 4. Section: 支持引擎
           const _SettingsSectionHeader(title: '调度引擎支持'),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBgColor,
+          Material(
+            color: cardBgColor,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderColor),
+              side: BorderSide(color: borderColor),
             ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 ListTile(

@@ -25,7 +25,7 @@ void main() {
       );
     }
 
-    testWidgets('renders 4-step flow: Select Project, Select Engine, Input Prompt, Launch', (tester) async {
+    testWidgets('renders Command Composer: Project Selector, Engine Switcher, Prompt Editor, Launch', (tester) async {
       await tester.pumpWidget(
         buildTestHarness(
           AnyCodingNewTaskSheet(
@@ -38,10 +38,9 @@ void main() {
         ),
       );
 
-      // Steps
-      expect(find.text('选择项目'), findsOneWidget);
-      expect(find.text('选择执行引擎'), findsOneWidget);
-      expect(find.text('输入初始指令'), findsOneWidget);
+      // Projects & Sections
+      expect(find.text('my-app'), findsOneWidget);
+      expect(find.text('指令输入 (Prompt)'), findsOneWidget);
       expect(find.text('高级选项'), findsOneWidget);
 
       // Engines (Codex & Antigravity only, no Claude)
