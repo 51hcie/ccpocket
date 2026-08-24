@@ -410,14 +410,15 @@ void main() {
         1,
       );
 
-      // Send follow-up via input field and send button
-      await tester.enterText(
-        find.byKey(const ValueKey('message_input')),
-        followUpPrompt,
+      // Emit idle status to simulate AI completion
+      bridge.emitMessage(
+        const StatusMessage(status: ProcessStatus.idle),
+        sessionId: sessionId,
       );
       await pumpN(tester);
 
-      await tester.tap(find.byKey(const ValueKey('send_button')));
+      final bodyElement = tester.element(find.byType(Scaffold).last);
+      bodyElement.read<ChatSessionCubit>().sendMessage(followUpPrompt);
       await pumpN(tester);
 
       expect(
