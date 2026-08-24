@@ -146,6 +146,7 @@ export class AntigravityProcess extends EventEmitter {
     this.failureCode = null;
     this.failureMessage = null;
     this.stdoutBuf = "";
+    this.currentAssistantMessageId = null;
     this.turnId = randomUUID();
 
     const args = [
@@ -293,7 +294,7 @@ export class AntigravityProcess extends EventEmitter {
 
       if (stepType === "agent_response" && typeof su.text_delta === "string") {
         if (!this.currentAssistantMessageId) {
-          this.currentAssistantMessageId = randomUUID();
+          this.currentAssistantMessageId = (su.message_id as string) || (su.step_id as string) || randomUUID();
         }
         const textContent: AssistantTextContent = {
           type: "text",
@@ -316,7 +317,7 @@ export class AntigravityProcess extends EventEmitter {
         const toolName = (su.tool_name as string) || "tool";
         const toolInfo = (su.tool_info as Record<string, unknown>) || {};
         const params = (toolInfo.parameters as Record<string, unknown>) || {};
-        const toolId = randomUUID();
+        const toolId = (su.step_id as string) || (su.tool_call_id as string) || (su.call_id as string) || (toolInfo.id as string) || randomUUID();
 
         const toolContent: AssistantToolUseContent = {
           type: "tool_use",
@@ -325,7 +326,7 @@ export class AntigravityProcess extends EventEmitter {
           input: params,
         };
         const assistantMsg: AssistantMessage = {
-          id: randomUUID(),
+          id: toolId,
           role: "assistant",
           content: [toolContent],
           model: this.currentModel,
@@ -368,13 +369,14 @@ export class AntigravityProcess extends EventEmitter {
       }
 
       const responseText = typeof res.response === "string" ? res.response.trim() : "";
-      if (responseText) {
+      if (!this.currentAssistantMessageId && responseText) {
+        this.currentAssistantMessageId = (res.message_id as string) || randomUUID();
         const textContent: AssistantTextContent = {
           type: "text",
           text: responseText,
         };
         const assistantMsg: AssistantMessage = {
-          id: randomUUID(),
+          id: this.currentAssistantMessageId,
           role: "assistant",
           content: [textContent],
           model: this.currentModel,
@@ -393,6 +395,8 @@ export class AntigravityProcess extends EventEmitter {
         sessionId: this.conversationId,
         error: isSuccess ? undefined : (res.error ? String(res.error) : undefined),
       } as ServerMessage);
+
+      this.currentAssistantMessageId = null;
     }
   }
 

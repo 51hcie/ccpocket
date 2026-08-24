@@ -1037,6 +1037,11 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
           return 'assistant:uuid:$messageUuid';
         }
         if (message.id.isNotEmpty) return 'assistant:id:${message.id}';
+        final toolUse =
+            message.content.whereType<ToolUseContent>().firstOrNull;
+        if (toolUse != null && toolUse.id.isNotEmpty) {
+          return 'assistant:tool_use:${toolUse.id}';
+        }
         return null;
       case ToolResultMessage(:final toolUseId):
         return 'tool_result:$toolUseId';
@@ -1174,6 +1179,19 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         messageUuid: existing.messageUuid ?? incoming.messageUuid,
         timestamp: existing.timestamp,
       );
+    }
+    if (existing is ServerChatEntry && incoming is ServerChatEntry) {
+      if (existing.message is AssistantServerMessage &&
+          incoming.message is AssistantServerMessage) {
+        final existingMsg =
+            (existing.message as AssistantServerMessage).message;
+        final incomingMsg =
+            (incoming.message as AssistantServerMessage).message;
+        if (_hasRenderableAssistantContent(incomingMsg)) {
+          return incoming;
+        }
+        return existing;
+      }
     }
     return existing;
   }

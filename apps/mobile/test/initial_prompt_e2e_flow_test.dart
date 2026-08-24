@@ -460,5 +460,141 @@ void main() {
       // Only one "Session started" should be in the tree
       expect(find.text('Session started'), findsOneWidget);
     });
+
+    testWidgets('Antigravity: identical assistant message entering via live + history/reconnect is deduplicated to exactly one in UI', (tester) async {
+      const sessionId = 'antigravity-live-history-dedup';
+
+      final widget = await buildTestHarness(
+        bridge: bridge,
+        child: const ClaudeSessionScreen(
+          sessionId: sessionId,
+          provider: Provider.antigravity,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(widget);
+      await pumpN(tester);
+
+      // 1. Live assistant message arrives
+      const liveMsg = AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'antigravity-response-msg-1',
+          role: 'assistant',
+          content: [
+            TextContent(text: 'REPLY_EXACTLY_AE0549E_ONCE_RESULT'),
+          ],
+        ),
+      );
+      bridge.emitMessage(liveMsg, sessionId: sessionId);
+      await pumpN(tester);
+
+      expect(find.text('REPLY_EXACTLY_AE0549E_ONCE_RESULT'), findsOneWidget);
+
+      // 2. Reconnect / History snapshot arrives containing the same message ID
+      final historyMsg = HistoryMessage(
+        messages: const [
+          liveMsg,
+        ],
+      );
+      bridge.emitMessage(historyMsg, sessionId: sessionId);
+      await pumpN(tester);
+
+      // Must STILL be exactly one in the UI
+      expect(find.text('REPLY_EXACTLY_AE0549E_ONCE_RESULT'), findsOneWidget);
+    });
+
+    testWidgets('Antigravity: two different messages with identical text are legitimately preserved as two in UI', (tester) async {
+      const sessionId = 'antigravity-distinct-id-preservation';
+
+      final widget = await buildTestHarness(
+        bridge: bridge,
+        child: const ClaudeSessionScreen(
+          sessionId: sessionId,
+          provider: Provider.antigravity,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(widget);
+      await pumpN(tester);
+
+      // Message 1 in turn 1
+      const msg1 = AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'antigravity-turn-1-msg',
+          role: 'assistant',
+          content: [
+            TextContent(text: 'OK'),
+          ],
+        ),
+      );
+      bridge.emitMessage(msg1, sessionId: sessionId);
+      await pumpN(tester);
+
+      // Message 2 in turn 2 with different ID but same text "OK"
+      const msg2 = AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'antigravity-turn-2-msg',
+          role: 'assistant',
+          content: [
+            TextContent(text: 'OK'),
+          ],
+        ),
+      );
+      bridge.emitMessage(msg2, sessionId: sessionId);
+      await pumpN(tester);
+
+      // Both legitimate messages should be preserved in UI
+      expect(find.text('OK'), findsNWidgets(2));
+    });
+
+    testWidgets('Antigravity: tool events with stable ID are deduplicated and do not duplicate across live/history', (tester) async {
+      const sessionId = 'antigravity-tool-dedup';
+
+      final widget = await buildTestHarness(
+        bridge: bridge,
+        child: const ClaudeSessionScreen(
+          sessionId: sessionId,
+          provider: Provider.antigravity,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(widget);
+      await pumpN(tester);
+
+      const toolMsg = AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'tool-use-list-dir-123',
+          role: 'assistant',
+          content: [
+            ToolUseContent(
+              id: 'tool-use-list-dir-123',
+              name: 'list_dir',
+              input: {'DirectoryPath': '/workspace'},
+            ),
+          ],
+        ),
+      );
+
+      // 1. Live tool event arrives
+      bridge.emitMessage(toolMsg, sessionId: sessionId);
+      await pumpN(tester);
+
+      expect(find.text('list_dir'), findsOneWidget);
+
+      // 2. History snapshot arrives containing the same tool event
+      final historyMsg = HistoryMessage(
+        messages: const [
+          toolMsg,
+        ],
+      );
+      bridge.emitMessage(historyMsg, sessionId: sessionId);
+      await pumpN(tester);
+
+      // UI should still have only 1 list_dir widget
+      expect(find.text('list_dir'), findsOneWidget);
+    });
   });
 }
