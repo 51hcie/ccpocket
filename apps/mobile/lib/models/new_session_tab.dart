@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../constants/brand_config.dart';
 import '../l10n/app_localizations.dart';
 import 'messages.dart';
 
@@ -45,6 +46,27 @@ const defaultNewSessionTabs = [
   NewSessionTab.antigravity,
   NewSessionTab.claude,
 ];
+
+/// Returns the visible tabs for new sessions based on branding.
+/// In AnyCoding mode, only [NewSessionTab.codex] and [NewSessionTab.antigravity]
+/// are exposed.
+List<NewSessionTab> resolveVisibleNewSessionTabs({
+  List<NewSessionTab> configuredTabs = defaultNewSessionTabs,
+  bool isAnyCoding = BrandConfig.isAnyCoding,
+}) {
+  if (isAnyCoding) {
+    final filtered =
+        configuredTabs.where((t) => t != NewSessionTab.claude).toList();
+    if (!filtered.contains(NewSessionTab.codex)) {
+      filtered.insert(0, NewSessionTab.codex);
+    }
+    if (!filtered.contains(NewSessionTab.antigravity)) {
+      filtered.add(NewSessionTab.antigravity);
+    }
+    return filtered;
+  }
+  return configuredTabs;
+}
 
 EnabledAgentsMode enabledAgentsModeFromTabs(List<NewSessionTab> tabs) {
   final set = tabs.toSet();

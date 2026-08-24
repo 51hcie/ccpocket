@@ -952,7 +952,10 @@ class _SessionListScreenState extends State<SessionListScreen>
     if (legacy != null) return legacy;
 
     return await _loadSessionStartDefaults(provider: Provider.codex) ??
-        await _loadSessionStartDefaults(provider: Provider.claude);
+        await _loadSessionStartDefaults(provider: Provider.antigravity) ??
+        (BrandConfig.isAnyCoding
+            ? null
+            : await _loadSessionStartDefaults(provider: Provider.claude));
   }
 
   Future<void> _saveSessionStartDefaults(NewSessionParams params) async {

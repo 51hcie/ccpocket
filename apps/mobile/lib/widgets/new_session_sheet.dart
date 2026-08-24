@@ -432,6 +432,9 @@ Future<NewSessionParams?> showNewSessionSheet({
   List<NewSessionTab> visibleTabs = defaultNewSessionTabs,
   bool showExtendedCodexEfforts = false,
 }) {
+  final resolvedTabs = resolveVisibleNewSessionTabs(
+    configuredTabs: visibleTabs,
+  );
   return showModalBottomSheet<NewSessionParams>(
     context: context,
     isScrollControlled: true,
@@ -446,7 +449,7 @@ Future<NewSessionParams?> showNewSessionSheet({
       bridge: bridge,
       initialParams: initialParams,
       lockProvider: lockProvider,
-      visibleTabs: visibleTabs,
+      visibleTabs: resolvedTabs,
       showExtendedCodexEfforts: showExtendedCodexEfforts,
     ),
   );
@@ -667,14 +670,23 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   bool get _canExpandProjects =>
       _allMergedProjects.length > _defaultRecentProjects;
 
+  List<NewSessionTab> get _effectiveVisibleTabs =>
+      resolveVisibleNewSessionTabs(configuredTabs: widget.visibleTabs);
+
   @override
   void initState() {
     super.initState();
-    final initialProvider =
-        widget.initialParams?.provider ?? widget.visibleTabs.first.toProvider();
-    final initialPage = widget.visibleTabs
+    final effectiveTabs = _effectiveVisibleTabs;
+    final preferredInitial =
+        widget.initialParams?.provider ?? effectiveTabs.first.toProvider();
+    final initialProvider = effectiveTabs.any(
+      (t) => t.toProvider() == preferredInitial,
+    )
+        ? preferredInitial
+        : effectiveTabs.first.toProvider();
+    final initialPage = effectiveTabs
         .indexWhere((t) => t.toProvider() == initialProvider)
-        .clamp(0, widget.visibleTabs.length - 1);
+        .clamp(0, effectiveTabs.length - 1);
     _pageController = PageController(initialPage: initialPage);
     _provider = initialProvider;
     // Use the latest cached recent sessions from BridgeService if available,
@@ -811,11 +823,12 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     if (p == null) return;
 
     _pathController.text = p.projectPath;
-    // Validate provider is in visibleTabs; fall back to first tab if hidden.
-    final isVisible = widget.visibleTabs.any(
+    // Validate provider is in _effectiveVisibleTabs; fall back to first tab if hidden.
+    final effectiveTabs = _effectiveVisibleTabs;
+    final isVisible = effectiveTabs.any(
       (t) => t.toProvider() == p.provider,
     );
-    _provider = isVisible ? p.provider : widget.visibleTabs.first.toProvider();
+    _provider = isVisible ? p.provider : effectiveTabs.first.toProvider();
     _executionMode = p.executionMode;
     _codexPermissionsMode = p.codexPermissionsMode;
     _claudePermissionMode = p.provider == Provider.claude
@@ -1413,9 +1426,10 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
 
   void _onProviderChanged(Provider p) {
     setState(() => _provider = p);
-    final page = widget.visibleTabs
+    final effectiveTabs = _effectiveVisibleTabs;
+    final page = effectiveTabs
         .indexWhere((t) => t.toProvider() == p)
-        .clamp(0, widget.visibleTabs.length - 1);
+        .clamp(0, effectiveTabs.length - 1);
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 300),
@@ -1428,20 +1442,21 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     // Tab: cycle provider (only when not locked, multiple tabs, and no text field focused)
+    final effectiveTabs = _effectiveVisibleTabs;
     if (event.logicalKey == LogicalKeyboardKey.tab &&
         !HardwareKeyboard.instance.isShiftPressed &&
         !HardwareKeyboard.instance.isMetaPressed &&
         !widget.lockProvider &&
-        widget.visibleTabs.length > 1) {
+        effectiveTabs.length > 1) {
       // Only toggle if no text field has focus (check for primary focus)
       final focus = FocusManager.instance.primaryFocus;
       final isInTextField = focus?.context?.widget is EditableText;
       if (!isInTextField) {
-        final currentIndex = widget.visibleTabs.indexWhere(
+        final currentIndex = effectiveTabs.indexWhere(
           (t) => t.toProvider() == _provider,
         );
-        final nextIndex = (currentIndex + 1) % widget.visibleTabs.length;
-        _onProviderChanged(widget.visibleTabs[nextIndex].toProvider());
+        final nextIndex = (currentIndex + 1) % effectiveTabs.length;
+        _onProviderChanged(effectiveTabs[nextIndex].toProvider());
         return KeyEventResult.handled;
       }
     }
@@ -1459,6 +1474,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   @override
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
+    final effectiveTabs = _effectiveVisibleTabs;
     return Focus(
       onKeyEvent: _handleKeyEvent,
       child: AnimatedPadding(
@@ -1476,23 +1492,23 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
               _SheetTitle(
                 provider: _provider,
                 lockProvider: widget.lockProvider,
-                visibleTabs: widget.visibleTabs,
+                visibleTabs: effectiveTabs,
                 onProviderChanged: _onProviderChanged,
               ),
               const SizedBox(height: 12),
               Expanded(
                 child: PageView(
                   controller: _pageController,
-                  physics: widget.lockProvider || widget.visibleTabs.length <= 1
+                  physics: widget.lockProvider || effectiveTabs.length <= 1
                       ? const NeverScrollableScrollPhysics()
                       : null,
                   onPageChanged: (index) {
                     setState(() {
-                      _provider = widget.visibleTabs[index].toProvider();
+                      _provider = effectiveTabs[index].toProvider();
                     });
                   },
                   children: [
-                    for (final tab in widget.visibleTabs)
+                    for (final tab in effectiveTabs)
                       _buildPage(tab.toProvider()),
                   ],
                 ),

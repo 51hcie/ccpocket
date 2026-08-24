@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
 import '../../../models/new_session_tab.dart';
 import '../../../services/bridge_service.dart';
@@ -93,7 +94,7 @@ class SessionListCubit extends Cubit<SessionListState> {
         const <String>{};
 
     var provider = ProviderFilter.all;
-    if (providerStr == ProviderFilter.claude.name) {
+    if (providerStr == ProviderFilter.claude.name && !BrandConfig.isAnyCoding) {
       provider = ProviderFilter.claude;
     } else if (providerStr == ProviderFilter.antigravity.name) {
       provider = ProviderFilter.antigravity;
@@ -197,15 +198,22 @@ class SessionListCubit extends Cubit<SessionListState> {
     });
   }
 
-  /// Toggle provider filter: All → Codex → Antigravity → Claude → All.
+  /// Toggle provider filter: All → Codex → Antigravity (→ Claude) → All.
   void toggleProviderFilter({List<ProviderFilter>? allowedFilters}) {
-    final options = allowedFilters == null || allowedFilters.isEmpty
+    final defaultOptions = BrandConfig.isAnyCoding
         ? const [
             ProviderFilter.all,
             ProviderFilter.codex,
             ProviderFilter.antigravity,
-            ProviderFilter.claude,
           ]
+        : const [
+            ProviderFilter.all,
+            ProviderFilter.codex,
+            ProviderFilter.antigravity,
+            ProviderFilter.claude,
+          ];
+    final options = (allowedFilters == null || allowedFilters.isEmpty)
+        ? defaultOptions
         : allowedFilters;
     final currentIndex = options.indexOf(state.providerFilter);
     final next = options[(currentIndex + 1) % options.length];
@@ -410,8 +418,28 @@ class SessionListCubit extends Cubit<SessionListState> {
 }
 
 List<ProviderFilter> providerFiltersForEnabledTabs(
-  List<NewSessionTab> enabledTabs,
-) {
+  List<NewSessionTab> enabledTabs, {
+  bool isAnyCoding = BrandConfig.isAnyCoding,
+}) {
+  if (isAnyCoding) {
+    final set = enabledTabs.where((t) => t != NewSessionTab.claude).toSet();
+    final hasCodex = set.contains(NewSessionTab.codex);
+    final hasAntigravity = set.contains(NewSessionTab.antigravity);
+    if (hasCodex && hasAntigravity) {
+      return const [
+        ProviderFilter.all,
+        ProviderFilter.codex,
+        ProviderFilter.antigravity,
+      ];
+    }
+    if (hasCodex) return const [ProviderFilter.codex];
+    if (hasAntigravity) return const [ProviderFilter.antigravity];
+    return const [
+      ProviderFilter.all,
+      ProviderFilter.codex,
+      ProviderFilter.antigravity,
+    ];
+  }
   return switch (enabledAgentsModeFromTabs(enabledTabs)) {
     EnabledAgentsMode.all => const [
       ProviderFilter.all,

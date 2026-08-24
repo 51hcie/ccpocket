@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../constants/app_constants.dart';
+import '../../../constants/brand_config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/messages.dart';
 import '../../../services/bridge_service.dart';
@@ -183,8 +184,10 @@ class _UsageSectionState extends State<UsageSection> {
               ),
             ),
           ),
-        const SizedBox(height: 8),
-        const _ClaudeUsageLinksCard(),
+        if (!BrandConfig.isAnyCoding) ...[
+          const SizedBox(height: 8),
+          const _ClaudeUsageLinksCard(),
+        ],
       ],
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/brand_config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/new_session_tab.dart';
 import '../../../theme/app_theme.dart';
@@ -52,10 +53,14 @@ class _TabsBottomSheetContentState extends State<_TabsBottomSheetContent> {
   void initState() {
     super.initState();
     // Build ordered list: enabled tabs first (in order), then disabled ones.
+    final availableTabs = BrandConfig.isAnyCoding
+        ? NewSessionTab.values.where((t) => t != NewSessionTab.claude).toSet()
+        : NewSessionTab.values.toSet();
     final enabledSet = widget.current.toSet();
     _items = [
-      for (final tab in widget.current) (tab: tab, enabled: true),
-      for (final tab in NewSessionTab.values)
+      for (final tab in widget.current)
+        if (availableTabs.contains(tab)) (tab: tab, enabled: true),
+      for (final tab in availableTabs)
         if (!enabledSet.contains(tab)) (tab: tab, enabled: false),
     ];
   }

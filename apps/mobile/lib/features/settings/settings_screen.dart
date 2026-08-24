@@ -555,71 +555,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      child: Row(
-                        children: [
-                          Icon(Icons.smart_toy_outlined, color: cs.primary),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: SegmentedButton<EnabledAgentsMode>(
-                              key: const ValueKey('enabled_agents_selector'),
-                              segments: const [
-                                ButtonSegment(
-                                  value: EnabledAgentsMode.both,
-                                  label: Text('Both'),
-                                ),
-                                ButtonSegment(
-                                  value: EnabledAgentsMode.codex,
-                                  label: Text('Codex'),
-                                ),
-                                ButtonSegment(
-                                  value: EnabledAgentsMode.claude,
-                                  label: Text('Claude'),
-                                ),
-                              ],
-                              selected: {enabledAgentsMode},
-                              showSelectedIcon: false,
-                              onSelectionChanged: (selection) => context
-                                  .read<SettingsCubit>()
-                                  .setEnabledAgentsMode(selection.single),
+                    if (!BrandConfig.isAnyCoding) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.smart_toy_outlined, color: cs.primary),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: SegmentedButton<EnabledAgentsMode>(
+                                key: const ValueKey('enabled_agents_selector'),
+                                segments: const [
+                                  ButtonSegment(
+                                    value: EnabledAgentsMode.both,
+                                    label: Text('Both'),
+                                  ),
+                                  ButtonSegment(
+                                    value: EnabledAgentsMode.codex,
+                                    label: Text('Codex'),
+                                  ),
+                                  ButtonSegment(
+                                    value: EnabledAgentsMode.claude,
+                                    label: Text('Claude'),
+                                  ),
+                                ],
+                                selected: {enabledAgentsMode},
+                                showSelectedIcon: false,
+                                onSelectionChanged: (selection) => context
+                                    .read<SettingsCubit>()
+                                    .setEnabledAgentsMode(selection.single),
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+                      if (enabledAgentsMode == EnabledAgentsMode.both) ...[
+                        Divider(
+                          height: 1,
+                          indent: 16,
+                          endIndent: 16,
+                          color: cs.outlineVariant,
+                        ),
+                        ListTile(
+                          leading: Icon(Icons.tab, color: cs.primary),
+                          title: Text(l.settingsNewSessionTabs),
+                          subtitle: Text(
+                            state.newSessionTabs
+                                .map((t) => t.localizedLabel(l))
+                                .join(', '),
                           ),
-                        ],
-                      ),
-                    ),
-                    if (enabledAgentsMode == EnabledAgentsMode.both) ...[
-                      Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                        color: cs.outlineVariant,
-                      ),
-                      ListTile(
-                        leading: Icon(Icons.tab, color: cs.primary),
-                        title: Text(l.settingsNewSessionTabs),
-                        subtitle: Text(
-                          state.newSessionTabs
-                              .map((t) => t.localizedLabel(l))
-                              .join(', '),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => showNewSessionTabsBottomSheet(
+                            context: context,
+                            current: state.newSessionTabs,
+                            onChanged: (tabs) => context
+                                .read<SettingsCubit>()
+                                .setNewSessionTabs(tabs),
+                          ),
                         ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => showNewSessionTabsBottomSheet(
-                          context: context,
-                          current: state.newSessionTabs,
-                          onChanged: (tabs) => context
-                              .read<SettingsCubit>()
-                              .setNewSessionTabs(tabs),
-                        ),
-                      ),
+                      ],
                     ],
-                    if (codexEnabled) ...[
-                      Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                        color: cs.outlineVariant,
-                      ),
+                    if (codexEnabled || BrandConfig.isAnyCoding) ...[
+                      if (!BrandConfig.isAnyCoding)
+                        Divider(
+                          height: 1,
+                          indent: 16,
+                          endIndent: 16,
+                          color: cs.outlineVariant,
+                        ),
                       SwitchListTile(
                         secondary: Icon(
                           Icons.drive_file_rename_outline,
@@ -654,7 +657,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             .setShowExtendedCodexEfforts(value),
                       ),
                     ],
-                    if (claudeEnabled) ...[
+                    if (claudeEnabled && !BrandConfig.isAnyCoding) ...[
                       Divider(
                         height: 1,
                         indent: 16,
