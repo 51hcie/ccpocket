@@ -1,6 +1,7 @@
+import 'dart:io' show Platform;
+
 import '../../../models/messages.dart';
 import '../../../models/offline_pending_action.dart';
-import '../../../services/platform_environment_service.dart';
 
 /// The 4 standard AnyCoding task categories.
 enum AnyCodingTaskCategory {
@@ -82,10 +83,12 @@ class TaskStatusClassifier {
 
   /// Shortens an absolute path by replacing home directory with `~`.
   static String shortenHomePath(String path) {
-    final home = getHomeDirectory();
-    if (home.isNotEmpty && path.startsWith(home)) {
-      return '~${path.substring(home.length)}';
-    }
+    try {
+      final home = Platform.environment['HOME'] ?? '';
+      if (home.isNotEmpty && path.startsWith(home)) {
+        return '~${path.substring(home.length)}';
+      }
+    } catch (_) {}
     return path;
   }
 
@@ -135,12 +138,12 @@ class TaskStatusClassifier {
     }
     final prompt = firstPrompt.trim();
     if (prompt.isNotEmpty) {
-      return prompt.replaceAll(r'
+      return prompt.replaceAll('
 ', ' ');
     }
     final last = lastPrompt?.trim();
     if (last != null && last.isNotEmpty) {
-      return last.replaceAll(r'
+      return last.replaceAll('
 ', ' ');
     }
     return '新建任务';

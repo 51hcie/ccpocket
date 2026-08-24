@@ -5,7 +5,7 @@ import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
 import '../../../models/offline_pending_action.dart';
 import '../../../services/bridge_service.dart';
-import '../../../widgets/directory_browser_sheet.dart';
+import '../../../widgets/directory_browser_sheet.dart' show showDirectoryBrowserSheet;
 import '../services/task_status_classifier.dart';
 
 class AnyCodingProjectsView extends StatefulWidget {
@@ -44,13 +44,9 @@ class _AnyCodingProjectsViewState extends State<AnyCodingProjectsView> {
   }
 
   Future<void> _browseDirectory() async {
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showDirectoryBrowserSheet(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => DirectoryBrowserSheet(
-        bridge: widget.bridge,
-      ),
+      bridge: widget.bridge,
     );
 
     if (selected != null && selected.isNotEmpty && mounted) {

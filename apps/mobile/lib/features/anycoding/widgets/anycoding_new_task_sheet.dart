@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
 import '../../../services/bridge_service.dart';
-import '../../../widgets/directory_browser_sheet.dart';
+import '../../../widgets/directory_browser_sheet.dart' show showDirectoryBrowserSheet;
 import '../../../widgets/new_session_sheet.dart';
 import '../services/task_status_classifier.dart';
 
@@ -144,14 +144,10 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
   }
 
   Future<void> _browseDirectory() async {
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showDirectoryBrowserSheet(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => DirectoryBrowserSheet(
-        bridge: widget.bridge,
-        initialPath: _projectPath.isNotEmpty ? _projectPath : null,
-      ),
+      bridge: widget.bridge,
+      initialPath: _projectPath.isNotEmpty ? _projectPath : null,
     );
 
     if (selected != null && selected.isNotEmpty && mounted) {
