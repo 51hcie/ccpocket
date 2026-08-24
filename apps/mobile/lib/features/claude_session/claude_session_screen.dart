@@ -200,26 +200,9 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
 
     if (_isPending) {
       _listenForSessionCreated();
-    } else {
-      _maybeSendInitialPrompt();
     }
     _listenForSessionSwitch();
     _listenForSessionStopped();
-  }
-
-  bool _initialPromptDispatched = false;
-
-  void _maybeSendInitialPrompt() {
-    if (_initialPromptDispatched) return;
-    final prompt = widget.initialPrompt?.trim();
-    if (prompt == null || prompt.isEmpty) return;
-    if (_isPending) return;
-    _initialPromptDispatched = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<ChatSessionCubit>().sendMessage(prompt);
-      }
-    });
   }
 
   @override
@@ -337,7 +320,6 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     _syncSessionRouteIdentity();
     _pendingSub?.cancel();
     _pendingSub = null;
-    _maybeSendInitialPrompt();
   }
 
   void _listenForSessionStopped() {
@@ -487,6 +469,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       recentPeekedFiles: _recentPeekedFiles,
       permissionMode: _permissionMode,
       sandboxMode: _sandboxMode,
+      initialPrompt: widget.initialPrompt,
       onBackToSessions: widget.onBackToSessions,
       hideSessionBackButton: widget.hideSessionBackButton,
     );
@@ -504,6 +487,7 @@ class _ChatScreenProviders extends StatelessWidget {
   final List<String> recentPeekedFiles;
   final PermissionMode? permissionMode;
   final SandboxMode? sandboxMode;
+  final String? initialPrompt;
   final VoidCallback? onBackToSessions;
   final bool hideSessionBackButton;
 
@@ -518,6 +502,7 @@ class _ChatScreenProviders extends StatelessWidget {
     this.recentPeekedFiles = const [],
     this.permissionMode,
     this.sandboxMode,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -547,6 +532,7 @@ class _ChatScreenProviders extends StatelessWidget {
         projectPath: projectPath,
         gitBranch: gitBranch,
         worktreePath: worktreePath,
+        initialPrompt: initialPrompt,
         onBackToSessions: onBackToSessions,
         hideSessionBackButton: hideSessionBackButton,
       ),
@@ -559,6 +545,7 @@ class _ChatScreenBody extends HookWidget {
   final String? projectPath;
   final String? gitBranch;
   final String? worktreePath;
+  final String? initialPrompt;
   final VoidCallback? onBackToSessions;
   final bool hideSessionBackButton;
 
@@ -567,6 +554,7 @@ class _ChatScreenBody extends HookWidget {
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -577,6 +565,22 @@ class _ChatScreenBody extends HookWidget {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final shell = WorkspaceShellScreen.maybeOf(context);
     final presentationListenable = shell?.presentationListenable;
+
+    // Initial prompt dispatch (dispatches exactly once in valid Cubit scope)
+    final initialPromptDispatched = useRef(false);
+    useEffect(() {
+      if (initialPromptDispatched.value) return null;
+      final prompt = initialPrompt?.trim();
+      if (prompt != null && prompt.isNotEmpty) {
+        initialPromptDispatched.value = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            context.read<ChatSessionCubit>().sendMessage(prompt);
+          }
+        });
+      }
+      return null;
+    }, const []);
 
     // Mutable branch state (refreshed from Bridge)
     final currentBranch = useState(gitBranch);

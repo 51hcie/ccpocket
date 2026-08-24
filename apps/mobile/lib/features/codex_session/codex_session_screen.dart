@@ -216,26 +216,9 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
 
     if (_isPending) {
       _listenForSessionCreated();
-    } else {
-      _maybeSendInitialPrompt();
     }
     _listenForSandboxRestart();
     _listenForSessionStopped();
-  }
-
-  bool _initialPromptDispatched = false;
-
-  void _maybeSendInitialPrompt() {
-    if (_initialPromptDispatched) return;
-    final prompt = widget.initialPrompt?.trim();
-    if (prompt == null || prompt.isEmpty) return;
-    if (_isPending) return;
-    _initialPromptDispatched = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<ChatSessionCubit>().sendMessage(prompt);
-      }
-    });
   }
 
   @override
@@ -383,7 +366,6 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     _syncSessionRouteIdentity();
     _pendingSub?.cancel();
     _pendingSub = null;
-    _maybeSendInitialPrompt();
   }
 
   void _listenForSessionStopped() {
@@ -516,6 +498,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       codexApprovalPolicy: _codexApprovalPolicy,
       codexApprovalsReviewer: _codexApprovalsReviewer,
       codexPermissionsMode: _codexPermissionsMode,
+      initialPrompt: widget.initialPrompt,
       onBackToSessions: widget.onBackToSessions,
       hideSessionBackButton: widget.hideSessionBackButton,
     );
@@ -538,6 +521,7 @@ class _CodexProviders extends StatelessWidget {
   final CodexApprovalPolicy? codexApprovalPolicy;
   final String? codexApprovalsReviewer;
   final CodexPermissionsMode? codexPermissionsMode;
+  final String? initialPrompt;
   final VoidCallback? onBackToSessions;
   final bool hideSessionBackButton;
 
@@ -554,6 +538,7 @@ class _CodexProviders extends StatelessWidget {
     this.codexApprovalPolicy,
     this.codexApprovalsReviewer,
     this.codexPermissionsMode,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -586,6 +571,7 @@ class _CodexProviders extends StatelessWidget {
         projectPath: projectPath,
         gitBranch: gitBranch,
         worktreePath: worktreePath,
+        initialPrompt: initialPrompt,
         onBackToSessions: onBackToSessions,
         hideSessionBackButton: hideSessionBackButton,
       ),
@@ -602,6 +588,7 @@ class _CodexChatBody extends HookWidget {
   final String? projectPath;
   final String? gitBranch;
   final String? worktreePath;
+  final String? initialPrompt;
   final VoidCallback? onBackToSessions;
   final bool hideSessionBackButton;
 
@@ -610,6 +597,7 @@ class _CodexChatBody extends HookWidget {
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
+    this.initialPrompt,
     this.onBackToSessions,
     this.hideSessionBackButton = false,
   });
@@ -626,6 +614,22 @@ class _CodexChatBody extends HookWidget {
     final showRemoteGitStatusBadge = context.select(
       (SettingsCubit cubit) => cubit.state.showRemoteGitStatusBadge,
     );
+
+    // Initial prompt dispatch (dispatches exactly once in valid Cubit scope)
+    final initialPromptDispatched = useRef(false);
+    useEffect(() {
+      if (initialPromptDispatched.value) return null;
+      final prompt = initialPrompt?.trim();
+      if (prompt != null && prompt.isNotEmpty) {
+        initialPromptDispatched.value = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            context.read<ChatSessionCubit>().sendMessage(prompt);
+          }
+        });
+      }
+      return null;
+    }, const []);
 
     // Custom hooks
     final lifecycleState = useAppLifecycleState();
