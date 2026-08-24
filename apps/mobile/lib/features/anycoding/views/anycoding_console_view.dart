@@ -90,22 +90,27 @@ class AnyCodingConsoleView extends StatelessWidget {
           ? BrandConfig.anyCodingSurfaceDark
           : cs.surfaceContainerLowest,
       appBar: AppBar(
-        titleSpacing: 16,
+        titleSpacing: 12,
         elevation: 0,
+        centerTitle: false,
         backgroundColor: isDark
             ? BrandConfig.anyCodingPrimaryDark
             : cs.surface,
-        title: Row(
+        title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AnyCodingLogo(size: 24, showContainer: true),
-            const SizedBox(width: 8),
-            Text(
-              BrandConfig.appName,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 17,
-                letterSpacing: -0.2,
+            AnyCodingLogo(size: 22, showContainer: true),
+            SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                BrandConfig.appName,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -119,6 +124,9 @@ class AnyCodingConsoleView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh, size: 20),
             tooltip: '刷新状态',
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             onPressed: onRefresh,
           ),
           const SizedBox(width: 6),
