@@ -259,33 +259,45 @@ class _ProjectListItem extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: FilledButton.tonalIcon(
+                child: FilledButton.tonal(
                   onPressed: onLaunchCodex,
-                  icon: const Icon(Icons.bolt, size: 16, color: BrandConfig.codexAccent),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('启动 Codex', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                  ),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt, size: 16, color: BrandConfig.codexAccent),
+                        SizedBox(width: 4),
+                        Text('启动 Codex', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: FilledButton.tonalIcon(
+                child: FilledButton.tonal(
                   onPressed: onLaunchAntigravity,
-                  icon: const Icon(Icons.auto_awesome, size: 16, color: BrandConfig.antigravityAccent),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('启动 Antigravity', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                  ),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 16, color: BrandConfig.antigravityAccent),
+                        SizedBox(width: 4),
+                        Text('启动 Antigravity', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
                   ),
                 ),
               ),

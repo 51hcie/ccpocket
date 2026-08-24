@@ -771,9 +771,12 @@ class _ProjectQuickLaunchCard extends StatelessWidget {
                 child: Text(
                   project.name,
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (project.activeCount > 0)
+              if (project.activeCount > 0) ...[
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
@@ -785,42 +788,57 @@ class _ProjectQuickLaunchCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 10, color: Color(0xFF3B82F6), fontWeight: FontWeight.bold),
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 2),
           Text(
             TaskStatusClassifier.formatMiddleEllipsisPath(project.path, maxLength: 36),
             style: TextStyle(fontSize: 10, fontFamily: 'monospace', color: cs.onSurfaceVariant),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: OutlinedButton(
                   onPressed: onLaunchCodex,
-                  icon: const Icon(Icons.bolt, size: 14, color: BrandConfig.codexAccent),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('启动 Codex', style: TextStyle(fontSize: 11)),
-                  ),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt, size: 14, color: BrandConfig.codexAccent),
+                        SizedBox(width: 4),
+                        Text('启动 Codex', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: OutlinedButton.icon(
+                child: OutlinedButton(
                   onPressed: onLaunchAntigravity,
-                  icon: const Icon(Icons.auto_awesome, size: 14, color: BrandConfig.antigravityAccent),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('启动 Antigravity', style: TextStyle(fontSize: 11)),
-                  ),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 14, color: BrandConfig.antigravityAccent),
+                        SizedBox(width: 4),
+                        Text('启动 Antigravity', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -75,13 +75,13 @@ void main() {
 
       // Tap launch Codex
       await tester.tap(find.text('启动 Codex'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(launchedPath, equals('/Users/developer/projects/antigravity-hub'));
       expect(launchedProvider, equals(Provider.codex));
 
       // Tap launch Antigravity
       await tester.tap(find.text('启动 Antigravity'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(launchedProvider, equals(Provider.antigravity));
     });
   });
