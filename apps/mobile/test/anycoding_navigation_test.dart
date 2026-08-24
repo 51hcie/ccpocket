@@ -147,7 +147,7 @@ void main() {
       );
 
       // Default tab: 控制台 (Console)
-      expect(find.text('新建 AI 任务'), findsOneWidget);
+      expect(find.text('新建任务'), findsOneWidget);
       expect(find.text('待处理事项'), findsOneWidget);
 
       // Switch to Tab 1: 任务 (Tasks)

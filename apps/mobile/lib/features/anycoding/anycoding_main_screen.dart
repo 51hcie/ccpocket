@@ -155,6 +155,7 @@ class _AnyCodingMainScreenState extends State<AnyCodingMainScreen> {
                 initialProjectPath: path,
                 initialProvider: provider,
               ),
+              onNavigateTab: _switchTab,
             ),
 
             // Tab 1: 任务中心 (Tasks)

@@ -214,36 +214,43 @@ class _CodeFontFamilyList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
-      child: RadioGroup<CodeFontFamily>(
-        groupValue: current,
-        onChanged: (value) {
-          if (value == null) return;
-          onChanged(value);
-        },
-        child: Column(
-          children: [
-            for (var i = 0; i < CodeFontFamily.values.length; i++) ...[
-              _CodeFontFamilyTile(family: CodeFontFamily.values[i]),
-              if (i != CodeFontFamily.values.length - 1)
-                const Divider(height: 1),
-            ],
+      child: Column(
+        children: [
+          for (var i = 0; i < CodeFontFamily.values.length; i++) ...[
+            _CodeFontFamilyTile(
+              family: CodeFontFamily.values[i],
+              groupValue: current,
+              onChanged: (value) {
+                if (value != null) onChanged(value);
+              },
+            ),
+            if (i != CodeFontFamily.values.length - 1)
+              const Divider(height: 1),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
 class _CodeFontFamilyTile extends StatelessWidget {
-  const _CodeFontFamilyTile({required this.family});
+  const _CodeFontFamilyTile({
+    required this.family,
+    required this.groupValue,
+    required this.onChanged,
+  });
 
   final CodeFontFamily family;
+  final CodeFontFamily groupValue;
+  final ValueChanged<CodeFontFamily?> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return RadioListTile<CodeFontFamily>(
       key: ValueKey('code_font_family_${family.id}_radio'),
       value: family,
+      groupValue: groupValue,
+      onChanged: onChanged,
       title: Text(
         family.label,
         style: TextStyle(fontFamily: family.fontFamily),

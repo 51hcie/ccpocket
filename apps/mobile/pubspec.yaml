@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.115.2+217
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.6.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -125,11 +125,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-  config:
-    # speech_to_text's SwiftPM manifest still targets macOS 10.14, while the
-    # plugin uses APIs that require 10.15+. CocoaPods respects the app's 12.0
-    # deployment target, so keep SPM off for this project for now.
-    enable-swift-package-manager: false
   generate: true
 
   # The following line ensures that the Material Icons font is

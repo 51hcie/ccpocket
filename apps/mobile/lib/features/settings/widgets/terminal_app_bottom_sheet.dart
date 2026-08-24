@@ -168,36 +168,44 @@ class _TerminalAppSheetContentState extends State<_TerminalAppSheetContent> {
             child: ListView(
               shrinkWrap: true,
               children: [
-                RadioGroup<String>(
-                  groupValue: _isCustom
-                      ? _kCustomKey
-                      : (_selectedPresetId ?? ''),
-                  onChanged: (v) {
-                    if (v == _kCustomKey) {
-                      _selectCustom();
-                    } else if (v != null) {
-                      _selectPreset(v);
-                    }
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Presets
-                      for (final preset in kTerminalAppPresets)
-                        RadioListTile<String>(
-                          value: preset.id,
-                          title: Text(preset.name),
-                          secondary: const Icon(Icons.terminal, size: 20),
-                        ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      // Custom option
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Presets
+                    for (final preset in kTerminalAppPresets)
                       RadioListTile<String>(
-                        value: _kCustomKey,
-                        title: Text(l.terminalAppCustom),
-                        secondary: const Icon(Icons.edit_outlined, size: 20),
+                        value: preset.id,
+                        groupValue: _isCustom
+                            ? _kCustomKey
+                            : (_selectedPresetId ?? ''),
+                        onChanged: (v) {
+                          if (v == _kCustomKey) {
+                            _selectCustom();
+                          } else if (v != null) {
+                            _selectPreset(v);
+                          }
+                        },
+                        title: Text(preset.name),
+                        secondary: const Icon(Icons.terminal, size: 20),
                       ),
-                    ],
-                  ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    // Custom option
+                    RadioListTile<String>(
+                      value: _kCustomKey,
+                      groupValue: _isCustom
+                          ? _kCustomKey
+                          : (_selectedPresetId ?? ''),
+                      onChanged: (v) {
+                        if (v == _kCustomKey) {
+                          _selectCustom();
+                        } else if (v != null) {
+                          _selectPreset(v);
+                        }
+                      },
+                      title: Text(l.terminalAppCustom),
+                      secondary: const Icon(Icons.edit_outlined, size: 20),
+                    ),
+                  ],
                 ),
                 // Custom fields
                 if (_isCustom) ...[

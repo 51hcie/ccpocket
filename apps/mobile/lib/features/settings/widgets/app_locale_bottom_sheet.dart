@@ -85,22 +85,20 @@ class _AppLocaleBottomSheetContent extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
-        RadioGroup<String>(
-          groupValue: current,
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final (id, label, subtitle) in appLocales)
-                RadioListTile<String>(
-                  value: id,
-                  title: Text(id.isEmpty ? l.languageSystem : label),
-                  subtitle: subtitle != null ? Text(subtitle) : null,
-                ),
-            ],
-          ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (id, label, subtitle) in appLocales)
+              RadioListTile<String>(
+                value: id,
+                groupValue: current,
+                onChanged: (v) {
+                  if (v != null) onChanged(v);
+                },
+                title: Text(id.isEmpty ? l.languageSystem : label),
+                subtitle: subtitle != null ? Text(subtitle) : null,
+              ),
+          ],
         ),
         SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
       ],

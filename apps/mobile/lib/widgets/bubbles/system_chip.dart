@@ -11,25 +11,48 @@ class SystemChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
-    final isCodexStarted =
-        message.provider == 'codex' &&
-        (message.subtype == 'init' || message.subtype == 'session_created');
-    final label = isCodexStarted ? null : 'System: ${message.subtype}';
+    final isInit = message.subtype == 'init' || message.subtype == 'session_created';
+
+    // Completely suppress empty/raw system init bubbles
+    if (isInit) {
+      if (message.provider == 'codex' && message.model != null) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Chip(
+              label: CodexEnvironmentSummary(
+                leadingLabel: '会话已启动',
+                model: message.model,
+                reasoningEffort: message.modelReasoningEffort,
+                approvalPolicy: message.approvalPolicy,
+                approvalsReviewer: message.approvalsReviewer,
+                sandboxMode: message.sandboxMode,
+                showDefaultReasoning: true,
+              ),
+              backgroundColor: appColors.systemChip,
+              side: BorderSide.none,
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        );
+      }
+      // For Antigravity or general init without model summary, hide completely
+      return const SizedBox.shrink();
+    }
+
+    final subtypeLabel = switch (message.subtype) {
+      'compact_boundary' => '上下文已压缩',
+      'tool_use' => '工具调用',
+      'error' => '系统异常',
+      _ => '系统: ${message.subtype}',
+    };
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Chip(
-          label: isCodexStarted
-              ? CodexEnvironmentSummary(
-                  leadingLabel: 'Session started',
-                  model: message.model,
-                  reasoningEffort: message.modelReasoningEffort,
-                  approvalPolicy: message.approvalPolicy,
-                  approvalsReviewer: message.approvalsReviewer,
-                  sandboxMode: message.sandboxMode,
-                  showDefaultReasoning: true,
-                )
-              : Text(label!, style: const TextStyle(fontSize: 12)),
+          label: Text(subtypeLabel, style: const TextStyle(fontSize: 12)),
           backgroundColor: appColors.systemChip,
           side: BorderSide.none,
           padding: EdgeInsets.zero,

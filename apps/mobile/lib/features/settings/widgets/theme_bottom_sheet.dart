@@ -70,31 +70,37 @@ class _ThemeBottomSheetContent extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
-        RadioGroup<ThemeMode>(
-          groupValue: current,
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<ThemeMode>(
-                value: ThemeMode.system,
-                title: const Text('System'),
-                secondary: const Icon(Icons.settings_brightness, size: 20),
-              ),
-              RadioListTile<ThemeMode>(
-                value: ThemeMode.light,
-                title: const Text('Light'),
-                secondary: const Icon(Icons.light_mode, size: 20),
-              ),
-              RadioListTile<ThemeMode>(
-                value: ThemeMode.dark,
-                title: const Text('Dark'),
-                secondary: const Icon(Icons.dark_mode, size: 20),
-              ),
-            ],
-          ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              value: ThemeMode.system,
+              groupValue: current,
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
+              title: const Text('System'),
+              secondary: const Icon(Icons.settings_brightness, size: 20),
+            ),
+            RadioListTile<ThemeMode>(
+              value: ThemeMode.light,
+              groupValue: current,
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
+              title: const Text('Light'),
+              secondary: const Icon(Icons.light_mode, size: 20),
+            ),
+            RadioListTile<ThemeMode>(
+              value: ThemeMode.dark,
+              groupValue: current,
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
+              title: const Text('Dark'),
+              secondary: const Icon(Icons.dark_mode, size: 20),
+            ),
+          ],
         ),
         SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
       ],

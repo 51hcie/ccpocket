@@ -42,16 +42,22 @@ class ResultChip extends StatelessWidget {
     switch (message.subtype) {
       case 'success':
         final truncated = message.stopReason == 'max_tokens'
-            ? ' [truncated]'
+            ? (BrandConfig.isAnyCoding ? ' [已截断]' : ' [truncated]')
             : '';
-        label =
-            'Done${parts.isNotEmpty ? ' (${parts.join(", ")})' : ''}$truncated';
+        final durationStr = message.duration != null
+            ? ' · 耗时 ${(message.duration! / 1000).toStringAsFixed(1)}s'
+            : '';
+        label = BrandConfig.isAnyCoding
+            ? '✓ 任务已完成$durationStr$truncated'
+            : 'Done${parts.isNotEmpty ? ' (${parts.join(", ")})' : ''}$truncated';
         chipColor = appColors.successChip;
       case 'stopped':
-        label = 'Stopped';
+        label = BrandConfig.isAnyCoding ? '已停止' : 'Stopped';
         chipColor = appColors.subtleText.withValues(alpha: 0.2);
       default:
-        label = 'Error: ${message.error ?? 'unknown'}';
+        label = BrandConfig.isAnyCoding
+            ? '异常: ${message.error ?? '未知错误'}'
+            : 'Error: ${message.error ?? 'unknown'}';
         chipColor = appColors.errorChip;
     }
 

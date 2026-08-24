@@ -133,22 +133,23 @@ class DebugScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-            RadioGroup<String>(
-              groupValue: settings.shorebirdTrack,
-              onChanged: (v) {
-                if (v != null) {
-                  context.read<SettingsCubit>().setShorebirdTrack(v);
-                  Navigator.pop(context);
-                  _checkForUpdate(context, v);
-                }
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final (value, label) in tracks)
-                    RadioListTile<String>(title: Text(label), value: value),
-                ],
-              ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final (value, label) in tracks)
+                  RadioListTile<String>(
+                    title: Text(label),
+                    value: value,
+                    groupValue: settings.shorebirdTrack,
+                    onChanged: (v) {
+                      if (v != null) {
+                        context.read<SettingsCubit>().setShorebirdTrack(v);
+                        Navigator.pop(context);
+                        _checkForUpdate(context, v);
+                      }
+                    },
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
           ],
