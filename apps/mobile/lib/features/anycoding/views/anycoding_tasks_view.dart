@@ -428,7 +428,7 @@ class _TaskListItem extends StatelessWidget {
                 children: [
                   _EnginePill(provider: task.provider),
                   const SizedBox(width: 6),
-                  Flexible(
+                  Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -443,7 +443,7 @@ class _TaskListItem extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   _StatusPill(category: task.category, label: task.statusLabel),
                 ],
               ),

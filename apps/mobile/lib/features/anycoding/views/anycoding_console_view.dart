@@ -497,7 +497,7 @@ class _PendingTaskCard extends StatelessWidget {
             children: [
               _EngineBadge(provider: task.provider),
               const SizedBox(width: 6),
-              Flexible(
+              Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -512,7 +512,7 @@ class _PendingTaskCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -631,7 +631,7 @@ class _InProgressTaskCard extends StatelessWidget {
                 children: [
                   _EngineBadge(provider: task.provider),
                   const SizedBox(width: 6),
-                  Flexible(
+                  Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -646,7 +646,7 @@ class _InProgressTaskCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
