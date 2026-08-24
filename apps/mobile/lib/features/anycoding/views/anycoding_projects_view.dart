@@ -248,6 +248,7 @@ class _ProjectListItem extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 12),

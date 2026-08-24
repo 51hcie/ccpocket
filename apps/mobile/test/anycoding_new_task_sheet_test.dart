@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 
 import 'package:ccpocket/features/anycoding/widgets/anycoding_new_task_sheet.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
@@ -14,7 +14,7 @@ void main() {
   group('AnyCoding New Task Sheet Flow Tests', () {
     Widget buildTestHarness(Widget child) {
       final bridge = BridgeService();
-      return Provider<BridgeService>.value(
+      return provider_pkg.Provider<BridgeService>.value(
         value: bridge,
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
