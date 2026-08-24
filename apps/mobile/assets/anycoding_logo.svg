@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" rx="224" fill="#0B0F19"/>
+  <!-- Left Ascending Leg (Antigravity Warm Orange) -->
+  <path d="M 280 800 L 512 230" stroke="#FF7A00" stroke-width="110" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Command Prompt Chevron / Transmission Trajectory (Codex Cyan) -->
+  <path d="M 400 480 L 760 580 L 512 800" stroke="#00D2B4" stroke-width="110" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Apex Pulse Execution Dot -->
+  <circle cx="512" cy="230" r="52" fill="#38BDF8"/>
+</svg>

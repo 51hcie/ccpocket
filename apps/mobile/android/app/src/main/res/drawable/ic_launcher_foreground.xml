@@ -7,19 +7,19 @@
     <!-- Left Ascending Leg (Antigravity Warm Orange) -->
     <path
         android:strokeColor="#FF7A00"
-        android:strokeWidth="11"
+        android:strokeWidth="11.6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M30,80 L54,26" />
+        android:pathData="M29.5,84.4 L54,24.3" />
     <!-- Command Prompt Chevron (Codex Teal/Cyan) -->
     <path
         android:strokeColor="#00D2B4"
-        android:strokeWidth="11"
+        android:strokeWidth="11.6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M44,48 L76,57 L52,80" />
+        android:pathData="M42.2,50.6 L80.2,61.2 L54,84.4" />
     <!-- Apex Pulse Terminal Dot -->
     <path
         android:fillColor="#38BDF8"
-        android:pathData="M54,26m-5,0a5,5 0 1,0 10,0a5,5 0 1,0 -10,0" />
+        android:pathData="M54,24.3m-5.5,0a5.5,5.5 0 1,0 11,0a5.5,5.5 0 1,0 -11,0" />
 </vector>

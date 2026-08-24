@@ -78,16 +78,40 @@ android {
 
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
+            val keyAliasProp = keystoreProperties["keyAlias"] as? String
+            val keyPasswordProp = keystoreProperties["keyPassword"] as? String
+            val storeFilePath = keystoreProperties["storeFile"] as? String
+            val storePasswordProp = keystoreProperties["storePassword"] as? String
+
+            if (storeFilePath.isNullOrBlank() || storePasswordProp.isNullOrBlank() || keyAliasProp.isNullOrBlank() || keyPasswordProp.isNullOrBlank()) {
+                throw GradleException("keystore.properties is present but missing required keys: storeFile, storePassword, keyAlias, keyPassword")
+            }
+
+            val rawStoreFile = file(storeFilePath)
+            val customStoreFile = if (rawStoreFile.isAbsolute) rawStoreFile else rootProject.file(storeFilePath)
+            if (!customStoreFile.exists()) {
+                throw GradleException("Keystore file specified in keystore.properties does not exist: ${customStoreFile.absolutePath}")
+            }
+
+            getByName("debug") {
+                keyAlias = keyAliasProp
+                keyPassword = keyPasswordProp
+                storeFile = customStoreFile
+                storePassword = storePasswordProp
+            }
             create("release") {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keyAliasProp
+                keyPassword = keyPasswordProp
+                storeFile = customStoreFile
+                storePassword = storePasswordProp
             }
         }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")

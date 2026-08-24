@@ -53,20 +53,20 @@ class _AnyCodingLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
-    final scale = w / 100.0;
+    final scale = w / 1024.0;
 
     // Paints
     final leftLegPaint = Paint()
       ..color = const Color(0xFFFF7A00) // Antigravity Warm Orange
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 14 * scale
+      ..strokeWidth = 110 * scale
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
     final promptChevronPaint = Paint()
       ..color = const Color(0xFF00D2B4) // Codex Cyan / Teal
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 14 * scale
+      ..strokeWidth = 110 * scale
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
@@ -76,21 +76,21 @@ class _AnyCodingLogoPainter extends CustomPainter {
 
     // Left diagonal stroke of 'A' (from bottom-left to top apex)
     final leftPath = Path()
-      ..moveTo(22 * scale, 82 * scale)
-      ..lineTo(50 * scale, 18 * scale);
+      ..moveTo(280 * scale, 800 * scale)
+      ..lineTo(512 * scale, 230 * scale);
     canvas.drawPath(leftPath, leftLegPaint);
 
     // Command Prompt Chevron '>' forming crossbar and right descender
     final promptPath = Path()
-      ..moveTo(38 * scale, 48 * scale)
-      ..lineTo(76 * scale, 58 * scale)
-      ..lineTo(48 * scale, 82 * scale);
+      ..moveTo(400 * scale, 480 * scale)
+      ..lineTo(760 * scale, 580 * scale)
+      ..lineTo(512 * scale, 800 * scale);
     canvas.drawPath(promptPath, promptChevronPaint);
 
     // Subtle terminal pulse dot at the apex
     canvas.drawCircle(
-      Offset(50 * scale, 18 * scale),
-      5.5 * scale,
+      Offset(512 * scale, 230 * scale),
+      52 * scale,
       dotPaint,
     );
   }
