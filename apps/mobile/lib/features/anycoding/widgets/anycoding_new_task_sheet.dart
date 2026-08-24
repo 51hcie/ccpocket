@@ -560,8 +560,8 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {
