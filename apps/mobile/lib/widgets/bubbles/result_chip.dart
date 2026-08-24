@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../constants/brand_config.dart';
 import '../../features/file_peek/file_path_syntax.dart';
 import '../../features/file_peek/markdown_link_handler.dart';
 import '../../models/messages.dart';
