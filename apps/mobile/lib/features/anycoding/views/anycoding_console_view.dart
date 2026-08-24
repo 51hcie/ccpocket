@@ -114,31 +114,20 @@ class AnyCodingConsoleView extends StatelessWidget {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AnyCodingLogo(size: 24, showContainer: true),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'AnyCoding',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                    letterSpacing: -0.3,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
+            const AnyCodingLogo(size: 22, showContainer: true),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'AnyCoding',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  letterSpacing: -0.3,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
-                Text(
-                  'AI 指挥中心',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10,
-                    letterSpacing: 0.2,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  ),
-                ),
-              ],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -1007,31 +996,37 @@ class _InProgressTaskCard extends StatelessWidget {
               // Footer: Branch, relative time, and quick actions
               Row(
                 children: [
-                  if (task.gitBranch != null && task.gitBranch!.isNotEmpty) ...[
-                    Icon(Icons.fork_right_rounded, size: 13, color: const Color(0xFF94A3B8)),
-                    const SizedBox(width: 2),
-                    Flexible(
-                      child: Text(
-                        task.gitBranch!,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontFamily: 'monospace',
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (task.gitBranch != null && task.gitBranch!.isNotEmpty) ...[
+                          Icon(Icons.fork_right_rounded, size: 13, color: const Color(0xFF94A3B8)),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              task.gitBranch!,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontFamily: 'monospace',
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          task.updatedAt != null ? _formatRelativeTime(task.updatedAt!) : '刚刚',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    task.updatedAt != null ? _formatRelativeTime(task.updatedAt!) : '刚刚',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                      ],
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 6),
                   // Quick Action: Open Chat
                   FilledButton.tonal(
                     onPressed: onTap,
@@ -1043,7 +1038,7 @@ class _InProgressTaskCard extends StatelessWidget {
                     ),
                     child: const Text('打开', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   // Quick Action: Stop
                   IconButton(
                     icon: const Icon(Icons.stop_circle_outlined, size: 18, color: Color(0xFFEF4444)),

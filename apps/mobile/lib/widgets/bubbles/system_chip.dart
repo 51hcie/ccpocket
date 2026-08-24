@@ -13,15 +13,15 @@ class SystemChip extends StatelessWidget {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final isInit = message.subtype == 'init' || message.subtype == 'session_created';
 
-    // Completely suppress empty/raw system init bubbles
+    // Completely suppress empty/raw system init bubbles for Antigravity & generic providers
     if (isInit) {
-      if (message.provider == 'codex' && message.model != null) {
+      if (message.provider == 'codex') {
         return Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Chip(
               label: CodexEnvironmentSummary(
-                leadingLabel: '会话已启动',
+                leadingLabel: 'Session started',
                 model: message.model,
                 reasoningEffort: message.modelReasoningEffort,
                 approvalPolicy: message.approvalPolicy,
@@ -37,7 +37,7 @@ class SystemChip extends StatelessWidget {
           ),
         );
       }
-      // For Antigravity or general init without model summary, hide completely
+      // For Antigravity or general init, hide completely
       return const SizedBox.shrink();
     }
 
