@@ -14,9 +14,27 @@ import 'package:ccpocket/services/bridge_service.dart';
 import 'package:ccpocket/services/platform_environment_service.dart';
 import 'package:ccpocket/providers/bridge_cubits.dart';
 
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ccpocket/models/machine.dart';
 import 'package:ccpocket/providers/machine_manager_cubit.dart';
 import 'package:ccpocket/services/machine_manager_service.dart';
+
+class _MockMachineManagerService implements MachineManagerService {
+  final _controller = StreamController<List<MachineWithStatus>>.broadcast();
+
+  @override
+  Stream<List<MachineWithStatus>> get machines => _controller.stream;
+
+  @override
+  List<Machine> get currentMachines => const [];
+
+  @override
+  List<MachineWithStatus> get machinesWithStatus => const [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -47,8 +65,7 @@ void main() {
     testWidgets('renders 4 navigation tabs: 控制台, 任务, 项目, 设置', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
-      final bridge = BridgeService();
-      final machineManagerService = MachineManagerService(bridge, prefs);
+      final machineManagerService = _MockMachineManagerService();
       final machineManagerCubit = MachineManagerCubit(machineManagerService, null);
       final settingsCubit = SettingsCubit(prefs);
 
@@ -83,8 +100,7 @@ void main() {
     testWidgets('switching tabs switches view in IndexedStack and preserves page hierarchy', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
-      final bridge = BridgeService();
-      final machineManagerService = MachineManagerService(bridge, prefs);
+      final machineManagerService = _MockMachineManagerService();
       final machineManagerCubit = MachineManagerCubit(machineManagerService, null);
       final settingsCubit = SettingsCubit(prefs);
 
