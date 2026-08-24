@@ -691,15 +691,20 @@ class _InProgressTaskCard extends StatelessWidget {
                   if (task.gitBranch != null && task.gitBranch!.isNotEmpty) ...[
                     Icon(Icons.fork_right, size: 12, color: cs.onSurfaceVariant),
                     const SizedBox(width: 3),
-                    Text(
-                      task.gitBranch!,
-                      style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: cs.onSurfaceVariant),
+                    Flexible(
+                      child: Text(
+                        task.gitBranch!,
+                        style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: cs.onSurfaceVariant),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 8),
                   ],
                   Text(
                     task.updatedAt != null ? _formatRelativeTime(task.updatedAt!) : '刚刚',
                     style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
+                    maxLines: 1,
                   ),
                   const Spacer(),
                   IconButton(

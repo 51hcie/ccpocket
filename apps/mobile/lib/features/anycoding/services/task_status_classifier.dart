@@ -95,7 +95,7 @@ class TaskStatusClassifier {
   /// Extracts the last path component as the friendly project directory name.
   static String extractProjectShortName(String projectPath) {
     if (projectPath.isEmpty) return '未命名项目';
-    final normalized = projectPath.replaceAll(r'', '/');
+    final normalized = projectPath.replaceAll('\\', '/');
     final trimmed = normalized.endsWith('/') && normalized.length > 1
         ? normalized.substring(0, normalized.length - 1)
         : normalized;
