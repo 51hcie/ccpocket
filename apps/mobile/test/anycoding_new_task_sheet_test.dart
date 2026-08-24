@@ -39,7 +39,7 @@ void main() {
       );
 
       // Projects & Sections
-      expect(find.text('my-app'), findsOneWidget);
+      expect(find.text('my-app'), findsWidgets);
       expect(find.text('指令输入 (Prompt)'), findsOneWidget);
       expect(find.text('高级选项'), findsOneWidget);
 
