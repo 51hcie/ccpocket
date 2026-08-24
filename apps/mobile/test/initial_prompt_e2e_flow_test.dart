@@ -158,6 +158,9 @@ void main() {
           .where((m) => _toMap(m)['text'] == 'ANYCODING_PHASE1_CODEX_E2E_read_package_json')
           .length;
       expect(countAfterPumps, 1);
+
+      // Drain delivery pending timer
+      await tester.pump(const Duration(milliseconds: 700));
     });
 
     testWidgets('Codex: pending session dispatches initialPrompt only after session is resolved', (tester) async {
@@ -200,6 +203,9 @@ void main() {
 
       expect(inputMessages.length, 1);
       expect(_toMap(inputMessages.first)['sessionId'], 'codex-resolved-real-id');
+
+      // Drain delivery pending timer
+      await tester.pump(const Duration(milliseconds: 700));
     });
 
     testWidgets('Antigravity (Claude): ready session dispatches initialPrompt exactly once', (tester) async {
@@ -223,6 +229,9 @@ void main() {
 
       expect(inputMessages.length, 1);
       expect(_toMap(inputMessages.first)['sessionId'], 'antigravity-ready-session');
+
+      // Drain delivery pending timer
+      await tester.pump(const Duration(milliseconds: 700));
     });
 
     testWidgets('Antigravity (Claude): pending session dispatches initialPrompt only after session is resolved', (tester) async {
@@ -264,6 +273,9 @@ void main() {
 
       expect(inputMessages.length, 1);
       expect(_toMap(inputMessages.first)['sessionId'], 'antigravity-resolved-real-id');
+
+      // Drain delivery pending timer
+      await tester.pump(const Duration(milliseconds: 700));
     });
 
     testWidgets('Session started chip is not duplicated when multiple init events arrive', (tester) async {
@@ -278,15 +290,15 @@ void main() {
       await tester.pumpWidget(widget);
       await pumpN(tester);
 
-      // Emit two init system messages
+      // Emit two init system messages with provider: 'codex'
       bridge.emitMessage(
-        const SystemMessage(subtype: 'init', sessionId: 'session-dedup-ui'),
+        const SystemMessage(subtype: 'init', sessionId: 'session-dedup-ui', provider: 'codex'),
         sessionId: 'session-dedup-ui',
       );
       await pumpN(tester);
 
       bridge.emitMessage(
-        const SystemMessage(subtype: 'init', sessionId: 'session-dedup-ui', projectPath: '/workspace'),
+        const SystemMessage(subtype: 'init', sessionId: 'session-dedup-ui', provider: 'codex', projectPath: '/workspace'),
         sessionId: 'session-dedup-ui',
       );
       await pumpN(tester);
