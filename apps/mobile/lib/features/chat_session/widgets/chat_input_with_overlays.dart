@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
+import '../../../constants/brand_config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/composer_tokens.dart';
 import '../../../utils/command_completion_matcher.dart';
