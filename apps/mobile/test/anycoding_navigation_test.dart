@@ -15,18 +15,25 @@ import 'package:ccpocket/services/platform_environment_service.dart';
 import 'package:ccpocket/providers/bridge_cubits.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ccpocket/providers/machine_manager_cubit.dart';
+import 'package:ccpocket/services/machine_manager_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AnyCoding 4-Tab Navigation & Shell Tests', () {
-    Widget buildTestHarness(Widget child, SettingsCubit settingsCubit) {
+    Widget buildTestHarness(
+      Widget child,
+      SettingsCubit settingsCubit,
+      MachineManagerCubit machineManagerCubit,
+    ) {
       final bridge = BridgeService();
 
       return provider_pkg.MultiProvider(
         providers: [
           provider_pkg.Provider<BridgeService>.value(value: bridge),
           BlocProvider<SettingsCubit>.value(value: settingsCubit),
+          BlocProvider<MachineManagerCubit>.value(value: machineManagerCubit),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -40,6 +47,9 @@ void main() {
     testWidgets('renders 4 navigation tabs: 控制台, 任务, 项目, 设置', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
+      final bridge = BridgeService();
+      final machineManagerService = MachineManagerService(bridge, prefs);
+      final machineManagerCubit = MachineManagerCubit(machineManagerService, null);
       final settingsCubit = SettingsCubit(prefs);
 
       await tester.pumpWidget(
@@ -59,6 +69,7 @@ void main() {
             onStartNewSession: (_) {},
           ),
           settingsCubit,
+          machineManagerCubit,
         ),
       );
 
@@ -72,6 +83,9 @@ void main() {
     testWidgets('switching tabs switches view in IndexedStack and preserves page hierarchy', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
+      final bridge = BridgeService();
+      final machineManagerService = MachineManagerService(bridge, prefs);
+      final machineManagerCubit = MachineManagerCubit(machineManagerService, null);
       final settingsCubit = SettingsCubit(prefs);
 
       await tester.pumpWidget(
@@ -101,6 +115,7 @@ void main() {
             onStartNewSession: (_) {},
           ),
           settingsCubit,
+          machineManagerCubit,
         ),
       );
 
