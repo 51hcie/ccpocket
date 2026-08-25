@@ -4,7 +4,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../../models/messages.dart';
 import '../../chat_session/state/chat_session_cubit.dart';
-import '../../chat_session/state/chat_session_state.dart';
 
 /// Codex-specific session cubit.
 ///

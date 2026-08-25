@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ccpocket/features/anycoding/services/task_status_classifier.dart';
 import 'package:ccpocket/models/messages.dart';
-import 'package:ccpocket/models/offline_pending_action.dart';
 
 void main() {
   group('TaskStatusClassifier - Status Categorization & Fail-Closed Rules', () {
@@ -53,7 +52,7 @@ void main() {
       );
     });
 
-    test('classifies pending permission and waiting approval as pending', () {
+    test('classifies pending permission and waiting approval as waitingApproval', () {
       const permissionSession = SessionInfo(
         id: 'perm-1',
         provider: 'codex',
@@ -69,7 +68,7 @@ void main() {
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(permissionSession),
-        equals(AnyCodingTaskCategory.pending),
+        equals(AnyCodingTaskCategory.waitingApproval),
       );
 
       const waitingSession = SessionInfo(
@@ -82,7 +81,31 @@ void main() {
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(waitingSession),
-        equals(AnyCodingTaskCategory.pending),
+        equals(AnyCodingTaskCategory.waitingApproval),
+      );
+    });
+
+    test('classifies takeover queue as takeoverQueued', () {
+      const takeoverSession = SessionInfo(
+        id: 'takeover-1',
+        provider: 'codex',
+        projectPath: '/Users/test/workspace/app',
+        status: 'running',
+        createdAt: '2026-08-24T00:00:00Z',
+        lastActivityAt: '2026-08-24T00:00:00Z',
+      );
+      const queueStatus = CodexTakeoverQueueStatusMessage(
+        threadId: 'takeover-1',
+        status: 'queued',
+        position: 1,
+        total: 2,
+      );
+      expect(
+        TaskStatusClassifier.classifySessionInfo(
+          takeoverSession,
+          takeoverQueueStatus: queueStatus,
+        ),
+        equals(AnyCodingTaskCategory.takeoverQueued),
       );
     });
 
@@ -239,9 +262,9 @@ void main() {
     });
   });
 
-  group('TaskStatusClassifier - Filtering & Project Summaries', () {
+  group('TaskStatusClassifier - Filtering, Sorting & Project Summaries', () {
     final tasks = [
-      const AnyCodingTaskItem(
+      AnyCodingTaskItem(
         id: '1',
         provider: Provider.codex,
         projectPath: '/projects/repo-a',
@@ -250,8 +273,9 @@ void main() {
         category: AnyCodingTaskCategory.inProgress,
         rawStatus: 'running',
         statusLabel: '运行中',
+        updatedAt: DateTime.parse('2026-08-24T10:00:00Z'),
       ),
-      const AnyCodingTaskItem(
+      AnyCodingTaskItem(
         id: '2',
         provider: Provider.antigravity,
         projectPath: '/projects/repo-b',
@@ -260,16 +284,18 @@ void main() {
         category: AnyCodingTaskCategory.completed,
         rawStatus: 'completed',
         statusLabel: '已完成',
+        updatedAt: DateTime.parse('2026-08-24T12:00:00Z'),
       ),
-      const AnyCodingTaskItem(
+      AnyCodingTaskItem(
         id: '3',
         provider: Provider.codex,
         projectPath: '/projects/repo-a',
         projectName: 'repo-a',
         title: 'Approve script execution',
-        category: AnyCodingTaskCategory.pending,
+        category: AnyCodingTaskCategory.waitingApproval,
         rawStatus: 'waiting_approval',
         statusLabel: '等待审批',
+        updatedAt: DateTime.parse('2026-08-24T11:00:00Z'),
       ),
     ];
 
@@ -281,12 +307,56 @@ void main() {
       expect(inProgress.length, equals(1));
       expect(inProgress.first.id, equals('1'));
 
-      final pending = TaskStatusClassifier.filterTasks(
+      final waiting = TaskStatusClassifier.filterTasks(
         tasks: tasks,
-        category: AnyCodingTaskCategory.pending,
+        category: AnyCodingTaskCategory.waitingApproval,
       );
-      expect(pending.length, equals(1));
-      expect(pending.first.id, equals('3'));
+      expect(waiting.length, equals(1));
+      expect(waiting.first.id, equals('3'));
+    });
+
+    test('buildUnifiedTaskList sorts by updatedAt descending with pinned on top', () {
+      final unified = TaskStatusClassifier.buildUnifiedTaskList(
+        activeSessions: const [
+          SessionInfo(
+            id: 's-older',
+            provider: 'codex',
+            projectPath: '/proj',
+            status: 'running',
+            createdAt: '2026-08-24T08:00:00Z',
+            lastActivityAt: '2026-08-24T08:00:00Z',
+          ),
+          SessionInfo(
+            id: 's-newer',
+            provider: 'codex',
+            projectPath: '/proj',
+            status: 'running',
+            createdAt: '2026-08-24T14:00:00Z',
+            lastActivityAt: '2026-08-24T14:00:00Z',
+          ),
+        ],
+        recentSessions: const [
+          RecentSession(
+            sessionId: 'r-pinned-old',
+            provider: 'codex',
+            firstPrompt: 'pinned prompt',
+            gitBranch: 'main',
+            isSidechain: false,
+            created: '2026-08-24T05:00:00Z',
+            modified: '2026-08-24T05:00:00Z',
+            projectPath: '/proj',
+          ),
+        ],
+        pinnedKeys: const {'r-pinned-old'},
+      );
+
+      expect(unified.length, equals(3));
+      // Pinned item should come first despite older timestamp
+      expect(unified[0].id, equals('r-pinned-old'));
+      // Then newer active session
+      expect(unified[1].id, equals('s-newer'));
+      // Then older active session
+      expect(unified[2].id, equals('s-older'));
     });
 
     test('filters tasks by engine provider', () {

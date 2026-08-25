@@ -298,9 +298,6 @@ class _BufferedSshSocket implements SSHSocket {
   }
 
   @override
-  Future<void> flush() => _delegate.flush();
-
-  @override
   void destroy() {
     unawaited(_subscription.cancel());
     _delegate.destroy();
@@ -326,9 +323,6 @@ class _SshSessionSocket implements SSHSocket {
     _session.close();
     return _session.done;
   }
-
-  @override
-  Future<void> flush() => _session.flush();
 
   @override
   void destroy() {

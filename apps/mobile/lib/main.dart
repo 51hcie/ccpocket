@@ -21,8 +21,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:marionette_flutter/marionette_flutter.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:talker_bloc_logger/talker_bloc_logger.dart';
@@ -193,6 +191,67 @@ void main() async {
     bridge: bridge,
     gitStatusCubit: gitStatusCubit,
   );
+
+  // Background/inactive session local notification listener
+  final previousSessionStatuses = <String, String>{};
+  final previousSessionPermissions = <String, String>{};
+
+  final bridgeNotificationSub = bridge.sessionList.listen((sessions) {
+    final activeId = NotificationService.instance.activeSessionId;
+    final lang = settingsCubit.state.appLocaleId.isNotEmpty
+        ? settingsCubit.state.appLocaleId.split('-').first
+        : (BrandConfig.isAnyCoding ? 'zh' : 'en');
+    final loc = lookupAppLocalizations(Locale(lang));
+
+    for (final s in sessions) {
+      if (s.id == activeId) {
+        previousSessionStatuses[s.id] = s.status;
+        if (s.pendingPermission != null) {
+          previousSessionPermissions[s.id] = s.pendingPermission!.toolUseId;
+        } else {
+          previousSessionPermissions.remove(s.id);
+        }
+        continue;
+      }
+
+      // Check permission request notification
+      if (s.pendingPermission != null) {
+        final permId = s.pendingPermission!.toolUseId;
+        if (previousSessionPermissions[s.id] != permId) {
+          previousSessionPermissions[s.id] = permId;
+          NotificationService.instance.showApprovalNotification(
+            s.pendingPermission!,
+            l: loc,
+            id: s.id.hashCode,
+            payload: s.id,
+          );
+        }
+      } else {
+        previousSessionPermissions.remove(s.id);
+      }
+
+      // Check status transitions for completed / failed
+      final prevStatus = previousSessionStatuses[s.id];
+      previousSessionStatuses[s.id] = s.status;
+      if (prevStatus != null && prevStatus != s.status) {
+        final norm = s.status.trim().toLowerCase();
+        if (norm == 'completed' || norm == 'done' || norm == 'success') {
+          NotificationService.instance.showSessionCompleteNotification(
+            body: s.name ?? '任务已执行完成',
+            id: s.id.hashCode,
+            payload: s.id,
+          );
+        } else if (norm == 'failed' || norm == 'error' || norm == 'stopped') {
+          NotificationService.instance.showTaskFailedNotification(
+            body: s.name ?? (norm == 'stopped' ? '任务已停止' : '任务执行失败'),
+            id: s.id.hashCode,
+            payload: s.id,
+          );
+        }
+      }
+    }
+  });
+
   runApp(
     MultiRepositoryProvider(
       providers: [
@@ -202,6 +261,7 @@ void main() async {
           lazy: false,
           dispose: (service) {
             unawaited(promptHistorySyncSub.cancel());
+            unawaited(bridgeNotificationSub.cancel());
             service.dispose();
           },
         ),

@@ -53,7 +53,7 @@ class NotificationService extends ChangeNotifier {
     );
 
     await _plugin.initialize(
-      settings: settings,
+      settings,
       onDidReceiveNotificationResponse: _onNotificationResponse,
     );
 
@@ -150,10 +150,10 @@ class NotificationService extends ChangeNotifier {
     );
 
     await _plugin.show(
-      id: id,
-      title: title,
-      body: body,
-      notificationDetails: details,
+      id,
+      title,
+      body,
+      details,
       payload: payload,
     );
   }
@@ -170,11 +170,28 @@ class NotificationService extends ChangeNotifier {
 
   Future<void> showSessionCompleteNotification({
     required String body,
+    String? title,
     int id = 3,
     String? payload,
   }) {
     return show(
-      title: 'Session Complete',
+      title: title ??
+          (BrandConfig.isAnyCoding ? 'AnyCoding: 任务已完成' : 'Session Complete'),
+      body: body,
+      id: id,
+      payload: payload,
+    );
+  }
+
+  Future<void> showTaskFailedNotification({
+    required String body,
+    String? title,
+    int id = 4,
+    String? payload,
+  }) {
+    return show(
+      title: title ??
+          (BrandConfig.isAnyCoding ? 'AnyCoding: 任务失败' : 'Session Failed'),
       body: body,
       id: id,
       payload: payload,

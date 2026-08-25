@@ -118,11 +118,9 @@ class GalleryImageViewer extends HookWidget {
         }
         final tempDir = Directory.systemTemp;
         final ext = _extensionFromMime(currentImage.mimeType);
-        tempFile = File('${tempDir.path}/screenshot_${currentImage.id}$ext');
+        tempFile = File('${tempDir.path}/share_${currentImage.id}.$ext');
         await tempFile.writeAsBytes(response.bodyBytes);
-        await SharePlus.instance.share(
-          ShareParams(files: [XFile(tempFile.path)]),
-        );
+        await Share.shareXFiles([XFile(tempFile.path)]);
       } catch (_) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -71,9 +71,12 @@ class AnyCodingConsoleView extends StatelessWidget {
       offlinePendingActions: offlinePendingActions,
     );
 
-    // 1. Pending items (waiting for approval, question, or failed requiring action)
+    // 1. Pending items (waiting for approval, question, takeover queue, or failed requiring action)
     final pendingTasks = allTasks
-        .where((t) => t.category == AnyCodingTaskCategory.pending || t.category == AnyCodingTaskCategory.failed)
+        .where((t) =>
+            t.category == AnyCodingTaskCategory.waitingApproval ||
+            t.category == AnyCodingTaskCategory.takeoverQueued ||
+            t.category == AnyCodingTaskCategory.failed)
         .toList();
 
     // 2. Truly active / in-progress tasks (running or starting or streaming or idle active)

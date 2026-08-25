@@ -131,10 +131,14 @@ class _TabsBottomSheetContentState extends State<_TabsBottomSheetContent> {
           physics: const NeverScrollableScrollPhysics(),
           buildDefaultDragHandles: false,
           itemCount: _items.length,
-          onReorderItem: (oldIndex, newIndex) {
+          onReorder: (oldIndex, newIndex) {
             setState(() {
+              var adjustedIndex = newIndex;
+              if (oldIndex < newIndex) {
+                adjustedIndex -= 1;
+              }
               final item = _items.removeAt(oldIndex);
-              _items.insert(newIndex, item);
+              _items.insert(adjustedIndex, item);
             });
           },
           itemBuilder: (context, index) {

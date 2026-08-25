@@ -4,7 +4,6 @@ import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() {
   group('GeneratedImagePreviewScreen', () {
@@ -22,7 +21,7 @@ void main() {
     testWidgets('shares the currently selected image from the app bar', (
       tester,
     ) async {
-      ShareParams? shareParams;
+      GeneratedImageShareParams? shareParams;
       await tester.pumpWidget(
         _wrap(
           initialIndex: 1,
@@ -48,8 +47,8 @@ void main() {
       expect(params.sharePositionOrigin, isNotNull);
       expect(params.sharePositionOrigin!.isEmpty, isFalse);
       expect(params.files, hasLength(1));
-      expect(params.files!.single.mimeType, 'image/png');
-      expect(await params.files!.single.readAsBytes(), _transparentPng);
+      expect(params.files.single.mimeType, 'image/png');
+      expect(await params.files.single.readAsBytes(), _transparentPng);
     });
 
     testWidgets('hides file sharing on unsupported Linux builds', (
@@ -178,7 +177,7 @@ void main() {
 
 Widget _wrap({
   int initialIndex = 0,
-  Future<void> Function(ShareParams params)? shareImage,
+  Future<void> Function(GeneratedImageShareParams params)? shareImage,
 }) {
   return _wrapItems(_items, initialIndex: initialIndex, shareImage: shareImage);
 }
@@ -186,7 +185,7 @@ Widget _wrap({
 Widget _wrapItems(
   List<GeneratedImagePreviewItem> items, {
   int initialIndex = 0,
-  Future<void> Function(ShareParams params)? shareImage,
+  Future<void> Function(GeneratedImageShareParams params)? shareImage,
 }) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,

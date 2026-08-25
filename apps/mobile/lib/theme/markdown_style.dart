@@ -556,19 +556,9 @@ class _HighlightSpanCache {
 
 class _SyntaxHighlightRegistry {
   static const _supportedLanguages = <String>[
-    'css',
     'dart',
-    'go',
-    'html',
-    'java',
-    'javascript',
     'json',
-    'kotlin',
-    'python',
-    'rust',
     'sql',
-    'swift',
-    'typescript',
     'yaml',
   ];
 

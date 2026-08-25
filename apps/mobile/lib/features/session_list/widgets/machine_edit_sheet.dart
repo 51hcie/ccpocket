@@ -1034,7 +1034,7 @@ class _ConnectionModeField extends StatelessWidget {
 
     return DropdownButtonFormField<BridgeConnectionMode>(
       key: const ValueKey('connection_mode_dropdown'),
-      initialValue: value,
+      value: value,
       decoration: InputDecoration(
         labelText: l.machineEditConnectionMode,
         helperText: description,

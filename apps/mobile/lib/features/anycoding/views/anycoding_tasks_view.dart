@@ -56,9 +56,10 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
 
   final _categories = const [
     AnyCodingTaskCategory.inProgress,
-    AnyCodingTaskCategory.pending,
-    AnyCodingTaskCategory.completed,
+    AnyCodingTaskCategory.waitingApproval,
+    AnyCodingTaskCategory.takeoverQueued,
     AnyCodingTaskCategory.failed,
+    AnyCodingTaskCategory.completed,
   ];
 
   @override
@@ -91,21 +92,25 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
     final countInProgress = allTasks
         .where((t) => t.category == AnyCodingTaskCategory.inProgress)
         .length;
-    final countPending = allTasks
-        .where((t) => t.category == AnyCodingTaskCategory.pending)
+    final countWaitingApproval = allTasks
+        .where((t) => t.category == AnyCodingTaskCategory.waitingApproval)
         .length;
-    final countCompleted = allTasks
-        .where((t) => t.category == AnyCodingTaskCategory.completed)
+    final countTakeoverQueued = allTasks
+        .where((t) => t.category == AnyCodingTaskCategory.takeoverQueued)
         .length;
     final countFailed = allTasks
         .where((t) => t.category == AnyCodingTaskCategory.failed)
         .length;
+    final countCompleted = allTasks
+        .where((t) => t.category == AnyCodingTaskCategory.completed)
+        .length;
 
     final counts = [
       countInProgress,
-      countPending,
-      countCompleted,
+      countWaitingApproval,
+      countTakeoverQueued,
       countFailed,
+      countCompleted,
     ];
 
     return Scaffold(
@@ -277,7 +282,7 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
                   onArchive: task.recentSession != null
                       ? () => widget.onArchiveSession(task.recentSession!)
                       : null,
-                  onStop: task.isActive ? () => widget.onStopSession(task.id) : null,
+                  onStop: task.isActive ? () => _confirmStop(context, task.id) : null,
                 );
               },
             ),
@@ -287,16 +292,44 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
     );
   }
 
+  Future<void> _confirmStop(BuildContext context, String sessionId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('停止任务确认'),
+        content: const Text('确认停止该任务？\n停止后当前正在执行的操作将被中断。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('确认停止'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      widget.onStopSession(sessionId);
+    }
+  }
+
   Color _badgeColorForCategory(AnyCodingTaskCategory category, ColorScheme cs) {
     switch (category) {
       case AnyCodingTaskCategory.inProgress:
         return const Color(0xFF3B82F6);
-      case AnyCodingTaskCategory.pending:
+      case AnyCodingTaskCategory.waitingApproval:
         return const Color(0xFFF59E0B);
+      case AnyCodingTaskCategory.takeoverQueued:
+        return const Color(0xFF8B5CF6);
+      case AnyCodingTaskCategory.failed:
+        return const Color(0xFFEF4444);
       case AnyCodingTaskCategory.completed:
         return const Color(0xFF10B981);
-      case AnyCodingTaskCategory.failed:
-        return cs.error;
     }
   }
 
@@ -424,8 +457,11 @@ class _TaskListItem extends StatelessWidget {
       case AnyCodingTaskCategory.inProgress:
         trackColor = const Color(0xFF3B82F6);
         break;
-      case AnyCodingTaskCategory.pending:
+      case AnyCodingTaskCategory.waitingApproval:
         trackColor = const Color(0xFFF59E0B);
+        break;
+      case AnyCodingTaskCategory.takeoverQueued:
+        trackColor = const Color(0xFF8B5CF6);
         break;
       case AnyCodingTaskCategory.completed:
         trackColor = const Color(0xFF10B981);
@@ -553,7 +589,7 @@ class _TaskListItem extends StatelessWidget {
                                 onPressed: onStop,
                               ),
                             ],
-                          ] else if (task.category == AnyCodingTaskCategory.pending) ...[
+                          ] else if (task.category == AnyCodingTaskCategory.waitingApproval) ...[
                             InkWell(
                               onTap: onTap,
                               borderRadius: BorderRadius.circular(6),
@@ -566,6 +602,22 @@ class _TaskListItem extends StatelessWidget {
                                 child: const Text(
                                   '立即处理',
                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                                ),
+                              ),
+                            ),
+                          ] else if (task.category == AnyCodingTaskCategory.takeoverQueued) ...[
+                            InkWell(
+                              onTap: onTap,
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '查看排队',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6)),
                                 ),
                               ),
                             ),
@@ -705,14 +757,17 @@ class _StatusPill extends StatelessWidget {
       case AnyCodingTaskCategory.inProgress:
         color = const Color(0xFF3B82F6);
         break;
-      case AnyCodingTaskCategory.pending:
+      case AnyCodingTaskCategory.waitingApproval:
         color = const Color(0xFFF59E0B);
+        break;
+      case AnyCodingTaskCategory.takeoverQueued:
+        color = const Color(0xFF8B5CF6);
         break;
       case AnyCodingTaskCategory.completed:
         color = const Color(0xFF10B981);
         break;
       case AnyCodingTaskCategory.failed:
-        color = cs.error;
+        color = const Color(0xFFEF4444);
         break;
     }
 
@@ -757,14 +812,19 @@ class _EmptyTaskState extends StatelessWidget {
     } else {
       switch (category) {
         case AnyCodingTaskCategory.inProgress:
-          title = '暂无进行中任务';
+          title = '暂无运行中任务';
           desc = '启动新的 Codex 或 Antigravity 任务即可在此监控';
           icon = Icons.play_circle_outline;
           break;
-        case AnyCodingTaskCategory.pending:
-          title = '暂无待处理事项';
+        case AnyCodingTaskCategory.waitingApproval:
+          title = '暂无待审批或回答事项';
           desc = '所有审批、问题和任务均处于正常状态';
           icon = Icons.check_circle_outline;
+          break;
+        case AnyCodingTaskCategory.takeoverQueued:
+          title = '暂无接管排队任务';
+          desc = '当 Mac 端有活跃写入者冲突时，排队任务将展示在此';
+          icon = Icons.queue_outlined;
           break;
         case AnyCodingTaskCategory.completed:
           title = '暂无已完成任务';

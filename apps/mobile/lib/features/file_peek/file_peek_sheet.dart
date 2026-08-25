@@ -622,7 +622,7 @@ class _FilePeekImagePreview extends StatelessWidget {
               : Image.memory(
                   bytes,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Icon(
+                  errorBuilder: (context, error, stackTrace) => const Icon(
                     Icons.broken_image,
                     color: Colors.white54,
                     size: 48,

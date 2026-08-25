@@ -182,7 +182,8 @@ class _GeneratedImage extends StatelessWidget {
         bytes,
         fit: BoxFit.contain,
         gaplessPlayback: true,
-        errorBuilder: (_, _, _) => const _ImageLoadFailure(),
+        errorBuilder: (context, error, stackTrace) =>
+            const _ImageLoadFailure(),
       );
     }
 

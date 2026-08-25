@@ -10,7 +10,6 @@ import '../../../services/macremote_bootstrap_service.dart';
 import '../../../theme/app_typography.dart';
 import '../../../widgets/anycoding_logo.dart';
 import '../../settings/state/settings_cubit.dart';
-import '../../settings/state/settings_state.dart';
 import '../../settings/widgets/app_locale_bottom_sheet.dart';
 import '../../settings/widgets/speech_locale_bottom_sheet.dart';
 import '../../settings/widgets/theme_bottom_sheet.dart';
@@ -499,6 +498,88 @@ class AnyCodingSettingsView extends StatelessWidget {
                     Icons.check_circle,
                     size: 18,
                     color: Color(0xFF10B981),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // 6. Section: 后台提醒与能力边界
+          const _SettingsSectionHeader(title: '后台提醒与通知能力边界'),
+          Material(
+            color: cardBgColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: borderColor),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.notifications_active_outlined,
+                      size: 18,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                  title: Text(
+                    '实时进程级本地通知 (免配置)',
+                    style: AppTypography.titleSmall(context),
+                  ),
+                  subtitle: Text(
+                    '任务完成、失败、等待审批与回答时实时向系统通知栏发送提醒',
+                    style: AppTypography.caption(context),
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '已就绪',
+                      style: AppTypography.labelSmall(
+                        context,
+                        color: const Color(0xFF10B981),
+                      ),
+                    ),
+                  ),
+                ),
+                Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '能力边界说明：\n1. 在 App 处于前台或切入后台但进程存活时，只要 Bridge 触发事件，即可在通知栏接收实时提醒。\n2. 若 App 进程被系统清理杀死，因未接入外部云端中转服务器（如 Firebase/FCM 独立下发通道），通知将暂停；重新打开 App 即可立即通过 Bridge 恢复最新状态与队列。\n3. 本地调度无需扫描额外二维码或手动配置第三方推送服务。',
+                          style: AppTypography.caption(context).copyWith(
+                            height: 1.45,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

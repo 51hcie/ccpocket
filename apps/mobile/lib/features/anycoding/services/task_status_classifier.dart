@@ -3,19 +3,22 @@ import 'dart:io' show Platform;
 import '../../../models/messages.dart';
 import '../../../models/offline_pending_action.dart';
 
-/// The 4 standard AnyCoding task categories.
+/// The 5 standard AnyCoding task categories.
 enum AnyCodingTaskCategory {
-  /// Task is currently running, executing, starting, or active.
-  inProgress('进行中', 'in_progress'),
+  /// 运行中: Task is currently running, executing, starting, streaming, or active idle.
+  inProgress('运行中', 'in_progress'),
 
-  /// Task requires user attention: tool approval, question answer, or error to resolve.
-  pending('待处理', 'pending'),
+  /// 等待批准/回答: Task requires user attention (tool approval, user answer).
+  waitingApproval('等待批准/回答', 'waiting_approval'),
 
-  /// Task has finished successfully or is archived history without errors.
-  completed('已完成', 'completed'),
+  /// 接管排队: Task is queued in Bridge takeover queue or waiting for writer release.
+  takeoverQueued('接管排队', 'takeover_queued'),
 
-  /// Task encountered a fatal error or failed execution.
-  failed('失败', 'failed');
+  /// 失败: Task encountered an error, was stopped/terminated, or failed execution.
+  failed('失败', 'failed'),
+
+  /// 已完成: Task finished successfully or is archived clean history.
+  completed('已完成', 'completed');
 
   final String label;
   final String key;
@@ -74,7 +77,7 @@ class AnyCodingTaskItem {
   bool get isActive => activeSession != null || offlineAction != null;
   bool get hasPendingAction =>
       pendingPermission != null ||
-      category == AnyCodingTaskCategory.pending;
+      category == AnyCodingTaskCategory.waitingApproval;
 }
 
 /// Pure functions for classifying, filtering, and formatting AnyCoding tasks.
@@ -161,9 +164,16 @@ class TaskStatusClassifier {
   ///
   /// Active sessions with `status == 'idle'` are waiting for user instructions,
   /// so they are classified as [AnyCodingTaskCategory.inProgress] (active), NOT completed.
-  static AnyCodingTaskCategory classifySessionInfo(SessionInfo session) {
+  static AnyCodingTaskCategory classifySessionInfo(
+    SessionInfo session, {
+    CodexTakeoverQueueStatusMessage? takeoverQueueStatus,
+  }) {
+    if (takeoverQueueStatus != null && takeoverQueueStatus.status == 'queued') {
+      return AnyCodingTaskCategory.takeoverQueued;
+    }
+
     if (session.pendingPermission != null) {
-      return AnyCodingTaskCategory.pending;
+      return AnyCodingTaskCategory.waitingApproval;
     }
 
     final normalizedStatus = session.status.trim().toLowerCase();
@@ -172,7 +182,11 @@ class TaskStatusClassifier {
       case 'waiting_for_input':
       case 'waiting_user':
       case 'ask_user':
-        return AnyCodingTaskCategory.pending;
+        return AnyCodingTaskCategory.waitingApproval;
+
+      case 'takeover_queued':
+      case 'queued':
+        return AnyCodingTaskCategory.takeoverQueued;
 
       case 'running':
       case 'starting':
@@ -209,7 +223,7 @@ class TaskStatusClassifier {
 
   /// Classifies an [OfflinePendingAction] into an [AnyCodingTaskCategory].
   static AnyCodingTaskCategory classifyOfflineAction(OfflinePendingAction action) {
-    return AnyCodingTaskCategory.inProgress;
+    return AnyCodingTaskCategory.takeoverQueued;
   }
 
   /// Resolves the provider enum from a string, ensuring only Codex & Antigravity are used in AnyCoding.
@@ -222,21 +236,33 @@ class TaskStatusClassifier {
   }
 
   /// Maps an [AnyCodingTaskCategory] to a localized Chinese status label.
-  static String statusLabelForCategory(AnyCodingTaskCategory category, String rawStatus) {
+  static String statusLabelForCategory(
+    AnyCodingTaskCategory category,
+    String rawStatus, {
+    CodexTakeoverQueueStatusMessage? takeoverQueueStatus,
+  }) {
     switch (category) {
       case AnyCodingTaskCategory.inProgress:
         if (rawStatus == 'running' || rawStatus == 'streaming') return '运行中';
         if (rawStatus == 'starting') return '启动中';
         if (rawStatus == 'compacting') return '整理上下文';
-        if (rawStatus == 'idle') return '等待指令';
-        return '执行中';
-      case AnyCodingTaskCategory.pending:
+        if (rawStatus == 'idle') return '运行中 · 空闲';
+        return '运行中';
+      case AnyCodingTaskCategory.waitingApproval:
         if (rawStatus == 'waiting_approval') return '等待审批';
         if (rawStatus == 'waiting_for_input') return '等待回答';
-        return '需处理';
+        return '等待批准/回答';
+      case AnyCodingTaskCategory.takeoverQueued:
+        if (takeoverQueueStatus != null &&
+            takeoverQueueStatus.status == 'queued' &&
+            takeoverQueueStatus.position > 0) {
+          return '排队中 (${takeoverQueueStatus.position}/${takeoverQueueStatus.total})';
+        }
+        return '接管排队中';
       case AnyCodingTaskCategory.completed:
         return '已完成';
       case AnyCodingTaskCategory.failed:
+        if (rawStatus == 'stopped') return '已停止';
         return '失败';
     }
   }
@@ -248,12 +274,13 @@ class TaskStatusClassifier {
   }
 
   /// Deduplicates and builds a consolidated list of [AnyCodingTaskItem]s from
-  /// active sessions, recent sessions, and offline actions.
+  /// active sessions, recent sessions, and offline actions, strictly sorted by update time.
   static List<AnyCodingTaskItem> buildUnifiedTaskList({
     required List<SessionInfo> activeSessions,
     required List<RecentSession> recentSessions,
     List<OfflinePendingAction> offlinePendingActions = const [],
     Set<String> pinnedKeys = const {},
+    Map<String, CodexTakeoverQueueStatusMessage> takeoverQueueByThread = const {},
   }) {
     final items = <AnyCodingTaskItem>[];
     final seenActiveSessionIds = <String>{};
@@ -263,7 +290,9 @@ class TaskStatusClassifier {
       // In AnyCoding brand mode, hide Claude sessions
       if (s.provider == 'claude') continue;
 
-      final category = classifySessionInfo(s);
+      final queueStatus = takeoverQueueByThread[s.id] ??
+          (s.claudeSessionId != null ? takeoverQueueByThread[s.claudeSessionId!] : null);
+      final category = classifySessionInfo(s, takeoverQueueStatus: queueStatus);
       final provider = resolveProvider(s.provider);
       final projectName = extractProjectShortName(s.projectPath);
       final title = formatTaskTitle(
@@ -272,7 +301,11 @@ class TaskStatusClassifier {
         summary: s.name,
       );
       final rawStatus = s.status;
-      final statusLabel = statusLabelForCategory(category, rawStatus);
+      final statusLabel = statusLabelForCategory(
+        category,
+        rawStatus,
+        takeoverQueueStatus: queueStatus,
+      );
       final updatedAt = parseDateTime(s.lastActivityAt) ?? parseDateTime(s.createdAt);
 
       seenActiveSessionIds.add(s.id);
@@ -310,7 +343,7 @@ class TaskStatusClassifier {
       final projectName = extractProjectShortName(a.projectPath);
       final title = a.sessionId != null ? '离线恢复任务' : '离线新建任务';
       final category = classifyOfflineAction(a);
-      final statusLabel = '排队中';
+      final statusLabel = '离线排队中';
 
       if (a.sessionId != null) {
         seenActiveSessionIds.add(a.sessionId!);
@@ -338,7 +371,10 @@ class TaskStatusClassifier {
       if (r.provider == 'claude') continue;
       if (seenActiveSessionIds.contains(r.sessionId)) continue;
 
-      final category = classifyRecentSession(r);
+      final queueStatus = takeoverQueueByThread[r.sessionId];
+      final category = (queueStatus != null && queueStatus.status == 'queued')
+          ? AnyCodingTaskCategory.takeoverQueued
+          : classifyRecentSession(r);
       final provider = resolveProvider(r.provider);
       final projectName = extractProjectShortName(r.projectPath);
       final title = formatTaskTitle(
@@ -347,8 +383,14 @@ class TaskStatusClassifier {
         summary: r.summary,
         lastPrompt: r.lastPrompt,
       );
-      final rawStatus = category == AnyCodingTaskCategory.completed ? 'completed' : 'failed';
-      final statusLabel = statusLabelForCategory(category, rawStatus);
+      final rawStatus = category == AnyCodingTaskCategory.completed
+          ? 'completed'
+          : (category == AnyCodingTaskCategory.takeoverQueued ? 'queued' : 'failed');
+      final statusLabel = statusLabelForCategory(
+        category,
+        rawStatus,
+        takeoverQueueStatus: queueStatus,
+      );
       final updatedAt = parseDateTime(r.modified) ?? parseDateTime(r.created);
 
       items.add(
@@ -369,6 +411,19 @@ class TaskStatusClassifier {
         ),
       );
     }
+
+    // 4. Stable sort by pinned first, then updatedAt descending (latest first)
+    items.sort((a, b) {
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      final aTime = a.updatedAt;
+      final bTime = b.updatedAt;
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
 
     return items;
   }

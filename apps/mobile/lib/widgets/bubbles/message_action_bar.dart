@@ -67,7 +67,7 @@ class MessageActionBar extends StatelessWidget {
             size: 18,
             color: appColors.subtleText,
             onTap: () {
-              SharePlus.instance.share(ShareParams(text: textToCopy));
+              Share.share(textToCopy);
             },
           ),
           if (onFork != null) ...[

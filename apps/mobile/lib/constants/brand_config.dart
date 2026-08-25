@@ -7,7 +7,7 @@ class BrandConfig {
   /// Whether AnyCoding branding is enabled via `--dart-define=ANYCODING_BRAND=true`.
   static const bool isAnyCoding = bool.fromEnvironment(
     'ANYCODING_BRAND',
-    defaultValue: false,
+    defaultValue: true,
   );
 
   /// Brand display name.

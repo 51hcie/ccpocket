@@ -3,21 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart' as provider_pkg;
 
-import 'package:ccpocket/constants/brand_config.dart';
 import 'package:ccpocket/features/anycoding/anycoding_main_screen.dart';
 import 'package:ccpocket/features/anycoding/widgets/anycoding_bottom_navigation.dart';
 import 'package:ccpocket/features/settings/state/settings_cubit.dart';
-import 'package:ccpocket/features/settings/state/settings_state.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/services/bridge_service.dart';
-import 'package:ccpocket/services/platform_environment_service.dart';
-import 'package:ccpocket/providers/bridge_cubits.dart';
 
-import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ccpocket/models/machine.dart';
-import 'package:ccpocket/providers/machine_manager_cubit.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ccpocket/models/machine.dart';

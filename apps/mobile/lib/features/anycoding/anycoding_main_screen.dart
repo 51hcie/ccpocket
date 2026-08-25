@@ -121,7 +121,7 @@ class _AnyCodingMainScreenState extends State<AnyCodingMainScreen> {
         .where((t) => t.category == AnyCodingTaskCategory.inProgress)
         .length;
     final pendingCount = allTasks
-        .where((t) => t.category == AnyCodingTaskCategory.pending)
+        .where((t) => t.category == AnyCodingTaskCategory.waitingApproval)
         .length;
 
     return PopScope(

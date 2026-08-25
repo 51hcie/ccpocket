@@ -62,7 +62,7 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
   late Provider _selectedProvider;
   final _promptController = TextEditingController();
   final _pathController = TextEditingController();
-  bool _showAdvancedOptions = false;
+  final bool _showAdvancedOptions = false;
   bool _useWorktree = false;
   final _worktreeBranchController = TextEditingController();
   String? _selectedCodexModel;

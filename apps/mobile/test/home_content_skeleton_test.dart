@@ -7,11 +7,11 @@ import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/models/offline_pending_action.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/services/bridge_service.dart';
+import 'package:ccpocket/services/draft_service.dart';
 import 'package:ccpocket/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/src/widgets/skeletonizer.dart';
 
@@ -138,9 +138,9 @@ Widget _buildHomeContent({
             }) {},
             onStopSession: (_) {},
             onResumeSession: (_) {},
-            onLongPressRecentSession: (_, _) {},
+            onLongPressRecentSession: (_, __) {},
             onArchiveSession: (_) {},
-            onLongPressRunningSession: (_, _) {},
+            onLongPressRunningSession: (_, __) {},
             onSelectProject: (_) {},
             onLoadMore: () {},
             onLoadMoreProject: (_) {},

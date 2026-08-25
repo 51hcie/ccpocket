@@ -4331,6 +4331,65 @@ export class BridgeWebSocketServer {
           }
 
           if (!handledHistorical) {
+            try {
+              await globalAntigravityStore.ensureInitialized();
+              const agyRecord = globalAntigravityStore.getSession(msg.sessionId);
+              if (agyRecord) {
+                const messages: any[] = [];
+                if (agyRecord.firstPrompt) {
+                  messages.push({
+                    type: "user",
+                    id: `u-${agyRecord.bridgeSessionId}-0`,
+                    sessionId: agyRecord.bridgeSessionId,
+                    text: agyRecord.firstPrompt,
+                    timestamp: agyRecord.createdAt,
+                  });
+                }
+                if (agyRecord.lastPrompt && agyRecord.lastPrompt !== agyRecord.firstPrompt) {
+                  messages.push({
+                    type: "user",
+                    id: `u-${agyRecord.bridgeSessionId}-1`,
+                    sessionId: agyRecord.bridgeSessionId,
+                    text: agyRecord.lastPrompt,
+                    timestamp: agyRecord.updatedAt,
+                  });
+                }
+                if (agyRecord.finalResult) {
+                  messages.push({
+                    type: "result",
+                    id: `r-${agyRecord.bridgeSessionId}`,
+                    sessionId: agyRecord.bridgeSessionId,
+                    text: agyRecord.finalResult,
+                    status: agyRecord.terminalStatus === "failed" ? "error" : "success",
+                    timestamp: agyRecord.updatedAt,
+                  });
+                } else if (agyRecord.failureMessage) {
+                  messages.push({
+                    type: "error",
+                    id: `e-${agyRecord.bridgeSessionId}`,
+                    sessionId: agyRecord.bridgeSessionId,
+                    message: agyRecord.failureMessage,
+                    timestamp: agyRecord.updatedAt,
+                  });
+                }
+                this.send(ws, {
+                  type: "history",
+                  messages,
+                  sessionId: msg.sessionId,
+                } as Record<string, unknown>);
+                this.send(ws, {
+                  type: "status",
+                  status: agyRecord.terminalStatus === "running" ? "running" : "idle",
+                  sessionId: msg.sessionId,
+                } as Record<string, unknown>);
+                handledHistorical = true;
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          if (!handledHistorical) {
             this.send(ws, {
               type: "error",
               message: `Session ${msg.sessionId} not found`,

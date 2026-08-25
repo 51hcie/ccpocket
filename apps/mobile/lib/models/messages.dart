@@ -3130,8 +3130,8 @@ class PromptHistoryServerEntry {
     'createdAt': createdAt,
     'lastUsedAt': lastUsedAt,
     'updatedAt': updatedAt,
-    'favoriteUpdatedAt': ?favoriteUpdatedAt,
-    'deletedAt': ?deletedAt,
+    if (favoriteUpdatedAt != null) 'favoriteUpdatedAt': favoriteUpdatedAt,
+    if (deletedAt != null) 'deletedAt': deletedAt,
     'commandKind': commandKind,
     'clientStats': clientStats.map(
       (key, value) => MapEntry(key, value.toJson()),
@@ -3164,7 +3164,7 @@ class PromptHistoryClientStat {
   Map<String, dynamic> toJson() => {
     'useCount': useCount,
     'lastUsedAt': lastUsedAt,
-    'clientName': ?clientName,
+    if (clientName != null) 'clientName': clientName,
   };
 }
 
@@ -4002,7 +4002,7 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'client_capabilities',
       'protocolVersion': protocolVersion,
-      'appVersion': ?appVersion,
+      if (appVersion != null) 'appVersion': appVersion,
       if (supportedServerMessages.isNotEmpty)
         'supportedServerMessages': supportedServerMessages,
     });
@@ -4041,35 +4041,35 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'start',
       'projectPath': projectPath,
-      'sessionId': ?sessionId,
+      if (sessionId != null) 'sessionId': sessionId,
       if (continueMode == true) 'continue': true,
-      'permissionMode': ?permissionMode,
-      'executionMode': ?executionMode,
-      'approvalPolicy': ?approvalPolicy,
-      'approvalsReviewer': ?approvalsReviewer,
-      'codexPermissionsMode': ?codexPermissionsMode,
-      'planMode': ?planMode,
-      'effort': ?effort,
-      'maxTurns': ?maxTurns,
-      'maxBudgetUsd': ?maxBudgetUsd,
-      'fallbackModel': ?fallbackModel,
-      'forkSession': ?forkSession,
-      'persistSession': ?persistSession,
-      'profile': ?profile,
+      if (permissionMode != null) 'permissionMode': permissionMode,
+      if (executionMode != null) 'executionMode': executionMode,
+      if (approvalPolicy != null) 'approvalPolicy': approvalPolicy,
+      if (approvalsReviewer != null) 'approvalsReviewer': approvalsReviewer,
+      if (codexPermissionsMode != null) 'codexPermissionsMode': codexPermissionsMode,
+      if (planMode != null) 'planMode': planMode,
+      if (effort != null) 'effort': effort,
+      if (maxTurns != null) 'maxTurns': maxTurns,
+      if (maxBudgetUsd != null) 'maxBudgetUsd': maxBudgetUsd,
+      if (fallbackModel != null) 'fallbackModel': fallbackModel,
+      if (forkSession != null) 'forkSession': forkSession,
+      if (persistSession != null) 'persistSession': persistSession,
+      if (profile != null) 'profile': profile,
       if (useWorktree == true) 'useWorktree': true,
       if (worktreeBranch != null && worktreeBranch.isNotEmpty)
         'worktreeBranch': worktreeBranch,
-      'existingWorktreePath': ?existingWorktreePath,
-      'provider': ?provider,
-      'model': ?model,
-      'sandboxMode': ?sandboxMode,
-      'modelReasoningEffort': ?modelReasoningEffort,
-      'serviceTier': ?serviceTier,
-      'networkAccessEnabled': ?networkAccessEnabled,
-      'webSearchMode': ?webSearchMode,
+      if (existingWorktreePath != null) 'existingWorktreePath': existingWorktreePath,
+      if (provider != null) 'provider': provider,
+      if (model != null) 'model': model,
+      if (sandboxMode != null) 'sandboxMode': sandboxMode,
+      if (modelReasoningEffort != null) 'modelReasoningEffort': modelReasoningEffort,
+      if (serviceTier != null) 'serviceTier': serviceTier,
+      if (networkAccessEnabled != null) 'networkAccessEnabled': networkAccessEnabled,
+      if (webSearchMode != null) 'webSearchMode': webSearchMode,
       if (additionalWritableRoots != null && additionalWritableRoots.isNotEmpty)
         'additionalWritableRoots': additionalWritableRoots,
-      'autoRename': ?autoRename,
+      if (autoRename != null) 'autoRename': autoRename,
     });
   }
 
@@ -4086,11 +4086,11 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'input',
       'text': text,
-      'sessionId': ?sessionId,
-      'clientMessageId': ?clientMessageId,
-      'baseSeq': ?baseSeq,
+      if (sessionId != null) 'sessionId': sessionId,
+      if (clientMessageId != null) 'clientMessageId': clientMessageId,
+      if (baseSeq != null) 'baseSeq': baseSeq,
       if (images != null && images.isNotEmpty) 'images': images,
-      'skill': ?skill,
+      if (skill != null) 'skill': skill,
       if (skills != null && skills.isNotEmpty) 'skills': skills,
       if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
     });
@@ -4144,8 +4144,8 @@ class ClientMessage {
     'type': 'push_register',
     'token': token,
     'platform': platform,
-    'locale': ?locale,
-    'privacyMode': ?privacyMode,
+    if (locale != null) 'locale': locale,
+    if (privacyMode != null) 'privacyMode': privacyMode,
   });
 
   factory ClientMessage.pushUnregister(String token) => ClientMessage._(
@@ -4156,7 +4156,7 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'set_permission_mode',
       'mode': mode,
-      'sessionId': ?sessionId,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4172,12 +4172,12 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'set_permission_mode',
       'mode': legacyMode,
-      'executionMode': ?executionMode,
-      'approvalPolicy': ?approvalPolicy,
-      'approvalsReviewer': ?approvalsReviewer,
-      'codexPermissionsMode': ?codexPermissionsMode,
-      'planMode': ?planMode,
-      'sessionId': ?sessionId,
+      if (executionMode != null) 'executionMode': executionMode,
+      if (approvalPolicy != null) 'approvalPolicy': approvalPolicy,
+      if (approvalsReviewer != null) 'approvalsReviewer': approvalsReviewer,
+      if (codexPermissionsMode != null) 'codexPermissionsMode': codexPermissionsMode,
+      if (planMode != null) 'planMode': planMode,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4189,8 +4189,8 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'set_codex_model',
       'model': model,
-      'modelReasoningEffort': ?modelReasoningEffort,
-      'sessionId': ?sessionId,
+      if (modelReasoningEffort != null) 'modelReasoningEffort': modelReasoningEffort,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4198,7 +4198,7 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'set_codex_speed',
       'serviceTier': serviceTier,
-      'sessionId': ?sessionId,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4212,7 +4212,7 @@ class ClientMessage {
   }) => ClientMessage._({
     'type': 'set_goal',
     'sessionId': sessionId,
-    'objective': ?objective,
+    if (objective != null) 'objective': objective,
     if (status != null) 'status': status.value,
   });
 
@@ -4226,7 +4226,7 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'set_sandbox_mode',
       'sandboxMode': sandboxMode,
-      'sessionId': ?sessionId,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4239,7 +4239,7 @@ class ClientMessage {
       'type': 'approve',
       'id': id,
       if (clearContext) 'clearContext': true,
-      'sessionId': ?sessionId,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4247,7 +4247,7 @@ class ClientMessage {
       ClientMessage._(<String, dynamic>{
         'type': 'approve_always',
         'id': id,
-        'sessionId': ?sessionId,
+        if (sessionId != null) 'sessionId': sessionId,
       });
 
   factory ClientMessage.reject(
@@ -4258,8 +4258,8 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'reject',
       'id': id,
-      'message': ?message,
-      'sessionId': ?sessionId,
+      if (message != null) 'message': message,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4272,7 +4272,7 @@ class ClientMessage {
       'type': 'answer',
       'toolUseId': toolUseId,
       'result': result,
-      'sessionId': ?sessionId,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4283,7 +4283,7 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'install_tool_suggestion',
       'toolUseId': toolUseId,
-      'sessionId': ?sessionId,
+      if (sessionId != null) 'sessionId': sessionId,
     });
   }
 
@@ -4307,7 +4307,7 @@ class ClientMessage {
     'type': 'resolve_session_link',
     'requestId': requestId,
     'sessionId': sessionId,
-    'provider': ?provider,
+    if (provider != null) 'provider': provider,
   });
 
   factory ClientMessage.refreshBranch(String sessionId) =>
@@ -4320,8 +4320,8 @@ class ClientMessage {
   }) => ClientMessage._(<String, dynamic>{
     'type': 'get_debug_bundle',
     'sessionId': sessionId,
-    'traceLimit': ?traceLimit,
-    'includeDiff': ?includeDiff,
+    if (traceLimit != null) 'traceLimit': traceLimit,
+    if (includeDiff != null) 'includeDiff': includeDiff,
   });
 
   factory ClientMessage.listSessions() =>
@@ -4342,10 +4342,10 @@ class ClientMessage {
     return ClientMessage._(<String, dynamic>{
       'type': 'rename_session',
       'sessionId': sessionId,
-      'name': ?name,
-      'provider': ?provider,
-      'providerSessionId': ?providerSessionId,
-      'projectPath': ?projectPath,
+      if (name != null) 'name': name,
+      if (provider != null) 'provider': provider,
+      if (providerSessionId != null) 'providerSessionId': providerSessionId,
+      if (projectPath != null) 'projectPath': projectPath,
     });
   }
 
@@ -4360,13 +4360,13 @@ class ClientMessage {
   }) {
     return ClientMessage._(<String, dynamic>{
       'type': 'list_recent_sessions',
-      'limit': ?limit,
-      'offset': ?offset,
-      'projectPath': ?projectPath,
-      'requestScope': ?requestScope,
-      'provider': ?provider,
-      'namedOnly': ?namedOnly,
-      'searchQuery': ?searchQuery,
+      if (limit != null) 'limit': limit,
+      if (offset != null) 'offset': offset,
+      if (projectPath != null) 'projectPath': projectPath,
+      if (requestScope != null) 'requestScope': requestScope,
+      if (provider != null) 'provider': provider,
+      if (namedOnly != null) 'namedOnly': namedOnly,
+      if (searchQuery != null) 'searchQuery': searchQuery,
     });
   }
 
@@ -4400,27 +4400,27 @@ class ClientMessage {
       'type': 'resume_session',
       'sessionId': sessionId,
       'projectPath': projectPath,
-      'permissionMode': ?permissionMode,
-      'executionMode': ?executionMode,
-      'approvalPolicy': ?approvalPolicy,
-      'approvalsReviewer': ?approvalsReviewer,
-      'codexPermissionsMode': ?codexPermissionsMode,
-      'planMode': ?planMode,
-      'effort': ?effort,
-      'maxTurns': ?maxTurns,
-      'maxBudgetUsd': ?maxBudgetUsd,
-      'fallbackModel': ?fallbackModel,
-      'forkSession': ?forkSession,
-      'persistSession': ?persistSession,
-      'profile': ?profile,
-      'provider': ?provider,
-      'sandboxMode': ?sandboxMode,
-      'model': ?model,
-      'modelReasoningEffort': ?modelReasoningEffort,
-      'serviceTier': ?serviceTier,
-      'networkAccessEnabled': ?networkAccessEnabled,
-      'webSearchMode': ?webSearchMode,
-      'resumeRequestId': ?resumeRequestId,
+      if (permissionMode != null) 'permissionMode': permissionMode,
+      if (executionMode != null) 'executionMode': executionMode,
+      if (approvalPolicy != null) 'approvalPolicy': approvalPolicy,
+      if (approvalsReviewer != null) 'approvalsReviewer': approvalsReviewer,
+      if (codexPermissionsMode != null) 'codexPermissionsMode': codexPermissionsMode,
+      if (planMode != null) 'planMode': planMode,
+      if (effort != null) 'effort': effort,
+      if (maxTurns != null) 'maxTurns': maxTurns,
+      if (maxBudgetUsd != null) 'maxBudgetUsd': maxBudgetUsd,
+      if (fallbackModel != null) 'fallbackModel': fallbackModel,
+      if (forkSession != null) 'forkSession': forkSession,
+      if (persistSession != null) 'persistSession': persistSession,
+      if (profile != null) 'profile': profile,
+      if (provider != null) 'provider': provider,
+      if (sandboxMode != null) 'sandboxMode': sandboxMode,
+      if (model != null) 'model': model,
+      if (modelReasoningEffort != null) 'modelReasoningEffort': modelReasoningEffort,
+      if (serviceTier != null) 'serviceTier': serviceTier,
+      if (networkAccessEnabled != null) 'networkAccessEnabled': networkAccessEnabled,
+      if (webSearchMode != null) 'webSearchMode': webSearchMode,
+      if (resumeRequestId != null) 'resumeRequestId': resumeRequestId,
       if (additionalWritableRoots != null && additionalWritableRoots.isNotEmpty)
         'additionalWritableRoots': additionalWritableRoots,
     });
@@ -4429,8 +4429,8 @@ class ClientMessage {
   factory ClientMessage.listGallery({String? project, String? sessionId}) =>
       ClientMessage._(<String, dynamic>{
         'type': 'list_gallery',
-        'project': ?project,
-        'sessionId': ?sessionId,
+        if (project != null) 'project': project,
+        if (sessionId != null) 'sessionId': sessionId,
       });
 
   factory ClientMessage.readFile(
@@ -4441,7 +4441,7 @@ class ClientMessage {
     'type': 'read_file',
     'projectPath': projectPath,
     'filePath': filePath,
-    'maxLines': ?maxLines,
+    if (maxLines != null) 'maxLines': maxLines,
   });
 
   factory ClientMessage.listFiles(String projectPath) =>
@@ -4451,14 +4451,14 @@ class ClientMessage {
       ClientMessage._(<String, dynamic>{
         'type': 'list_directory',
         'path': path,
-        'requestId': ?requestId,
+        if (requestId != null) 'requestId': requestId,
       });
 
   factory ClientMessage.getDiff(String projectPath, {bool? staged}) =>
       ClientMessage._(<String, dynamic>{
         'type': 'get_diff',
         'projectPath': projectPath,
-        'staged': ?staged,
+        if (staged != null) 'staged': staged,
       });
 
   factory ClientMessage.getDiffImage(
@@ -4473,7 +4473,10 @@ class ClientMessage {
   });
 
   factory ClientMessage.interrupt({String? sessionId}) => ClientMessage._(
-    <String, dynamic>{'type': 'interrupt', 'sessionId': ?sessionId},
+    <String, dynamic>{
+      'type': 'interrupt',
+      if (sessionId != null) 'sessionId': sessionId,
+    },
   );
 
   factory ClientMessage.enqueueCodexTakeover({
@@ -4486,9 +4489,9 @@ class ClientMessage {
     'type': 'enqueue_codex_takeover',
     'threadId': threadId,
     'projectPath': projectPath,
-    'clientId': ?clientId,
-    'queuedCommand': ?queuedCommand,
-    'options': ?options,
+    if (clientId != null) 'clientId': clientId,
+    if (queuedCommand != null) 'queuedCommand': queuedCommand,
+    if (options != null) 'options': options,
   });
 
   factory ClientMessage.cancelCodexTakeover({
@@ -4498,8 +4501,8 @@ class ClientMessage {
   }) => ClientMessage._(<String, dynamic>{
     'type': 'cancel_codex_takeover',
     'threadId': threadId,
-    'queueId': ?queueId,
-    'clientId': ?clientId,
+    if (queueId != null) 'queueId': queueId,
+    if (clientId != null) 'clientId': clientId,
   });
 
   factory ClientMessage.getCodexTakeoverQueue({
@@ -4584,8 +4587,8 @@ class ClientMessage {
     'type': 'take_screenshot',
     'mode': mode,
     'projectPath': projectPath,
-    'windowId': ?windowId,
-    'sessionId': ?sessionId,
+    if (windowId != null) 'windowId': windowId,
+    if (sessionId != null) 'sessionId': sessionId,
   });
 
   factory ClientMessage.backupPromptHistory({
@@ -4615,11 +4618,11 @@ class ClientMessage {
   }) => ClientMessage._(<String, dynamic>{
     'type': 'record_prompt_history',
     'text': text,
-    'projectPath': ?projectPath,
+    if (projectPath != null) 'projectPath': projectPath,
     'clientId': clientId,
-    'clientName': ?clientName,
-    'sessionId': ?sessionId,
-    'usedAt': ?usedAt,
+    if (clientName != null) 'clientName': clientName,
+    if (sessionId != null) 'sessionId': sessionId,
+    if (usedAt != null) 'usedAt': usedAt,
   });
 
   factory ClientMessage.syncPromptHistory({
@@ -4631,8 +4634,8 @@ class ClientMessage {
   }) => ClientMessage._(<String, dynamic>{
     'type': 'sync_prompt_history',
     'clientId': clientId,
-    'clientName': ?clientName,
-    'sinceRevision': ?sinceRevision,
+    if (clientName != null) 'clientName': clientName,
+    if (sinceRevision != null) 'sinceRevision': sinceRevision,
     'includeDeleted': includeDeleted,
     if (entries.isNotEmpty)
       'entries': entries.map((entry) => entry.toJson()).toList(),
@@ -4647,12 +4650,12 @@ class ClientMessage {
     String? updatedAt,
   }) => ClientMessage._(<String, dynamic>{
     'type': 'mutate_prompt_history',
-    'id': ?id,
-    'text': ?text,
-    'projectPath': ?projectPath,
+    if (id != null) 'id': id,
+    if (text != null) 'text': text,
+    if (projectPath != null) 'projectPath': projectPath,
     'action': action,
-    'isFavorite': ?isFavorite,
-    'updatedAt': ?updatedAt,
+    if (isFavorite != null) 'isFavorite': isFavorite,
+    if (updatedAt != null) 'updatedAt': updatedAt,
   });
 
   factory ClientMessage.importPromptHistoryV1({
@@ -4662,7 +4665,7 @@ class ClientMessage {
   }) => ClientMessage._(<String, dynamic>{
     'type': 'import_prompt_history_v1',
     'clientId': clientId,
-    'clientName': ?clientName,
+    if (clientName != null) 'clientName': clientName,
     'entries': entries.map((entry) => entry.toJson()).toList(),
   });
 
@@ -4688,15 +4691,15 @@ class ClientMessage {
   }) => ClientMessage._(<String, dynamic>{
     'type': 'git_stage',
     'projectPath': projectPath,
-    'files': ?files,
-    'hunks': ?hunks,
+    if (files != null) 'files': files,
+    if (hunks != null) 'hunks': hunks,
   });
 
   factory ClientMessage.gitUnstage(String projectPath, {List<String>? files}) =>
       ClientMessage._(<String, dynamic>{
         'type': 'git_unstage',
         'projectPath': projectPath,
-        'files': ?files,
+        if (files != null) 'files': files,
       });
 
   factory ClientMessage.gitUnstageHunks(
@@ -4716,9 +4719,9 @@ class ClientMessage {
   }) => ClientMessage._(<String, dynamic>{
     'type': 'git_commit',
     'projectPath': projectPath,
-    'sessionId': ?sessionId,
-    'message': ?message,
-    'autoGenerate': ?autoGenerate,
+    if (sessionId != null) 'sessionId': sessionId,
+    if (message != null) 'message': message,
+    if (autoGenerate != null) 'autoGenerate': autoGenerate,
   });
 
   factory ClientMessage.gitPush(String projectPath) => ClientMessage._(
@@ -4737,7 +4740,7 @@ class ClientMessage {
     'type': 'git_create_branch',
     'projectPath': projectPath,
     'name': name,
-    'checkout': ?checkout,
+    if (checkout != null) 'checkout': checkout,
   });
 
   factory ClientMessage.gitCheckoutBranch(String projectPath, String branch) =>
@@ -4776,7 +4779,7 @@ class ClientMessage {
   }) => ClientMessage._({
     'type': 'git_status',
     'projectPath': projectPath,
-    'sessionId': ?sessionId,
+    if (sessionId != null) 'sessionId': sessionId,
     if (includeRemote) 'includeRemote': true,
   });
 

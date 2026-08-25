@@ -22,7 +22,7 @@ class ExploreFileList extends StatelessWidget {
     return ListView.separated(
       key: const ValueKey('explore_list'),
       itemCount: entries.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = entries[index];
         final isHighlighted = entry.relativePath == highlightedFilePath;

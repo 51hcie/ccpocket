@@ -400,10 +400,10 @@ class _ChatMessageListState extends State<ChatMessageList> {
     return MultiBlocListener(
       listeners: [
         BlocListener<ChatSessionCubit, ChatSessionState>(
-          listener: (_, _) => _captureVisibleAnchor(),
+          listener: (context, state) => _captureVisibleAnchor(),
         ),
         BlocListener<StreamingStateCubit, StreamingState>(
-          listener: (_, _) => _captureVisibleAnchor(),
+          listener: (context, state) => _captureVisibleAnchor(),
         ),
       ],
       child: NotificationListener<ScrollMetricsNotification>(

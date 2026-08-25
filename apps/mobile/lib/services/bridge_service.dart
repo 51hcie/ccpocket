@@ -2598,7 +2598,7 @@ class BridgeService implements BridgeServiceBase {
               'base64': base64Data,
               'mimeType': mimeType,
               'projectPath': projectPath,
-              'sessionId': ?sessionId,
+              if (sessionId != null) 'sessionId': sessionId,
             }),
           )
           .timeout(const Duration(seconds: 30));

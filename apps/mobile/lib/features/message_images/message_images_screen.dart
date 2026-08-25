@@ -246,7 +246,7 @@ class _MultiImageList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: images.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final url = '$httpBaseUrl${images[index].url}';
         return GestureDetector(
