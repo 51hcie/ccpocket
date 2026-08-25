@@ -217,6 +217,7 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final isAntigravity = _selectedProvider == Provider.antigravity;
     final activeAccent = isAntigravity ? BrandConfig.antigravityAccent : BrandConfig.codexAccent;
+    final allProjects = _computeAllProjects();
 
     final sheetBgColor = isDark
         ? BrandConfig.anyCodingPrimaryDark
@@ -386,7 +387,6 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
                       ),
 
                       // Quick Recent Project Chips
-                      final allProjects = _computeAllProjects();
                       if (allProjects.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         SizedBox(

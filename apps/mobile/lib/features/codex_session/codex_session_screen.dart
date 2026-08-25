@@ -2077,7 +2077,15 @@ Future<void> _forkCodexSession(
       initialProjectPath: projectPath,
     );
     if (result != null && context.mounted) {
-      bridge.startSession(result);
+      bridge.send(
+        ClientMessage.start(
+          result.projectPath,
+          provider: result.provider.value,
+          model: result.model,
+          useWorktree: result.useWorktree,
+          worktreeBranch: result.worktreeBranch,
+        ),
+      );
     }
   }
 }
