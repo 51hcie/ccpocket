@@ -2257,6 +2257,35 @@ export class BridgeWebSocketServer {
     return this.wss.clients.size;
   }
 
+  /** Return live task counts for monitoring console. */
+  getTaskCounts(): { running: number; queued: number; completed: number; failed: number } {
+    let running = 0;
+    try {
+      const sessions = this.sessionManager.list();
+      for (const s of sessions) {
+        if (s.status === "running" || s.status === "waiting_approval") {
+          running++;
+        }
+      }
+    } catch {}
+
+    let queued = 0;
+    try {
+      if (this.codexTakeoverQueueStore) {
+        queued = this.codexTakeoverQueueStore.getPendingThreadIds().length;
+      }
+    } catch {}
+
+    let completed = 0;
+    try {
+      if (this.projectHistory) {
+        completed = this.projectHistory.getProjects().length;
+      }
+    } catch {}
+
+    return { running, queued, completed, failed: 0 };
+  }
+
   private handleConnection(ws: WebSocket): void {
     // Send session list and project history on connect
     this.refreshConnectionMetadata();

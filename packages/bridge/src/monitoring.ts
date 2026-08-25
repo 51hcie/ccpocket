@@ -233,36 +233,10 @@ export class MonitoringService {
     const uptime = Math.floor((Date.now() - this.startedAt) / 1000);
     const connectedClients = wsServer?.clientCount ?? 0;
 
-    let running = 0;
-    let queued = 0;
-    let completed = 0;
-    let failed = 0;
-
+    let taskCounts = { running: 0, queued: 0, completed: 0, failed: 0 };
     try {
-      if (wsServer) {
-        // Read session manager if available
-        const sessionManager = wsServer.sessionManager;
-        if (sessionManager) {
-          const sessions = sessionManager.getAllSessions();
-          for (const s of sessions) {
-            if (s.status === "running") running++;
-            else if (s.status === "waiting_approval") running++;
-          }
-        }
-
-        // Takeover queue
-        const takeoverStore = wsServer.codexTakeoverQueueStore;
-        if (takeoverStore) {
-          const queuedTasks = takeoverStore.getQueuedTasks();
-          queued = queuedTasks.length;
-        }
-
-        // Project history completed
-        const projectHistory = wsServer.projectHistory;
-        if (projectHistory) {
-          const entries = projectHistory.getAllEntries();
-          completed = entries.length;
-        }
+      if (wsServer && typeof (wsServer as any).getTaskCounts === "function") {
+        taskCounts = (wsServer as any).getTaskCounts();
       }
     } catch {
       // Degrade gracefully
@@ -273,12 +247,7 @@ export class MonitoringService {
       uptime,
       port: this.port,
       connectedClients,
-      taskCounts: {
-        running,
-        queued,
-        completed,
-        failed,
-      },
+      taskCounts,
       source: "AnyCoding Bridge Runtime",
     };
   }
