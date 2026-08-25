@@ -48,7 +48,19 @@ for file in "${DELETED_FILES[@]}"; do
 done
 echo "[+] All dead IAP/supporter files verified removed"
 
-# 4. Verify no purchases_flutter or revenuecat imports in apps/mobile/lib
+# 4. Verify no purchases_flutter, RevenueCat, or PurchasesHybridCommon in lockfiles
+for lockfile in "apps/mobile/ios/Podfile.lock" "apps/mobile/macos/Podfile.lock"; do
+  if [ -f "$REPO_ROOT/$lockfile" ]; then
+    if grep -E -i "purchases_flutter|revenuecat|purchaseshybridcommon" "$REPO_ROOT/$lockfile"; then
+      echo "[-] ERROR: Residual IAP entries found in $lockfile" >&2
+      FAILED=1
+    else
+      echo "[+] $lockfile: no residual IAP entries"
+    fi
+  fi
+done
+
+# 5. Verify no purchases_flutter or revenuecat/support_banner_service imports or references in apps/mobile/lib
 if grep -rn "purchases_flutter" "$REPO_ROOT/apps/mobile/lib"; then
   echo "[-] ERROR: purchases_flutter import or reference in apps/mobile/lib" >&2
   FAILED=1
@@ -56,21 +68,43 @@ else
   echo "[+] apps/mobile/lib: no purchases_flutter references"
 fi
 
-if grep -rn "revenuecat_service" "$REPO_ROOT/apps/mobile/lib"; then
-  echo "[-] ERROR: revenuecat_service import in apps/mobile/lib" >&2
+if grep -rn -i "revenuecat" "$REPO_ROOT/apps/mobile/lib"; then
+  echo "[-] ERROR: revenuecat reference in apps/mobile/lib" >&2
   FAILED=1
 else
-  echo "[+] apps/mobile/lib: no revenuecat_service imports"
+  echo "[+] apps/mobile/lib: no revenuecat references"
 fi
 
-if grep -rn "support_banner_service" "$REPO_ROOT/apps/mobile/lib"; then
-  echo "[-] ERROR: support_banner_service import in apps/mobile/lib" >&2
+if grep -rn -E "support_banner_service|SupportBannerService" "$REPO_ROOT/apps/mobile/lib"; then
+  echo "[-] ERROR: support_banner_service reference in apps/mobile/lib" >&2
   FAILED=1
 else
-  echo "[+] apps/mobile/lib: no support_banner_service imports"
+  echo "[+] apps/mobile/lib: no support_banner_service references"
 fi
 
-# 5. Verify no REVENUECAT in .github/workflows
+# 6. Verify no purchases_flutter, RevenueCatService, or SupportBannerService residues in apps/mobile/test
+if grep -rn "purchases_flutter" "$REPO_ROOT/apps/mobile/test"; then
+  echo "[-] ERROR: purchases_flutter found in apps/mobile/test" >&2
+  FAILED=1
+else
+  echo "[+] apps/mobile/test: no purchases_flutter references"
+fi
+
+if grep -rn -E "RevenueCatService|revenuecat_service|_FakeRevenueCatService" "$REPO_ROOT/apps/mobile/test"; then
+  echo "[-] ERROR: RevenueCatService residue found in apps/mobile/test" >&2
+  FAILED=1
+else
+  echo "[+] apps/mobile/test: no RevenueCatService residues"
+fi
+
+if grep -rn -E "SupportBannerService|support_banner_service" "$REPO_ROOT/apps/mobile/test"; then
+  echo "[-] ERROR: SupportBannerService residue found in apps/mobile/test" >&2
+  FAILED=1
+else
+  echo "[+] apps/mobile/test: no SupportBannerService residues"
+fi
+
+# 7. Verify no REVENUECAT in .github/workflows
 if grep -rn "REVENUECAT" "$REPO_ROOT/.github/workflows"; then
   echo "[-] ERROR: REVENUECAT references in .github/workflows" >&2
   FAILED=1

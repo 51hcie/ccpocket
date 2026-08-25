@@ -369,8 +369,6 @@ Widget _buildWorkspaceApp({
   required _MockBridgeService bridge,
   required SettingsCubit settingsCubit,
   required DraftService draftService,
-  dynamic revenueCatService,
-  dynamic supportBannerService,
   List<RecentSession>? debugRecentSessions,
   GlobalKey<WorkspaceShellScreenState>? shellKey,
   TargetPlatform platform = TargetPlatform.macOS,
@@ -468,9 +466,6 @@ Future<SettingsCubit> _createSettingsCubit(_MockBridgeService bridge) async {
   );
 }
 
-Object? _FakeRevenueCatService() => null;
-Future<dynamic> _createSupportBannerService() async => null;
-
 Future<void> _pumpUi(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 100));
@@ -490,8 +485,6 @@ void main() {
     final bridge = _MockBridgeService();
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
     final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
     await tester.pumpWidget(
@@ -499,8 +492,6 @@ void main() {
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         debugRecentSessions: [_recentSession('one')],
         shellKey: shellKey,
       ),
@@ -542,8 +533,6 @@ void main() {
     final bridge = _MockBridgeService();
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
     final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
     await tester.pumpWidget(
@@ -551,8 +540,6 @@ void main() {
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         shellKey: shellKey,
       ),
     );
@@ -590,8 +577,6 @@ void main() {
       ]);
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
       await tester.pumpWidget(
@@ -599,8 +584,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           debugRecentSessions: [_recentSession('one')],
           shellKey: shellKey,
         ),
@@ -655,8 +638,6 @@ void main() {
       ]);
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
       await tester.pumpWidget(
@@ -664,8 +645,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
         ),
       );
@@ -711,8 +690,6 @@ void main() {
       ]);
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
       await tester.pumpWidget(
@@ -720,8 +697,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           debugRecentSessions: [_recentSession('one')],
           shellKey: shellKey,
         ),
@@ -766,16 +741,12 @@ void main() {
     );
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
 
     await tester.pumpWidget(
       _buildWorkspaceApp(
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
       ),
     );
     await _pumpUi(tester);
@@ -800,16 +771,12 @@ void main() {
       );
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
 
       await tester.pumpWidget(
         _buildWorkspaceApp(
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
         ),
       );
       await _pumpUi(tester);
@@ -839,8 +806,6 @@ void main() {
     final bridge = _MockBridgeService();
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
     final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
     await tester.pumpWidget(
@@ -848,8 +813,6 @@ void main() {
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         shellKey: shellKey,
       ),
     );
@@ -913,8 +876,6 @@ void main() {
         activeMachineId: 'machine-1',
       );
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
       await tester.pumpWidget(
@@ -922,8 +883,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
           machineManagerCubit: machineManagerCubit,
         ),
@@ -985,8 +944,6 @@ void main() {
     ]);
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
     final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
     await tester.pumpWidget(
@@ -994,8 +951,6 @@ void main() {
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         debugRecentSessions: [_recentSession('one')],
         shellKey: shellKey,
       ),
@@ -1017,8 +972,6 @@ void main() {
       final bridge = _MockBridgeService();
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
       await tester.pumpWidget(
@@ -1026,8 +979,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
         ),
       );
@@ -1091,8 +1042,6 @@ void main() {
     final bridge = _MockBridgeService();
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
     final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
     await tester.pumpWidget(
@@ -1100,8 +1049,6 @@ void main() {
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         shellKey: shellKey,
       ),
     );
@@ -1176,8 +1123,6 @@ void main() {
       final bridge = _MockBridgeService();
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
       await tester.pumpWidget(
@@ -1185,8 +1130,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
         ),
       );
@@ -1290,8 +1233,6 @@ void main() {
       final bridge = _MockBridgeService();
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
       await tester.pumpWidget(
@@ -1299,8 +1240,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
         ),
       );
@@ -1333,16 +1272,12 @@ void main() {
     final bridge = _MockBridgeService();
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
 
     await tester.pumpWidget(
       _buildWorkspaceApp(
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         platform: TargetPlatform.macOS,
       ),
     );
@@ -1357,16 +1292,12 @@ void main() {
     final bridge = _MockBridgeService();
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
 
     await tester.pumpWidget(
       _buildWorkspaceApp(
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         platform: TargetPlatform.iOS,
       ),
     );
@@ -1384,8 +1315,6 @@ void main() {
       final bridge = _MockBridgeService();
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
       final session = _runningSession(
         id: 'session-1',
@@ -1397,8 +1326,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
         ),
       );
@@ -1449,8 +1376,6 @@ void main() {
       final bridge = _MockBridgeService();
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
       final session = _runningSession(
         id: 'session-1',
@@ -1462,8 +1387,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
         ),
       );
@@ -1506,8 +1429,6 @@ void main() {
       final bridge = _MockBridgeService();
       final settingsCubit = await _createSettingsCubit(bridge);
       final draftService = DraftService(await SharedPreferences.getInstance());
-      final revenueCatService = _FakeRevenueCatService();
-      final supportBannerService = await _createSupportBannerService();
       final shellKey = GlobalKey<WorkspaceShellScreenState>();
       final session = _runningSession(
         id: 'session-1',
@@ -1519,8 +1440,6 @@ void main() {
           bridge: bridge,
           settingsCubit: settingsCubit,
           draftService: draftService,
-          revenueCatService: revenueCatService,
-          supportBannerService: supportBannerService,
           shellKey: shellKey,
         ),
       );
@@ -1562,8 +1481,6 @@ void main() {
     final bridge = _MockBridgeService();
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
     final shellKey = GlobalKey<WorkspaceShellScreenState>();
 
     await tester.pumpWidget(
@@ -1571,8 +1488,6 @@ void main() {
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
         shellKey: shellKey,
       ),
     );
@@ -1608,16 +1523,12 @@ void main() {
     );
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
 
     await tester.pumpWidget(
       _buildWorkspaceApp(
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
       ),
     );
     await _pumpUi(tester);
@@ -1642,16 +1553,12 @@ void main() {
     );
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
 
     await tester.pumpWidget(
       _buildWorkspaceApp(
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
       ),
     );
     await _pumpUi(tester);
@@ -1675,8 +1582,6 @@ void main() {
     );
     final settingsCubit = await _createSettingsCubit(bridge);
     final draftService = DraftService(await SharedPreferences.getInstance());
-    final revenueCatService = _FakeRevenueCatService();
-    final supportBannerService = await _createSupportBannerService();
 
     Future<void> expectOfflineRoot() async {
       await _pumpUi(tester);
@@ -1693,8 +1598,6 @@ void main() {
         bridge: bridge,
         settingsCubit: settingsCubit,
         draftService: draftService,
-        revenueCatService: revenueCatService,
-        supportBannerService: supportBannerService,
       ),
     );
     await expectOfflineRoot();

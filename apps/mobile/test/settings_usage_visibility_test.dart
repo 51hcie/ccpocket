@@ -1264,11 +1264,6 @@ void main() {
         now: () => DateTime(2026, 4, 15, 12),
         appVersionLoader: () async => '1.50.0',
       );
-      final supportBannerService = SupportBannerService(
-        prefs: prefs,
-        reviewService: reviewService,
-      );
-      await supportBannerService.setDebugForceShowOverride(true);
 
       await tester.pumpWidget(
         await _buildScreen(
@@ -1276,7 +1271,6 @@ void main() {
           settingsCubit: settingsCubit,
           machineManagerCubit: machineManagerCubit,
           inAppReviewService: reviewService,
-          supportBannerService: supportBannerService,
         ),
       );
       await tester.pumpAndSettle();
