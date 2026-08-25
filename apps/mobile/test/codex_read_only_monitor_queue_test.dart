@@ -1,14 +1,62 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart' as provider_pkg;
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ccpocket/features/anycoding/views/anycoding_tasks_view.dart';
+import 'package:ccpocket/features/chat_session/state/chat_session_cubit.dart';
 import 'package:ccpocket/features/chat_session/state/streaming_state_cubit.dart';
+import 'package:ccpocket/features/codex_session/codex_session_screen.dart';
 import 'package:ccpocket/features/codex_session/state/codex_session_cubit.dart';
+import 'package:ccpocket/features/settings/state/settings_cubit.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/models/messages.dart';
+import 'package:ccpocket/providers/bridge_cubits.dart';
 import 'package:ccpocket/services/bridge_service.dart';
+import 'package:ccpocket/services/database_service.dart';
+import 'package:ccpocket/services/draft_service.dart';
+import 'package:ccpocket/services/prompt_history_service.dart';
+import 'package:ccpocket/theme/app_theme.dart';
+
+Future<Widget> buildTestCodexScreenHarness({
+  required BridgeService bridge,
+  required Widget child,
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('zh'),
+    theme: AppTheme.darkTheme,
+    home: MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<BridgeService>.value(value: bridge),
+        RepositoryProvider<DraftService>.value(value: DraftService(prefs)),
+        RepositoryProvider<PromptHistoryService>.value(
+          value: PromptHistoryService(DatabaseService()),
+        ),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<ConnectionCubit>(
+            create: (_) => ConnectionCubit(
+              BridgeConnectionState.connected,
+              bridge.connectionStatus,
+            ),
+          ),
+          BlocProvider<FileListCubit>(
+            create: (_) => FileListCubit(const <String>[], bridge.fileList),
+          ),
+          BlocProvider<SettingsCubit>(create: (_) => SettingsCubit(prefs)),
+        ],
+        child: child,
+      ),
+    ),
+  );
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -316,6 +364,230 @@ void main() {
       // 2. takeControl with command -> resume-then-send flow
       cubit.takeControl(command: 'Run migration');
       expect(cubit.hasPendingResumeCommand, isTrue);
+
+      await cubit.close();
+      await streamingCubit.close();
+    });
+
+    testWidgets('CodexSessionScreen for inactive historical session displays read-only banner, refresh, and enter control without showing session unavailable, and shows messages on history arrival', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final bridge = BridgeService();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: const CodexSessionScreen(
+          sessionId: 'hist-codex-1',
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await tester.pumpAndSettle();
+
+      // 1. Initial active session does not exist in bridge.sessions.
+      // Must display read-only monitor banner, refresh, and enter control; must NOT show session unavailable.
+      expect(find.byKey(const ValueKey('codex_read_only_monitor_banner')), findsOneWidget);
+      expect(find.byKey(const ValueKey('codex_read_only_refresh_button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('codex_read_only_take_control_button')), findsOneWidget);
+      expect(find.text('进入控制'), findsOneWidget);
+      expect(find.text('会话不可用'), findsNothing);
+
+      // 2. Tapping refresh triggers get_history
+      await tester.tap(find.byKey(const ValueKey('codex_read_only_refresh_button')));
+      await tester.pumpAndSettle();
+      expect(
+        sentClientMessages.any((m) => m.toJson().contains('get_history') && m.toJson().contains('hist-codex-1')),
+        isTrue,
+      );
+
+      // 3. CodexReadOnlyInfo arrives from Bridge
+      bridge.testHandleMessage(
+        const CodexReadOnlyInfoMessage(
+          threadId: 'hist-codex-1',
+          isReadOnly: true,
+          isLocalHistory: true,
+          status: 'completed',
+          updatedAt: '2026-08-25T11:00:00Z',
+        ),
+        sessionId: 'hist-codex-1',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('本地历史记录 (只读)'), findsOneWidget);
+      expect(find.text('会话不可用'), findsNothing);
+
+      // 4. History arrives from Bridge with assistant message
+      bridge.testHandleMessage(
+        HistoryMessage(
+          sessionId: 'hist-codex-1',
+          messages: [
+            AssistantServerMessage(
+              message: AssistantMessage(
+                id: 'msg-1',
+                role: 'assistant',
+                content: [TextContent(text: 'Historical code inspection complete.')],
+              ),
+            ),
+          ],
+        ),
+        sessionId: 'hist-codex-1',
+      );
+      await tester.pumpAndSettle();
+
+      // Content must be displayed and session unavailable still NOT shown
+      expect(find.text('Historical code inspection complete.'), findsOneWidget);
+      expect(find.text('会话不可用'), findsNothing);
+      expect(find.byKey(const ValueKey('codex_read_only_monitor_banner')), findsOneWidget);
+
+      // 5. Tapping take control triggers resume session
+      await tester.tap(find.byKey(const ValueKey('codex_read_only_take_control_button')));
+      await tester.pumpAndSettle();
+      expect(
+        sentClientMessages.any((m) => m.toJson().contains('resume_session') && m.toJson().contains('hist-codex-1')),
+        isTrue,
+      );
+    });
+
+    testWidgets('CodexSessionScreen displays SessionUnavailableView when bridge explicitly returns session_not_found and no history exists', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final bridge = BridgeService();
+
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: const CodexSessionScreen(
+          sessionId: 'missing-codex-thread',
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await tester.pump();
+
+      // Simulate bridge returning explicit session_not_found error
+      bridge.testHandleMessage(
+        const ErrorMessage(
+          message: 'Session missing-codex-thread not found',
+          errorCode: 'session_not_found',
+          sessionId: 'missing-codex-thread',
+        ),
+        sessionId: 'missing-codex-thread',
+      );
+      await tester.pumpAndSettle();
+
+      // Must show session unavailable view
+      expect(find.text('会话不可用'), findsOneWidget);
+      expect(find.byKey(const ValueKey('codex_read_only_monitor_banner')), findsNothing);
+    });
+
+    testWidgets('CodexSessionScreen on active writer conflict stays on read-only page and does not show session unavailable', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final bridge = BridgeService();
+
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: const CodexSessionScreen(
+          sessionId: 'conflict-codex-thread',
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await tester.pump();
+
+      // Simulate bridge emitting conflict message
+      bridge.testHandleMessage(
+        const CodexTakeoverConflictMessage(
+          threadId: 'conflict-codex-thread',
+          projectPath: '/workspace',
+          message: 'Thread is running with an active writer in another window',
+          canQueue: true,
+          queueLength: 1,
+        ),
+        sessionId: 'conflict-codex-thread',
+      );
+      await tester.pumpAndSettle();
+
+      // Must NOT show SessionUnavailableView
+      expect(find.text('会话不可用'), findsNothing);
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+    });
+
+    test('CodexSessionCubit clears sessionUnavailable state when CodexReadOnlyInfo / History / Conflict arrives', () async {
+      final bridge = BridgeService();
+      final streamingCubit = StreamingStateCubit();
+
+      final cubit = CodexSessionCubit(
+        sessionId: 'test-recovery-thread',
+        bridge: bridge,
+        streamingCubit: streamingCubit,
+        initialProjectPath: '/repo',
+        isReadOnly: true,
+      );
+
+      // Force sessionUnavailable to true (e.g. from early session_not_found error)
+      cubit.emit(cubit.state.copyWith(sessionUnavailable: true));
+      expect(cubit.state.sessionUnavailable, isTrue);
+
+      // 1. CodexReadOnlyInfo arrives -> clears sessionUnavailable
+      bridge.testHandleMessage(
+        const CodexReadOnlyInfoMessage(
+          threadId: 'test-recovery-thread',
+          isReadOnly: true,
+          status: 'idle',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.state.sessionUnavailable, isFalse);
+
+      // Set to true again
+      cubit.emit(cubit.state.copyWith(sessionUnavailable: true));
+      expect(cubit.state.sessionUnavailable, isTrue);
+
+      // 2. Conflict arrives -> clears sessionUnavailable
+      bridge.testHandleMessage(
+        const CodexTakeoverConflictMessage(
+          threadId: 'test-recovery-thread',
+          projectPath: '/repo',
+          message: 'conflict',
+          canQueue: true,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.state.sessionUnavailable, isFalse);
+
+      // Set to true again
+      cubit.emit(cubit.state.copyWith(sessionUnavailable: true));
+      expect(cubit.state.sessionUnavailable, isTrue);
+
+      // 3. HistoryMessage arrives -> clears sessionUnavailable
+      bridge.testHandleMessage(
+        HistoryMessage(
+          sessionId: 'test-recovery-thread',
+          messages: [
+            AssistantServerMessage(
+              message: AssistantMessage(
+                id: 'm1',
+                role: 'assistant',
+                content: [TextContent(text: 'Ready')],
+              ),
+            ),
+          ],
+        ),
+        sessionId: 'test-recovery-thread',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.state.sessionUnavailable, isFalse);
 
       await cubit.close();
       await streamingCubit.close();

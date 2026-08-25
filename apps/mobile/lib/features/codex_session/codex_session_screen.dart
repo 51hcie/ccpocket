@@ -1348,7 +1348,10 @@ class _CodexChatBody extends HookWidget {
                     ],
                   ),
                 ),
-                body: sessionState.sessionUnavailable
+                body: (sessionState.sessionUnavailable &&
+                        sessionState.entries.isEmpty &&
+                        readOnlyInfo.value == null &&
+                        !isConflict.value)
                     ? SessionUnavailableView(
                         onOpenRecentSessions:
                             onBackToSessions ??
@@ -1403,6 +1406,8 @@ class _CodexChatBody extends HookWidget {
                     },
                   )
                 else if (readOnlyInfo.value?.isReadOnly ??
+                    (chatSessionCubit is CodexSessionCubit &&
+                        (chatSessionCubit as CodexSessionCubit).isReadOnlySession) ||
                     !bridge.sessions.any(
                       (s) =>
                           s.id == sessionId || s.claudeSessionId == sessionId,

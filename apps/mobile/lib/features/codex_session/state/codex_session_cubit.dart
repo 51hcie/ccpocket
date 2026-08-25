@@ -57,6 +57,9 @@ class CodexSessionCubit extends ChatSessionCubit {
     _readOnlySub = bridge.codexReadOnlyInfoStream.listen((msg) {
       if (msg.threadId == sessionId) {
         _isReadOnly = msg.isReadOnly;
+        if (state.sessionUnavailable) {
+          emit(state.copyWith(sessionUnavailable: false));
+        }
       }
     });
 
@@ -80,6 +83,9 @@ class CodexSessionCubit extends ChatSessionCubit {
 
     _conflictSub = bridge.codexTakeoverConflictStream.listen((msg) {
       if (msg.threadId == sessionId) {
+        if (state.sessionUnavailable) {
+          emit(state.copyWith(sessionUnavailable: false));
+        }
         _onConflictEncountered(msg);
       }
     });
@@ -87,6 +93,9 @@ class CodexSessionCubit extends ChatSessionCubit {
 
   void _onSessionResumed() {
     _isReadOnly = false;
+    if (state.sessionUnavailable) {
+      emit(state.copyWith(sessionUnavailable: false));
+    }
     final pending = _pendingResumeCommand;
     if (pending != null) {
       _pendingResumeCommand = null;

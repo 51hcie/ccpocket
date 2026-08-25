@@ -303,6 +303,11 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
       logger.error('[session:$sessionId] Error from bridge: ${msg.message}');
       _rollbackFailedModeChange(msg);
       if (_isSessionNotFound(msg)) {
+        if (isCodex &&
+            (state.entries.isNotEmpty ||
+                _bridge.cachedSessionMessages(sessionId).isNotEmpty)) {
+          return;
+        }
         _statusRefreshTimer?.cancel();
         _statusRefreshTimer = null;
         emit(state.copyWith(sessionUnavailable: true));
@@ -742,8 +747,15 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     }
     final usage = _calculateUsageTotals(nextEntries);
 
+    final shouldClearUnavailable = current.sessionUnavailable &&
+        (originalMsg is HistoryMessage ||
+            originalMsg is PastHistoryMessage ||
+            nextEntries.isNotEmpty);
+
     emit(
       current.copyWith(
+        sessionUnavailable:
+            shouldClearUnavailable ? false : current.sessionUnavailable,
         status: update.status ?? current.status,
         entries: nextEntries,
         approval: approval,

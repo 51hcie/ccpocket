@@ -2706,15 +2706,18 @@ class BridgeService implements BridgeServiceBase {
       case ProjectHistoryMessage(:final projects):
         _projectHistory = projects;
         _projectHistoryController.add(projects);
-      case CodexTakeoverConflictMessage():
+      case CodexTakeoverConflictMessage(:final threadId):
         _codexTakeoverConflictController.add(msg);
         _messageController.add(msg);
-      case CodexTakeoverQueueStatusMessage():
+        _taggedMessageController.add((msg, sessionId ?? threadId));
+      case CodexTakeoverQueueStatusMessage(:final threadId):
         _codexTakeoverQueueStatusController.add(msg);
         _messageController.add(msg);
-      case CodexReadOnlyInfoMessage():
+        _taggedMessageController.add((msg, sessionId ?? threadId));
+      case CodexReadOnlyInfoMessage(:final threadId):
         _codexReadOnlyInfoController.add(msg);
         _messageController.add(msg);
+        _taggedMessageController.add((msg, sessionId ?? threadId));
       default:
         _messageController.add(msg);
         if (sessionId != null) {
