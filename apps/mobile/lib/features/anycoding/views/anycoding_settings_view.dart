@@ -44,6 +44,33 @@ class AnyCodingSettingsView extends StatelessWidget {
         ? BrandConfig.anyCodingBorderDark
         : cs.outlineVariant.withValues(alpha: 0.35);
 
+    final presetConfig = MacremoteBootstrapConfig.fromEnvironment();
+    final connState = bridge.currentBridgeConnectionState;
+    final diag = bridge.connectionDiagnostics;
+
+    final Color statusColor;
+    final String statusLabel;
+    switch (connState) {
+      case BridgeConnectionState.connected:
+        statusColor = const Color(0xFF10B981);
+        statusLabel = '已连接';
+      case BridgeConnectionState.connecting:
+        statusColor = const Color(0xFF3B82F6);
+        statusLabel = '连接中';
+      case BridgeConnectionState.reconnecting:
+        statusColor = const Color(0xFFF59E0B);
+        statusLabel = '重连中 (${diag.retryAttempt})';
+      case BridgeConnectionState.disconnected:
+        statusColor = cs.error;
+        statusLabel = '离线';
+    }
+
+    String subtitleText = bridge.lastUrl ?? '未配置连接地址';
+    if (diag.hasError && connState != BridgeConnectionState.connected) {
+      subtitleText = '$subtitleText\n${diag.message}';
+    }
+
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
