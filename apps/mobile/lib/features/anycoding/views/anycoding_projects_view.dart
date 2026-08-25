@@ -35,9 +35,19 @@ class _AnyCodingProjectsViewState extends State<AnyCodingProjectsView> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearching = false;
+  late final dynamic _historySub;
+
+  @override
+  void initState() {
+    super.initState();
+    _historySub = widget.bridge.projectHistoryStream.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   void dispose() {
+    _historySub.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -68,6 +78,7 @@ class _AnyCodingProjectsViewState extends State<AnyCodingProjectsView> {
     var projectSummaries = TaskStatusClassifier.buildProjectSummaries(
       allTasks: allTasks,
       projectPaths: widget.projectPaths,
+      bridgeProjectHistory: widget.bridge.projectHistory,
     );
 
     final trimmedQuery = _searchQuery.trim().toLowerCase();

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -116,6 +117,12 @@ class BridgeService implements BridgeServiceBase {
       StreamController<GitStatusResultMessage>.broadcast();
   final _gitRemoteStatusResultController =
       StreamController<GitRemoteStatusResultMessage>.broadcast();
+  final _codexTakeoverConflictController =
+      StreamController<CodexTakeoverConflictMessage>.broadcast();
+  final _codexTakeoverQueueStatusController =
+      StreamController<CodexTakeoverQueueStatusMessage>.broadcast();
+  final _codexReadOnlyInfoController =
+      StreamController<CodexReadOnlyInfoMessage>.broadcast();
   BridgeConnectionState _connectionState = BridgeConnectionState.disconnected;
   final List<ClientMessage> _messageQueue = [];
   List<SessionInfo> _sessions = [];
@@ -248,6 +255,12 @@ class BridgeService implements BridgeServiceBase {
       _gitStatusResultController.stream;
   Stream<GitRemoteStatusResultMessage> get gitRemoteStatusResults =>
       _gitRemoteStatusResultController.stream;
+  Stream<CodexTakeoverConflictMessage> get codexTakeoverConflictStream =>
+      _codexTakeoverConflictController.stream;
+  Stream<CodexTakeoverQueueStatusMessage> get codexTakeoverQueueStatusStream =>
+      _codexTakeoverQueueStatusController.stream;
+  Stream<CodexReadOnlyInfoMessage> get codexReadOnlyInfoStream =>
+      _codexReadOnlyInfoController.stream;
   BridgeConnectionState get currentBridgeConnectionState => _connectionState;
   @override
   bool get isConnected => _connectionState == BridgeConnectionState.connected;
@@ -569,6 +582,15 @@ class BridgeService implements BridgeServiceBase {
                 _gitStatusResultController.add(msg);
               case GitRemoteStatusResultMessage():
                 _gitRemoteStatusResultController.add(msg);
+              case CodexTakeoverConflictMessage():
+                _codexTakeoverConflictController.add(msg);
+                _messageController.add(msg);
+              case CodexTakeoverQueueStatusMessage():
+                _codexTakeoverQueueStatusController.add(msg);
+                _messageController.add(msg);
+              case CodexReadOnlyInfoMessage():
+                _codexReadOnlyInfoController.add(msg);
+                _messageController.add(msg);
               case ArchiveResultMessage(:final success):
                 if (success) {
                   // Refresh the recent sessions list to reflect the archived session
@@ -711,6 +733,7 @@ class BridgeService implements BridgeServiceBase {
               _setBridgeConnectionState(BridgeConnectionState.connected);
               _reconnectAttempt = 0;
               send(ClientMessage.clientCapabilities());
+              requestProjectHistory();
               _flushMessageQueue();
             })
             .catchError((Object error, StackTrace stackTrace) {
@@ -2588,7 +2611,116 @@ class BridgeService implements BridgeServiceBase {
     _gitPullResultController.close();
     _gitStatusResultController.close();
     _gitRemoteStatusResultController.close();
+    _codexTakeoverConflictController.close();
+    _codexTakeoverQueueStatusController.close();
+    _codexReadOnlyInfoController.close();
     clearDiffImageCache();
+  }
+
+  void enqueueCodexTakeover(
+    String threadId,
+    String projectPath, {
+    String? clientId,
+    String? queuedCommand,
+    Map<String, dynamic>? options,
+  }) {
+    send(ClientMessage.enqueueCodexTakeover(
+      threadId: threadId,
+      projectPath: projectPath,
+      clientId: clientId,
+      queuedCommand: queuedCommand,
+      options: options,
+    ));
+  }
+
+  void cancelCodexTakeover(
+    String threadId, {
+    String? queueId,
+    String? clientId,
+  }) {
+    send(ClientMessage.cancelCodexTakeover(
+      threadId: threadId,
+      queueId: queueId,
+      clientId: clientId,
+    ));
+  }
+
+  void getCodexTakeoverQueue(String threadId) {
+    send(ClientMessage.getCodexTakeoverQueue(threadId: threadId));
+  }
+
+  @visibleForTesting
+  void testHandleMessage(ServerMessage msg, {String? sessionId}) {
+    switch (msg) {
+      case SessionListMessage(
+        :final sessions,
+        :final allowedDirs,
+        :final claudeModels,
+        :final claudeModelEfforts,
+        :final codexModels,
+        :final codexModelReasoningEfforts,
+        :final codexModelServiceTiers,
+        :final codexProfiles,
+        :final defaultCodexProfile,
+        :final codexAutoReviewDisabled,
+        :final bridgeVersion,
+      ):
+        _sessions = _applyLocalDeliveryPendingInputs(sessions);
+        _clearPendingStartActionsForSessions(_sessions);
+        _sessionListController.add(_sessions);
+        _allowedDirs = allowedDirs;
+        _claudeModels = claudeModels;
+        _claudeModelEfforts = claudeModelEfforts;
+        _codexModels = codexModels;
+        _codexModelReasoningEfforts = codexModelReasoningEfforts;
+        _codexModelServiceTiers = codexModelServiceTiers;
+        _codexProfiles = codexProfiles;
+        _defaultCodexProfile = defaultCodexProfile;
+        _codexAutoReviewDisabled = codexAutoReviewDisabled;
+        _codexAutoReviewPolicyController.add(codexAutoReviewDisabled);
+        _bridgeVersion = bridgeVersion;
+      case RecentSessionsMessage(:final sessions, :final hasMore):
+        _lastRecentSessionsMessage = msg;
+        final isProjectMerge =
+            msg.requestScope == 'project' &&
+            msg.projectPath != null &&
+            msg.projectPath!.isNotEmpty;
+        if (isProjectMerge) {
+          _recentSessions = _mergeRecentSessions(
+            _recentSessions,
+            sessions,
+          );
+        } else {
+          _recentSessionsHasMore = hasMore;
+          if (_appendMode) {
+            _recentSessions = _mergeRecentSessions(
+              _recentSessions,
+              sessions,
+            );
+          } else {
+            _recentSessions = sessions;
+          }
+          _appendMode = false;
+        }
+        _recentSessionsController.add(_recentSessions);
+      case ProjectHistoryMessage(:final projects):
+        _projectHistory = projects;
+        _projectHistoryController.add(projects);
+      case CodexTakeoverConflictMessage():
+        _codexTakeoverConflictController.add(msg);
+        _messageController.add(msg);
+      case CodexTakeoverQueueStatusMessage():
+        _codexTakeoverQueueStatusController.add(msg);
+        _messageController.add(msg);
+      case CodexReadOnlyInfoMessage():
+        _codexReadOnlyInfoController.add(msg);
+        _messageController.add(msg);
+      default:
+        _messageController.add(msg);
+        if (sessionId != null) {
+          _taggedMessageController.add((msg, sessionId));
+        }
+    }
   }
 }
 

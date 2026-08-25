@@ -7,6 +7,7 @@ import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
 import '../../../models/new_session_tab.dart';
 import '../../../services/bridge_service.dart';
+import '../../anycoding/services/task_status_classifier.dart';
 import 'session_list_state.dart';
 
 const _collapsedProjectPathsKey = 'session_list_collapsed_project_paths';
@@ -72,7 +73,14 @@ class SessionListCubit extends Cubit<SessionListState> {
 
   SessionListCubit({required BridgeService bridge})
     : _bridge = bridge,
-      super(const SessionListState()) {
+      super(
+        SessionListState(
+          accumulatedProjectPaths: bridge.projectHistory
+              .map(TaskStatusClassifier.normalizeProjectPath)
+              .where((p) => p.isNotEmpty)
+              .toSet(),
+        ),
+      ) {
     _recentSub = _bridge.recentSessionsStream.listen(_onSessionsUpdate);
     _projectHistorySub = _bridge.projectHistoryStream.listen(
       _onProjectHistoryUpdate,
@@ -121,10 +129,15 @@ class SessionListCubit extends Cubit<SessionListState> {
         response?.requestScope == 'project' &&
         projectPath != null &&
         projectPath.isNotEmpty;
-    final newPaths = sessions
-        .map((s) => s.projectPath)
-        .where((p) => p.isNotEmpty)
-        .toSet();
+    final newPaths = <String>{};
+    for (final s in sessions) {
+      final p1 = TaskStatusClassifier.normalizeProjectPath(s.projectPath);
+      if (p1.isNotEmpty) newPaths.add(p1);
+      if (s.resumeCwd != null) {
+        final p2 = TaskStatusClassifier.normalizeProjectPath(s.resumeCwd);
+        if (p2.isNotEmpty) newPaths.add(p2);
+      }
+    }
     final current = state.accumulatedProjectPaths;
     final merged = newPaths.difference(current).isNotEmpty
         ? {...current, ...newPaths}
@@ -167,7 +180,10 @@ class SessionListCubit extends Cubit<SessionListState> {
   void _onProjectHistoryUpdate(List<String> projects) {
     if (projects.isEmpty) return;
     final current = state.accumulatedProjectPaths;
-    final newPaths = projects.toSet();
+    final newPaths = projects
+        .map(TaskStatusClassifier.normalizeProjectPath)
+        .where((p) => p.isNotEmpty)
+        .toSet();
     if (newPaths.difference(current).isNotEmpty) {
       emit(state.copyWith(accumulatedProjectPaths: {...current, ...newPaths}));
     }

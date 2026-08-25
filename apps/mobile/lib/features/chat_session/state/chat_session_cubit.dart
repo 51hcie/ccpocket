@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -59,6 +60,10 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
   CodexPermissionsMode? _pendingCodexPermissionsModeRollback;
   bool? _pendingPlanRollback;
   SandboxMode? _pendingSandboxRollback;
+
+  /// Exposes the underlying bridge service for subclass extensions.
+  @protected
+  BridgeService get bridge => _bridge;
 
   /// Whether this session is a Codex session.
   bool get isCodex => provider == Provider.codex;

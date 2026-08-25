@@ -24,6 +24,7 @@ import {
   codexErrorMessage,
   CodexRpcError,
   CodexProcess,
+  isCodexThreadWriterConflict,
   type CodexModelMetadata,
   type CodexStartOptions,
   type CodexThreadSourceKind,
@@ -67,6 +68,7 @@ import type { GalleryStore } from "./gallery-store.js";
 import type { ProjectHistory } from "./project-history.js";
 import { ArchiveStore } from "./archive-store.js";
 import { WorktreeStore } from "./worktree-store.js";
+import { CodexTakeoverQueueStore } from "./codex-takeover-queue.js";
 import {
   listWorktrees,
   removeWorktree,
@@ -661,6 +663,7 @@ export interface BridgeServerOptions {
   firebaseAuth?: FirebaseAuthClient;
   promptHistoryBackup?: PromptHistoryBackupStore;
   promptHistoryStore?: PromptHistoryStore;
+  codexTakeoverQueueStore?: CodexTakeoverQueueStore;
   platform?: NodeJS.Platform;
   fileListMaxEntries?: number;
   fileListMaxBytes?: number;
@@ -706,6 +709,10 @@ export class BridgeWebSocketServer {
   private pushRelay: PushRelayClient;
   private promptHistoryBackup: PromptHistoryBackupStore | null;
   private promptHistoryStore: PromptHistoryStore | null;
+  private codexTakeoverQueueStore: CodexTakeoverQueueStore;
+  private threadQueueTimers = new Map<string, NodeJS.Timeout>();
+  private threadQueueBackoffs = new Map<string, number>();
+  private threadQueueProcessing = new Set<string>();
 
   private recentSessionsRequestId = 0;
   private debugEvents = new Map<string, DebugTraceEvent[]>();
@@ -769,6 +776,7 @@ export class BridgeWebSocketServer {
       firebaseAuth,
       promptHistoryBackup,
       promptHistoryStore,
+      codexTakeoverQueueStore,
       platform,
       fileListMaxEntries,
       fileListMaxBytes,
@@ -786,6 +794,19 @@ export class BridgeWebSocketServer {
     this.pushRelay = new PushRelayClient({ firebaseAuth });
     this.promptHistoryBackup = promptHistoryBackup ?? null;
     this.promptHistoryStore = promptHistoryStore ?? null;
+    this.codexTakeoverQueueStore =
+      codexTakeoverQueueStore ?? new CodexTakeoverQueueStore();
+    void this.codexTakeoverQueueStore
+      .init()
+      .then(() => {
+        const pendingThreads = this.codexTakeoverQueueStore.getPendingThreadIds();
+        for (const threadId of pendingThreads) {
+          this.scheduleTakeoverQueueProcessing(threadId, 100);
+        }
+      })
+      .catch((err) => {
+        console.warn("[ws] Failed to initialize takeover queue store:", err);
+      });
     this.platform = platform ?? process.platform;
     this.fileListMaxEntries = normalizePositiveLimit(
       fileListMaxEntries,
@@ -2212,6 +2233,12 @@ export class BridgeWebSocketServer {
       if (operation.timeout) clearTimeout(operation.timeout);
     }
     this.resumeOperations.clear();
+    for (const timer of this.threadQueueTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.threadQueueTimers.clear();
+    this.threadQueueBackoffs.clear();
+    this.threadQueueProcessing.clear();
     this.flushAllDeltaBatches();
     this.sessionManager.destroyAll();
     this.flushAllDeltaBatches();
@@ -4211,12 +4238,77 @@ export class BridgeWebSocketServer {
 
           this.sendCachedCommands(ws, msg.sessionId, session);
         } else {
-          this.send(ws, {
-            type: "error",
-            message: `Session ${msg.sessionId} not found`,
-            errorCode: "session_not_found",
-            sessionId: msg.sessionId,
-          });
+          let handledHistorical = false;
+          try {
+            const pastMessages = await this.getCodexThreadHistory(msg.sessionId);
+            if (pastMessages && pastMessages.length > 0) {
+              const historyMessages = await this.codexHistoryToServerMessages(
+                { id: msg.sessionId, provider: "codex" } as unknown as SessionInfo,
+                pastMessages,
+              );
+              this.send(ws, {
+                type: "history",
+                messages: historyMessages,
+                sessionId: msg.sessionId,
+              } as Record<string, unknown>);
+              this.send(ws, {
+                type: "status",
+                status: "idle",
+                sessionId: msg.sessionId,
+              } as Record<string, unknown>);
+              this.send(ws, {
+                type: "codex_read_only_info",
+                threadId: msg.sessionId,
+                isReadOnly: true,
+                isLocalHistory: !this.getActiveCodexProcess(),
+                status: "idle",
+              });
+              handledHistorical = true;
+            }
+          } catch {
+            // fallback to local session history
+          }
+
+          if (!handledHistorical) {
+            try {
+              const localPast = await getCodexSessionHistory(msg.sessionId);
+              if (localPast && localPast.length > 0) {
+                const historyMessages = await this.codexHistoryToServerMessages(
+                  { id: msg.sessionId, provider: "codex" } as unknown as SessionInfo,
+                  localPast,
+                );
+                this.send(ws, {
+                  type: "history",
+                  messages: historyMessages,
+                  sessionId: msg.sessionId,
+                } as Record<string, unknown>);
+                this.send(ws, {
+                  type: "status",
+                  status: "idle",
+                  sessionId: msg.sessionId,
+                } as Record<string, unknown>);
+                this.send(ws, {
+                  type: "codex_read_only_info",
+                  threadId: msg.sessionId,
+                  isReadOnly: true,
+                  isLocalHistory: true,
+                  status: "idle",
+                });
+                handledHistorical = true;
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          if (!handledHistorical) {
+            this.send(ws, {
+              type: "error",
+              message: `Session ${msg.sessionId} not found`,
+              errorCode: "session_not_found",
+              sessionId: msg.sessionId,
+            });
+          }
         }
         break;
       }
@@ -4610,8 +4702,6 @@ export class BridgeWebSocketServer {
             });
             break;
           }
-          const convId = existingRecord?.antigravityConversationId || sessionRefId;
-          const workspace = existingRecord?.workspacePath || resumeProjectPath;
           const sessionId = this.sessionManager.create(
             workspace,
             { sessionId: convId },
@@ -4760,6 +4850,7 @@ export class BridgeWebSocketServer {
           let sessionCreateMs = 0;
           let nameLoadMs = 0;
           const historyStartedAt = Date.now();
+          let sessionId: string | null = null;
           try {
             const pastMessages = await this.getCodexThreadHistory(
               sessionRefId,
@@ -4769,7 +4860,7 @@ export class BridgeWebSocketServer {
             historyLoaded = true;
             historyMetrics = summarizeResumeHistory(pastMessages);
             const createStartedAt = Date.now();
-            const sessionId = this.sessionManager.create(
+            sessionId = this.sessionManager.create(
               effectiveProjectPath,
               undefined,
               pastMessages,
@@ -4815,6 +4906,12 @@ export class BridgeWebSocketServer {
               // second thread/read for the same restored session.
               createdSession.codexInitialHistoryPending = true;
             }
+
+            // Await real resume-ready to verify writer acquisition before broadcasting session_created
+            if (createdSession?.process instanceof CodexProcess) {
+              await createdSession.process.waitForReady(15000);
+            }
+
             const cached = this.sessionManager.getCachedCommands(
               "codex",
               createdSession?.worktreePath ?? effectiveProjectPath,
@@ -4894,9 +4991,15 @@ export class BridgeWebSocketServer {
               }),
             );
           } catch (err) {
+            if (sessionId) {
+              try {
+                this.sessionManager.destroy(sessionId);
+              } catch {}
+            }
             if (!historyLoaded) {
               historyLoadMs = Date.now() - historyStartedAt;
             }
+            const isConflict = isCodexThreadWriterConflict(err);
             console.info(
               formatResumePerformanceLog({
                 provider: "codex",
@@ -4912,7 +5015,10 @@ export class BridgeWebSocketServer {
             this.failResumeOperation(
               resumeOperation.key,
               resumeOperation.operationId,
-              `Failed to load Codex session history: ${err}`,
+              isConflict
+                ? "This Codex thread is already open in another client. Close it there and try again."
+                : `Failed to load Codex session history: ${err}`,
+              isConflict,
             );
           }
           break;
@@ -5101,6 +5207,64 @@ export class BridgeWebSocketServer {
               `Failed to load session history: ${err}`,
             );
           });
+        break;
+      }
+
+      case "enqueue_codex_takeover": {
+        const result = await this.codexTakeoverQueueStore.enqueue({
+          threadId: msg.threadId,
+          projectPath: msg.projectPath,
+          clientId: msg.clientId,
+          queuedCommand: msg.queuedCommand,
+          options: msg.options,
+        });
+        this.send(ws, {
+          type: "codex_takeover_queue_status",
+          threadId: msg.threadId,
+          queueId: result.item.id,
+          position: result.position,
+          total: result.total,
+          status: "queued",
+        });
+        this.scheduleTakeoverQueueProcessing(msg.threadId, 0);
+        break;
+      }
+
+      case "cancel_codex_takeover": {
+        const result = await this.codexTakeoverQueueStore.cancel({
+          threadId: msg.threadId,
+          queueId: msg.queueId,
+          clientId: msg.clientId,
+        });
+        if (result.remainingCount === 0) {
+          this.stopTakeoverQueueProcessing(msg.threadId);
+        }
+        this.send(ws, {
+          type: "codex_takeover_queue_status",
+          threadId: msg.threadId,
+          queueId: msg.queueId,
+          position: 0,
+          total: result.remainingCount,
+          status: "cancelled",
+        });
+        break;
+      }
+
+      case "get_codex_takeover_queue": {
+        await this.codexTakeoverQueueStore.ensureInitialized();
+        const status = this.codexTakeoverQueueStore.getQueueStatus({
+          threadId: msg.threadId,
+          queueId: msg.queueId,
+          clientId: msg.clientId,
+        });
+        this.send(ws, {
+          type: "codex_takeover_queue_status",
+          threadId: msg.threadId,
+          queueId: status.queueId,
+          position: status.position,
+          total: status.total,
+          status: status.status,
+        });
         break;
       }
 
@@ -6706,6 +6870,7 @@ export class BridgeWebSocketServer {
     key: string,
     operationId: string,
     message: string,
+    isWriterConflict = false,
   ): void {
     const operation = this.resumeOperations.get(key);
     if (!operation || operation.id !== operationId) return;
@@ -6716,7 +6881,24 @@ export class BridgeWebSocketServer {
         operation.sourceSessionId,
       );
       this.sendResumeFailed(waiter, operation);
-      this.send(waiter, { type: "error", message });
+      if (isWriterConflict) {
+        this.send(waiter, {
+          type: "codex_takeover_conflict",
+          threadId: operation.sourceSessionId,
+          projectPath: operation.projectPath,
+          message,
+          canQueue: true,
+          queueLength: this.codexTakeoverQueueStore.getPendingForThread(
+            operation.sourceSessionId,
+          ).length,
+        });
+      }
+      this.send(waiter, {
+        type: "error",
+        message,
+        errorCode: isWriterConflict ? "active_writer_conflict" : undefined,
+        sessionId: operation.sourceSessionId,
+      });
     }
   }
 
@@ -6808,6 +6990,186 @@ export class BridgeWebSocketServer {
       }
     } catch {
       // Non-critical: session works without name
+    }
+  }
+
+  scheduleTakeoverQueueProcessing(threadId: string, delayMs = 0): void {
+    if (this.threadQueueTimers.has(threadId)) {
+      clearTimeout(this.threadQueueTimers.get(threadId)!);
+      this.threadQueueTimers.delete(threadId);
+    }
+    const timer = setTimeout(() => {
+      this.threadQueueTimers.delete(threadId);
+      void this.processTakeoverQueueForThread(threadId);
+    }, delayMs);
+    this.threadQueueTimers.set(threadId, timer);
+  }
+
+  stopTakeoverQueueProcessing(threadId: string): void {
+    const timer = this.threadQueueTimers.get(threadId);
+    if (timer) {
+      clearTimeout(timer);
+      this.threadQueueTimers.delete(threadId);
+    }
+    this.threadQueueBackoffs.delete(threadId);
+  }
+
+  async processTakeoverQueueForThread(threadId: string): Promise<boolean> {
+    await this.codexTakeoverQueueStore.ensureInitialized();
+    if (this.threadQueueProcessing.has(threadId)) {
+      return false;
+    }
+
+    const pending = this.codexTakeoverQueueStore.getPendingForThread(threadId);
+    if (pending.length === 0) {
+      this.stopTakeoverQueueProcessing(threadId);
+      return false;
+    }
+
+    const nextItem = pending[0];
+    this.threadQueueProcessing.add(threadId);
+
+    let sessionId: string | null = null;
+    let createdSession: SessionInfo | undefined;
+
+    try {
+      const effectiveProjectPath = resolvePlatformPath(
+        nextItem.projectPath,
+        this.platform,
+      );
+
+      const wtMapping = this.worktreeStore.get(nextItem.threadId);
+      let worktreeOpts:
+        | {
+            useWorktree?: boolean;
+            worktreeBranch?: string;
+            existingWorktreePath?: string;
+          }
+        | undefined;
+      if (wtMapping) {
+        if (worktreeExists(wtMapping.worktreePath)) {
+          worktreeOpts = {
+            existingWorktreePath: wtMapping.worktreePath,
+            worktreeBranch: wtMapping.worktreeBranch,
+          };
+        } else {
+          worktreeOpts = {
+            useWorktree: true,
+            worktreeBranch: wtMapping.worktreeBranch,
+          };
+        }
+      }
+
+      // Directly attempt real resume by creating session
+      sessionId = this.sessionManager.create(
+        effectiveProjectPath,
+        undefined,
+        undefined,
+        worktreeOpts,
+        "codex",
+        this.withCodexAutoReviewPolicy({
+          threadId: nextItem.threadId,
+          ...(nextItem.options ?? {}),
+        }),
+      );
+
+      createdSession = this.sessionManager.get(sessionId);
+      if (!createdSession || !(createdSession.process instanceof CodexProcess)) {
+        throw new Error(`Failed to create Codex session ${sessionId}`);
+      }
+      createdSession.codexInitialHistoryPending = true;
+
+      // Await real resume-ready Promise: verifies thread/resume RPC success and input loop readiness
+      await createdSession.process.waitForReady(15000);
+    } catch (err) {
+      // Clean up temporary/failed session immediately: NO zombie session in sessionManager / session_list
+      if (sessionId) {
+        try {
+          this.sessionManager.destroy(sessionId);
+        } catch (cleanupErr) {
+          console.warn(
+            `[ws] Failed to destroy session ${sessionId} on resume failure:`,
+            cleanupErr,
+          );
+        }
+      }
+
+      const isConflict = isCodexThreadWriterConflict(err);
+      if (isConflict) {
+        // Active writer conflict: keep item pending, backoff and retry
+        const currentBackoff = this.threadQueueBackoffs.get(threadId) ?? 500;
+        const nextBackoff = Math.min(Math.round(currentBackoff * 1.5), 5000);
+        this.threadQueueBackoffs.set(threadId, nextBackoff);
+        this.scheduleTakeoverQueueProcessing(threadId, currentBackoff);
+        return false;
+      } else {
+        // Non-conflict error: keep pending / retryable in store, do NOT mark dispatched
+        console.warn(
+          `[ws] Non-conflict error during takeover queue resume for thread ${threadId}:`,
+          err,
+        );
+        this.stopTakeoverQueueProcessing(threadId);
+        return false;
+      }
+    } finally {
+      this.threadQueueProcessing.delete(threadId);
+    }
+
+    // --- REAL RESUME SUCCEEDED AND WRITER ACQUIRED ---
+    try {
+      const effectiveProjectPath = resolvePlatformPath(
+        nextItem.projectPath,
+        this.platform,
+      );
+
+      // Safe handover of queuedCommand to SessionManager queue / runtime queue BEFORE markDispatched
+      if (nextItem.queuedCommand && createdSession) {
+        this.sessionManager.queueCodexInput(createdSession.id, {
+          itemId: randomUUID(),
+          text: nextItem.queuedCommand,
+          createdAt: new Date().toISOString(),
+          userMessageUuid: nextCodexUserTurnUuid(createdSession),
+        });
+      }
+
+      // Mark dispatched in store AFTER command has been safely handed over
+      await this.codexTakeoverQueueStore.markDispatched(nextItem.id);
+      this.threadQueueBackoffs.delete(threadId);
+
+      await this.loadAndSetSessionName(
+        createdSession,
+        "codex",
+        effectiveProjectPath,
+        nextItem.threadId,
+      );
+
+      // Broadcast session_list & takeover resumed status
+      this.broadcastSessionList();
+      this.broadcast({
+        type: "codex_takeover_queue_status",
+        threadId: nextItem.threadId,
+        queueId: nextItem.id,
+        position: 0,
+        total: this.codexTakeoverQueueStore.getPendingForThread(threadId).length,
+        status: "resumed",
+        sessionId: createdSession.id,
+      });
+
+      // If more pending items exist for this thread, schedule next processing
+      const remaining = this.codexTakeoverQueueStore.getPendingForThread(threadId);
+      if (remaining.length > 0) {
+        this.scheduleTakeoverQueueProcessing(threadId, 500);
+      } else {
+        this.stopTakeoverQueueProcessing(threadId);
+      }
+
+      return true;
+    } catch (postResumeErr) {
+      console.error(
+        `[ws] Error during post-resume processing for thread ${threadId}:`,
+        postResumeErr,
+      );
+      return false;
     }
   }
 

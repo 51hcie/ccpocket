@@ -263,6 +263,9 @@ class ServerMessageWidget extends StatelessWidget {
       GitPullResultMessage() => const SizedBox.shrink(),
       GitStatusResultMessage() => const SizedBox.shrink(),
       GitRemoteStatusResultMessage() => const SizedBox.shrink(),
+      CodexTakeoverConflictMessage() => const SizedBox.shrink(),
+      CodexTakeoverQueueStatusMessage() => const SizedBox.shrink(),
+      CodexReadOnlyInfoMessage() => const SizedBox.shrink(),
     };
   }
 }

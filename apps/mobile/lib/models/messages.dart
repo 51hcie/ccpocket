@@ -897,6 +897,27 @@ sealed class ServerMessage {
                 .toList() ??
             const [],
       ),
+      'codex_takeover_conflict' => CodexTakeoverConflictMessage(
+        threadId: json['threadId'] as String? ?? '',
+        projectPath: json['projectPath'] as String? ?? '',
+        message: json['message'] as String? ?? '',
+        canQueue: json['canQueue'] as bool? ?? true,
+        queueLength: json['queueLength'] as int? ?? 0,
+      ),
+      'codex_takeover_queue_status' => CodexTakeoverQueueStatusMessage(
+        threadId: json['threadId'] as String? ?? '',
+        queueId: json['queueId'] as String?,
+        position: json['position'] as int? ?? 0,
+        total: json['total'] as int? ?? 0,
+        status: json['status'] as String? ?? 'not_queued',
+      ),
+      'codex_read_only_info' => CodexReadOnlyInfoMessage(
+        threadId: json['threadId'] as String? ?? '',
+        isReadOnly: json['isReadOnly'] as bool? ?? true,
+        isLocalHistory: json['isLocalHistory'] as bool? ?? false,
+        updatedAt: json['updatedAt'] as String?,
+        status: json['status'] as String?,
+      ),
       'goal_state' => GoalStateMessage(
         sessionId: json['sessionId'] as String?,
         goal: json['goal'] is Map<String, dynamic>
@@ -1301,6 +1322,56 @@ sealed class ServerMessage {
       _ => ErrorMessage(message: 'Unknown message type: ${json['type']}'),
     };
   }
+}
+
+class CodexTakeoverConflictMessage implements ServerMessage {
+  final String threadId;
+  final String projectPath;
+  final String message;
+  final bool canQueue;
+  final int queueLength;
+
+  const CodexTakeoverConflictMessage({
+    required this.threadId,
+    required this.projectPath,
+    required this.message,
+    this.canQueue = true,
+    this.queueLength = 0,
+  });
+}
+
+class CodexTakeoverQueueStatusMessage implements ServerMessage {
+  final String threadId;
+  final String? queueId;
+  final int position;
+  final int total;
+  final String status;
+
+  const CodexTakeoverQueueStatusMessage({
+    required this.threadId,
+    this.queueId,
+    required this.position,
+    required this.total,
+    required this.status,
+  });
+
+  bool get isQueued => status == 'queued' && position > 0;
+}
+
+class CodexReadOnlyInfoMessage implements ServerMessage {
+  final String threadId;
+  final bool isReadOnly;
+  final bool isLocalHistory;
+  final String? updatedAt;
+  final String? status;
+
+  const CodexReadOnlyInfoMessage({
+    required this.threadId,
+    this.isReadOnly = true,
+    this.isLocalHistory = false,
+    this.updatedAt,
+    this.status,
+  });
 }
 
 /// Metadata for a Codex skill, returned by the `skills/list` RPC.
@@ -4404,6 +4475,39 @@ class ClientMessage {
   factory ClientMessage.interrupt({String? sessionId}) => ClientMessage._(
     <String, dynamic>{'type': 'interrupt', 'sessionId': ?sessionId},
   );
+
+  factory ClientMessage.enqueueCodexTakeover({
+    required String threadId,
+    required String projectPath,
+    String? clientId,
+    String? queuedCommand,
+    Map<String, dynamic>? options,
+  }) => ClientMessage._(<String, dynamic>{
+    'type': 'enqueue_codex_takeover',
+    'threadId': threadId,
+    'projectPath': projectPath,
+    'clientId': ?clientId,
+    'queuedCommand': ?queuedCommand,
+    'options': ?options,
+  });
+
+  factory ClientMessage.cancelCodexTakeover({
+    required String threadId,
+    String? queueId,
+    String? clientId,
+  }) => ClientMessage._(<String, dynamic>{
+    'type': 'cancel_codex_takeover',
+    'threadId': threadId,
+    'queueId': ?queueId,
+    'clientId': ?clientId,
+  });
+
+  factory ClientMessage.getCodexTakeoverQueue({
+    required String threadId,
+  }) => ClientMessage._(<String, dynamic>{
+    'type': 'get_codex_takeover_queue',
+    'threadId': threadId,
+  });
 
   factory ClientMessage.listProjectHistory() =>
       ClientMessage._({'type': 'list_project_history'});

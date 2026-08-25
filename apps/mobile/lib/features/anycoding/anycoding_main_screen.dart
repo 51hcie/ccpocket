@@ -88,6 +88,7 @@ class _AnyCodingMainScreenState extends State<AnyCodingMainScreen> {
     final projectSummaries = TaskStatusClassifier.buildProjectSummaries(
       allTasks: allTasks,
       projectPaths: widget.projectPaths,
+      bridgeProjectHistory: bridge.projectHistory,
     );
     final recentProjectsList = projectSummaries
         .map((p) => (path: p.path, name: p.name))

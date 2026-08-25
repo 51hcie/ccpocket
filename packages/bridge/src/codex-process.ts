@@ -207,11 +207,25 @@ export class CodexRpcError extends Error {
 }
 
 export function isCodexThreadWriterConflict(error: unknown): boolean {
-  return (
+  if (!error) return false;
+  if (
     error instanceof CodexRpcError &&
     error.code === -32600 &&
     /\b(active|live local)\s+writer\b/i.test(error.message)
-  );
+  ) {
+    return true;
+  }
+  if (typeof error === "object" && error !== null) {
+    const err = error as { code?: number; message?: string; name?: string };
+    if (
+      err.code === -32600 &&
+      typeof err.message === "string" &&
+      /\b(active|live local)\s+writer\b/i.test(err.message)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function codexErrorMessage(error: unknown): string {
@@ -382,9 +396,34 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   private steerTempPaths: string[] = [];
   private readonly platform: NodeJS.Platform;
 
+  private readyResolve: (() => void) | null = null;
+  private readyReject: ((err: unknown) => void) | null = null;
+  private _readyPromise: Promise<void> = Promise.resolve();
+  private pendingInputsQueue: PendingInput[] = [];
+
   constructor(platform: NodeJS.Platform = process.platform) {
     super();
     this.platform = platform;
+  }
+
+  get ready(): Promise<void> {
+    return this._readyPromise;
+  }
+
+  async waitForReady(timeoutMs = 15000): Promise<void> {
+    let timer: NodeJS.Timeout | null = null;
+    try {
+      return await Promise.race([
+        this._readyPromise,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new Error(`Codex process ready timeout after ${timeoutMs}ms`));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   get status(): ProcessStatus {
@@ -763,11 +802,19 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   stop(): void {
     this.stopped = true;
 
+    if (this.readyReject) {
+      const reject = this.readyReject;
+      this.readyResolve = null;
+      this.readyReject = null;
+      reject(new Error("stopped"));
+    }
+
     if (this.inputResolve) {
       this.inputResolve({ text: "" });
       this.inputResolve = null;
     }
 
+    this.pendingInputsQueue = [];
     this.pendingApprovals.clear();
     this.pendingUserInputs.clear();
     this.cleanupSteerTempPaths();
@@ -824,6 +871,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     this.syntheticAgentTextByItemId.clear();
     this.pendingPlanCompletion = null;
     this._pendingPlanInput = null;
+    this.pendingInputsQueue = [];
+    this._readyPromise = new Promise<void>((resolve, reject) => {
+      this.readyResolve = resolve;
+      this.readyReject = reject;
+    });
+    this._readyPromise.catch(() => {});
     this._projectPath = projectPath;
     this.stdoutLineChunks = [];
   }
@@ -854,6 +907,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     });
 
     transport.on("error", (err) => {
+      if (this.readyReject) {
+        const reject = this.readyReject;
+        this.readyResolve = null;
+        this.readyReject = null;
+        reject(err);
+      }
       if (this.stopped) return;
       console.error("[codex-process] app-server process error:", err);
       this.emitMessage(codexAppServerStartError(err));
@@ -862,6 +921,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     });
 
     transport.on("exit", (code) => {
+      if (this.readyReject) {
+        const reject = this.readyReject;
+        this.readyResolve = null;
+        this.readyReject = null;
+        reject(new Error(`codex app-server exited with code ${code ?? 0}`));
+      }
       const exitCode = code ?? 0;
       this.transport = null;
       this.rejectAllPending(new Error("codex app-server exited"));
@@ -894,28 +959,14 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   }
 
   sendInput(text: string): void {
-    if (!this.inputResolve) {
-      console.error("[codex-process] No pending input resolver for sendInput");
-      return;
-    }
-    const resolve = this.inputResolve;
-    this.inputResolve = null;
-    resolve({ text });
+    this.sendInputStructured(text);
   }
 
   sendInputWithImages(
     text: string,
     images: Array<{ base64: string; mimeType: string }>,
   ): void {
-    if (!this.inputResolve) {
-      console.error(
-        "[codex-process] No pending input resolver for sendInputWithImages",
-      );
-      return;
-    }
-    const resolve = this.inputResolve;
-    this.inputResolve = null;
-    resolve({ text, images });
+    this.sendInputStructured(text, { images });
   }
 
   sendInputWithSkill(
@@ -933,20 +984,19 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
       mentions?: Array<{ name: string; path: string }>;
     },
   ): void {
-    if (!this.inputResolve) {
-      console.error(
-        "[codex-process] No pending input resolver for sendInputStructured",
-      );
-      return;
-    }
-    const resolve = this.inputResolve;
-    this.inputResolve = null;
-    resolve({
+    const input: PendingInput = {
       text,
       images: options?.images,
       skills: options?.skills,
       mentions: options?.mentions,
-    });
+    };
+    if (this.inputResolve) {
+      const resolve = this.inputResolve;
+      this.inputResolve = null;
+      resolve(input);
+    } else {
+      this.pendingInputsQueue.push(input);
+    }
   }
 
   async steerInputStructured(
@@ -1622,10 +1672,22 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
 
       await this.runInputLoop(options);
     } catch (err) {
+      if (this.readyReject) {
+        const reject = this.readyReject;
+        this.readyResolve = null;
+        this.readyReject = null;
+        reject(err);
+      }
       if (!this.stopped) {
+        const isConflict = isCodexThreadWriterConflict(err);
         const message = codexErrorMessage(err);
         console.error("[codex-process] bootstrap error:", err);
-        this.emitMessage({ type: "error", message: `Codex error: ${message}` });
+        this.emitMessage({
+          type: "error",
+          message: `Codex error: ${message}`,
+          errorCode: isConflict ? "active_writer_conflict" : undefined,
+          sessionId: this._threadId ?? undefined,
+        });
         this.emitMessage({
           type: "result",
           subtype: "error",
@@ -1955,16 +2017,26 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
 
   private async runInputLoop(options?: CodexStartOptions): Promise<void> {
     while (!this.stopped) {
+      if (this.readyResolve) {
+        const resolve = this.readyResolve;
+        this.readyResolve = null;
+        this.readyReject = null;
+        resolve();
+      }
       const pendingInput = await new Promise<PendingInput>((resolve) => {
-        this.inputResolve = resolve;
         // If plan approval arrived before inputResolve was ready, drain it now.
         if (this._pendingPlanInput) {
           const text = this._pendingPlanInput;
           this._pendingPlanInput = null;
-          this.inputResolve = null;
           resolve({ text });
           return;
         }
+        if (this.pendingInputsQueue.length > 0) {
+          const next = this.pendingInputsQueue.shift()!;
+          resolve(next);
+          return;
+        }
+        this.inputResolve = resolve;
         this.emit("input_ready");
       });
       if (this.stopped || !pendingInput.text) break;

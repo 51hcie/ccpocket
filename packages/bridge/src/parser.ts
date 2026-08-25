@@ -280,6 +280,21 @@ export type ClientMessage =
       version: "old" | "new" | "both";
     }
   | { type: "interrupt"; sessionId?: string }
+  | {
+      type: "enqueue_codex_takeover";
+      threadId: string;
+      projectPath: string;
+      clientId?: string;
+      queuedCommand?: string;
+      options?: Record<string, unknown>;
+    }
+  | {
+      type: "cancel_codex_takeover";
+      threadId: string;
+      queueId?: string;
+      clientId?: string;
+    }
+  | { type: "get_codex_takeover_queue"; threadId: string }
   | { type: "list_project_history" }
   | { type: "remove_project_history"; projectPath: string }
   | { type: "list_worktrees"; projectPath: string }
@@ -575,6 +590,31 @@ export type ServerMessage =
       sessionId?: string;
       limit: number;
       items: QueuedInputItem[];
+    }
+  | {
+      type: "codex_takeover_conflict";
+      threadId: string;
+      projectPath: string;
+      message: string;
+      canQueue: boolean;
+      queueLength: number;
+    }
+  | {
+      type: "codex_takeover_queue_status";
+      threadId: string;
+      queueId?: string;
+      position: number;
+      total: number;
+      status: "queued" | "dispatched" | "cancelled" | "not_queued" | "resumed";
+      sessionId?: string;
+    }
+  | {
+      type: "codex_read_only_info";
+      threadId: string;
+      isReadOnly: boolean;
+      isLocalHistory: boolean;
+      updatedAt?: string;
+      status?: ProcessStatus | string;
     }
   | {
       type: "goal_state";
@@ -1441,6 +1481,43 @@ export function parseClientMessage(data: string): ClientMessage | null {
           return null;
         break;
       case "interrupt":
+        break;
+      case "enqueue_codex_takeover":
+        if (
+          typeof msg.threadId !== "string" ||
+          msg.threadId.trim().length === 0
+        )
+          return null;
+        if (
+          typeof msg.projectPath !== "string" ||
+          msg.projectPath.trim().length === 0
+        )
+          return null;
+        if (msg.clientId !== undefined && typeof msg.clientId !== "string")
+          return null;
+        if (
+          msg.queuedCommand !== undefined &&
+          typeof msg.queuedCommand !== "string"
+        )
+          return null;
+        break;
+      case "cancel_codex_takeover":
+        if (
+          typeof msg.threadId !== "string" ||
+          msg.threadId.trim().length === 0
+        )
+          return null;
+        if (msg.queueId !== undefined && typeof msg.queueId !== "string")
+          return null;
+        if (msg.clientId !== undefined && typeof msg.clientId !== "string")
+          return null;
+        break;
+      case "get_codex_takeover_queue":
+        if (
+          typeof msg.threadId !== "string" ||
+          msg.threadId.trim().length === 0
+        )
+          return null;
         break;
       case "list_project_history":
         break;

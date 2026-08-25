@@ -315,7 +315,18 @@ class _AnyCodingTasksViewState extends State<AnyCodingTasksView>
         approvalsReviewer: s.codexApprovalsReviewer,
       );
     } else if (task.recentSession != null) {
-      widget.onResumeRecentSession(task.recentSession!);
+      final r = task.recentSession!;
+      if (r.provider == Provider.codex.value || task.provider == Provider.codex) {
+        widget.onTapRunning(
+          r.sessionId,
+          projectPath: r.projectPath,
+          gitBranch: r.gitBranch,
+          worktreePath: r.resumeCwd,
+          provider: Provider.codex.value,
+        );
+      } else {
+        widget.onResumeRecentSession(r);
+      }
     }
   }
 }

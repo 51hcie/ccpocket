@@ -22,6 +22,7 @@ import {
 import { parseAllowedDirectories } from "./path-utils.js";
 import { parseBridgePort } from "./bridge-port.js";
 import { listenForStartup } from "./server-listen.js";
+import { CodexTakeoverQueueStore } from "./codex-takeover-queue.js";
 
 function startupErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -87,9 +88,16 @@ export async function startServer() {
       process.env.BRIDGE_PROMPT_HISTORY_FILE,
     ),
   );
+  const codexTakeoverQueueStore = new CodexTakeoverQueueStore();
   const mdns = MDNS_ENABLED ? new MdnsAdvertiser() : undefined;
 
   // Initialize stores (async)
+  codexTakeoverQueueStore.init().then(() => {
+    console.log("[bridge] Codex takeover queue store initialized");
+  }).catch((err) => {
+    console.error("[bridge] Failed to initialize codex takeover queue store:", err);
+  });
+
   galleryStore.init().then(() => {
     console.log("[bridge] Gallery store initialized");
   }).catch((err) => {
@@ -223,6 +231,7 @@ export async function startServer() {
     firebaseAuth,
     promptHistoryBackup,
     promptHistoryStore,
+    codexTakeoverQueueStore,
   });
 
   function shutdown() {

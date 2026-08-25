@@ -88,6 +88,7 @@ class AnyCodingConsoleView extends StatelessWidget {
     final projectSummaries = TaskStatusClassifier.buildProjectSummaries(
       allTasks: allTasks,
       projectPaths: projectPaths,
+      bridgeProjectHistory: bridge.projectHistory,
     );
 
     return Scaffold(
@@ -288,7 +289,18 @@ class AnyCodingConsoleView extends StatelessWidget {
         approvalsReviewer: s.codexApprovalsReviewer,
       );
     } else if (task.recentSession != null) {
-      onResumeRecentSession(task.recentSession!);
+      final r = task.recentSession!;
+      if (r.provider == Provider.codex.value || task.provider == Provider.codex) {
+        onTapRunning(
+          r.sessionId,
+          projectPath: r.projectPath,
+          gitBranch: r.gitBranch,
+          worktreePath: r.resumeCwd,
+          provider: Provider.codex.value,
+        );
+      } else {
+        onResumeRecentSession(r);
+      }
     }
   }
 

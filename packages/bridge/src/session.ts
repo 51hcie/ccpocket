@@ -831,6 +831,14 @@ export class SessionManager {
     return this.sessions.get(id);
   }
 
+  async waitForSessionReady(sessionId: string, timeoutMs = 15000): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (session.process instanceof CodexProcess) {
+      await session.process.waitForReady(timeoutMs);
+    }
+  }
+
   appendHistory(sessionId: string, msg: ServerMessage): HistoryEntry | undefined {
     const session = this.sessions.get(sessionId);
     if (!session) return undefined;
@@ -1389,6 +1397,12 @@ export class SessionManager {
     session.codexQueuedInput = input;
     session.lastActivityAt = new Date();
     this.broadcastCodexQueue(session);
+    if (
+      session.process instanceof CodexProcess &&
+      session.process.isWaitingForInput
+    ) {
+      this.drainCodexQueue(session);
+    }
     return true;
   }
 

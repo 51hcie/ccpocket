@@ -92,14 +92,21 @@ class TaskStatusClassifier {
     return path;
   }
 
+  /// Normalizes a project path (trims, standardizes separators, strips trailing slashes).
+  static String normalizeProjectPath(String? path) {
+    if (path == null) return '';
+    var normalized = path.trim().replaceAll('\\', '/');
+    while (normalized.endsWith('/') && normalized.length > 1) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    return normalized;
+  }
+
   /// Extracts the last path component as the friendly project directory name.
   static String extractProjectShortName(String projectPath) {
-    if (projectPath.isEmpty) return '未命名项目';
-    final normalized = projectPath.replaceAll('\\', '/');
-    final trimmed = normalized.endsWith('/') && normalized.length > 1
-        ? normalized.substring(0, normalized.length - 1)
-        : normalized;
-    final parts = trimmed.split('/').where((p) => p.isNotEmpty).toList();
+    final normalized = normalizeProjectPath(projectPath);
+    if (normalized.isEmpty) return '未命名项目';
+    final parts = normalized.split('/').where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return projectPath;
     return parts.last;
   }
@@ -399,47 +406,61 @@ class TaskStatusClassifier {
     return result;
   }
 
-  /// Extracts unique projects from sessions and history.
+  /// Extracts unique projects from sessions and history, fully normalized and deduplicated.
   static List<({String path, String name, int activeCount, int totalCount})> buildProjectSummaries({
     required List<AnyCodingTaskItem> allTasks,
     required Iterable<String> projectPaths,
+    Iterable<String> bridgeProjectHistory = const [],
   }) {
-    final seen = <String>{};
     final map = <String, ({String path, String name, int activeCount, int totalCount})>{};
 
-    for (final task in allTasks) {
-      final path = task.projectPath;
-      if (path.isEmpty) continue;
-      seen.add(path);
+    void recordPath(String rawPath, {bool isActive = false, bool isTask = false, String? explicitName}) {
+      final path = normalizeProjectPath(rawPath);
+      if (path.isEmpty) return;
+      final activeInc = isActive ? 1 : 0;
+      final totalInc = isTask ? 1 : 0;
       final current = map[path];
-      final activeInc = task.isActive ? 1 : 0;
       if (current == null) {
         map[path] = (
           path: path,
-          name: task.projectName,
+          name: explicitName ?? extractProjectShortName(path),
           activeCount: activeInc,
-          totalCount: 1,
+          totalCount: totalInc,
         );
       } else {
         map[path] = (
           path: path,
-          name: current.name,
+          name: current.name.isNotEmpty && current.name != '未命名项目'
+              ? current.name
+              : (explicitName ?? extractProjectShortName(path)),
           activeCount: current.activeCount + activeInc,
-          totalCount: current.totalCount + 1,
+          totalCount: current.totalCount + totalInc,
         );
       }
     }
 
+    for (final task in allTasks) {
+      recordPath(task.projectPath, isActive: task.isActive, isTask: true, explicitName: task.projectName);
+      if (task.worktreePath != null && task.worktreePath!.isNotEmpty) {
+        recordPath(task.worktreePath!, isActive: task.isActive, isTask: false);
+      }
+      if (task.activeSession?.projectPath != null && task.activeSession!.projectPath.isNotEmpty) {
+        recordPath(task.activeSession!.projectPath, isActive: true, isTask: false);
+      }
+      if (task.recentSession?.projectPath != null && task.recentSession!.projectPath.isNotEmpty) {
+        recordPath(task.recentSession!.projectPath, isActive: false, isTask: false);
+      }
+      if (task.recentSession?.resumeCwd != null && task.recentSession!.resumeCwd!.isNotEmpty) {
+        recordPath(task.recentSession!.resumeCwd!, isActive: false, isTask: false);
+      }
+    }
+
     for (final rawPath in projectPaths) {
-      final path = rawPath.trim();
-      if (path.isEmpty || seen.contains(path)) continue;
-      seen.add(path);
-      map[path] = (
-        path: path,
-        name: extractProjectShortName(path),
-        activeCount: 0,
-        totalCount: 0,
-      );
+      recordPath(rawPath, isActive: false, isTask: false);
+    }
+
+    for (final rawPath in bridgeProjectHistory) {
+      recordPath(rawPath, isActive: false, isTask: false);
     }
 
     return map.values.toList();

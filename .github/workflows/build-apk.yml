@@ -53,9 +53,9 @@ jobs:
       - name: Pub get
         working-directory: apps/mobile
         run: flutter pub get
-      - name: Run AnyCoding 214-test suite
+      - name: Run AnyCoding 226-test suite
         working-directory: apps/mobile
-        run: flutter test --dart-define=ANYCODING_BRAND=true test/connection_url_parser_test.dart test/machine_manager_ipv6_test.dart test/network_endpoint_test.dart test/dashboard_metrics_test.dart test/dual_engine_dashboard_card_test.dart test/macremote_bootstrap_test.dart test/brand_config_test.dart test/task_status_classifier_test.dart test/anycoding_navigation_test.dart test/anycoding_projects_tab_test.dart test/anycoding_new_task_sheet_test.dart test/anycoding_advanced_options_test.dart test/anycoding_screen_overflow_test.dart test/hooks/use_voice_input_test.dart test/chat_session_cubit_test.dart test/initial_prompt_e2e_flow_test.dart
+        run: flutter test --dart-define=ANYCODING_BRAND=true test/connection_url_parser_test.dart test/machine_manager_ipv6_test.dart test/network_endpoint_test.dart test/dashboard_metrics_test.dart test/dual_engine_dashboard_card_test.dart test/macremote_bootstrap_test.dart test/brand_config_test.dart test/task_status_classifier_test.dart test/anycoding_navigation_test.dart test/anycoding_projects_tab_test.dart test/anycoding_new_task_sheet_test.dart test/anycoding_advanced_options_test.dart test/anycoding_screen_overflow_test.dart test/hooks/use_voice_input_test.dart test/chat_session_cubit_test.dart test/initial_prompt_e2e_flow_test.dart test/anycoding_project_history_completeness_test.dart test/codex_read_only_monitor_queue_test.dart
       - name: Build Debug APK
         working-directory: apps/mobile
         run: flutter build apk --debug --dart-define=MACREMOTE_BRIDGE_URL=ws://[2408:824e:158d:5a80:875:122:45bf:5441]:8766 --dart-define=MACREMOTE_BRIDGE_NAME="AnyCoding Mac" --dart-define=MACREMOTE_AUTO_CONNECT=true --dart-define=ANYCODING_BRAND=true

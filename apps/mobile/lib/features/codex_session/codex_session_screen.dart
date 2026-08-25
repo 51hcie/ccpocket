@@ -54,6 +54,8 @@ import '../git/state/git_view_cache_service.dart';
 import '../../router/app_router.dart';
 import '../claude_session/widgets/rewind_message_list_sheet.dart'
     show UserMessageHistorySheet;
+import '../anycoding/services/task_status_classifier.dart';
+import '../anycoding/widgets/anycoding_new_task_sheet.dart';
 import 'state/codex_session_cubit.dart';
 import 'widgets/codex_goal_card.dart';
 import 'widgets/codex_rewind_dialog.dart';
@@ -683,6 +685,47 @@ class _CodexChatBody extends HookWidget {
     final codexCliJoinCommand = useState(
       _latestCodexCliJoinCommand(bridge.cachedSessionMessages(sessionId)),
     );
+    final isConflict = useState(false);
+    final conflictMessage = useState<String?>(null);
+    final queueStatus = useState<CodexTakeoverQueueStatusMessage?>(null);
+    final readOnlyInfo = useState<CodexReadOnlyInfoMessage?>(null);
+
+    useEffect(() {
+      final subConflict = bridge.codexTakeoverConflictStream.listen((msg) {
+        if (msg.threadId == sessionId) {
+          isConflict.value = true;
+          conflictMessage.value = msg.message;
+        }
+      });
+      final subQueue = bridge.codexTakeoverQueueStatusStream.listen((msg) {
+        if (msg.threadId == sessionId) {
+          queueStatus.value = msg;
+          if (msg.status == 'resumed') {
+            isConflict.value = false;
+          }
+        }
+      });
+      final subReadOnly = bridge.codexReadOnlyInfoStream.listen((msg) {
+        if (msg.threadId == sessionId) {
+          readOnlyInfo.value = msg;
+        }
+      });
+      final subErr = bridge.messagesForSession(sessionId).listen((msg) {
+        if (msg is ErrorMessage &&
+            (msg.errorCode == 'active_writer_conflict' ||
+                msg.message.contains('active writer conflict') ||
+                msg.message.contains('is running with an active writer'))) {
+          isConflict.value = true;
+          conflictMessage.value = msg.message;
+        }
+      });
+      return () {
+        subConflict.cancel();
+        subQueue.cancel();
+        subReadOnly.cancel();
+        subErr.cancel();
+      };
+    }, [sessionId]);
 
     // --- Bloc state ---
     final chatSessionCubit = context.read<ChatSessionCubit>();
@@ -1318,6 +1361,75 @@ class _CodexChatBody extends HookWidget {
                 if (bridgeState == BridgeConnectionState.reconnecting ||
                     bridgeState == BridgeConnectionState.disconnected)
                   ReconnectBanner(bridgeState: bridgeState),
+                if (isConflict.value)
+                  _CodexTakeoverConflictBanner(
+                    threadId: sessionId,
+                    projectPath: effectiveProjectPath,
+                    message: conflictMessage.value,
+                    queueStatus: queueStatus.value,
+                    onRefresh: () => bridge.requestSessionHistory(sessionId),
+                    onQueueTakeover: () {
+                      if (effectiveProjectPath != null) {
+                        final composerText = chatInputController.text.trim();
+                        if (composerText.isNotEmpty) {
+                          chatInputController.clear();
+                        }
+                        bridge.enqueueCodexTakeover(
+                          sessionId,
+                          effectiveProjectPath,
+                          queuedCommand:
+                              composerText.isNotEmpty ? composerText : null,
+                        );
+                      }
+                    },
+                    onCancelQueue: () {
+                      bridge.cancelCodexTakeover(
+                        sessionId,
+                        queueId: queueStatus.value?.queueId,
+                      );
+                      queueStatus.value = null;
+                    },
+                    onForkContinuation: () {
+                      unawaited(
+                        _forkCodexSession(
+                          context,
+                          sessionId: sessionId,
+                          projectPath: effectiveProjectPath,
+                        ),
+                      );
+                    },
+                  )
+                else if (readOnlyInfo.value?.isReadOnly ??
+                    !bridge.sessions.any(
+                      (s) =>
+                          s.id == sessionId || s.claudeSessionId == sessionId,
+                    ))
+                  _CodexReadOnlyMonitorBanner(
+                    threadId: sessionId,
+                    readOnlyInfo: readOnlyInfo.value,
+                    onRefresh: () => bridge.requestSessionHistory(sessionId),
+                    onTakeControl: () {
+                      final composerText = chatInputController.text.trim();
+                      if (composerText.isNotEmpty) {
+                        chatInputController.clear();
+                        if (chatSessionCubit is CodexSessionCubit) {
+                          (chatSessionCubit as CodexSessionCubit)
+                              .takeControl(command: composerText);
+                        } else {
+                          chatSessionCubit.sendMessage(composerText);
+                        }
+                      } else {
+                        if (chatSessionCubit is CodexSessionCubit) {
+                          (chatSessionCubit as CodexSessionCubit).takeControl();
+                        } else if (effectiveProjectPath != null) {
+                          bridge.resumeSession(
+                            sessionId,
+                            effectiveProjectPath,
+                          );
+                        }
+                      }
+                    },
+                  ),
                 Expanded(
                   child: BottomOverlayLayout(
                     overlay:
@@ -1914,6 +2026,298 @@ Future<void> _forkCodexFromAssistant(
   if (confirmed != true || !context.mounted) return;
 
   cubit.forkSession(targetUuid);
+}
+
+Future<void> _forkCodexSession(
+  BuildContext context, {
+  required String sessionId,
+  String? projectPath,
+}) async {
+  final cubit = context.read<ChatSessionCubit>();
+  final l = AppLocalizations.of(context);
+  final lastUserEntry =
+      cubit.state.entries.whereType<UserChatEntry>().lastOrNull;
+  if (lastUserEntry?.messageUuid != null) {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l.forkConversationTitle),
+          content: Text(l.forkConversationBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l.fork),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed == true && context.mounted) {
+      cubit.forkSession(lastUserEntry!.messageUuid!);
+    }
+  } else {
+    final bridge = context.read<BridgeService>();
+    final result = await showAnyCodingNewTaskSheet(
+      context: context,
+      recentProjects: projectPath != null
+          ? [
+              (
+                path: projectPath,
+                name: TaskStatusClassifier.extractProjectShortName(projectPath),
+              )
+            ]
+          : const [],
+      bridge: bridge,
+      initialProvider: Provider.codex,
+      initialProjectPath: projectPath,
+    );
+    if (result != null && context.mounted) {
+      bridge.startSession(result);
+    }
+  }
+}
+
+class _CodexTakeoverConflictBanner extends StatelessWidget {
+  final String threadId;
+  final String? projectPath;
+  final String? message;
+  final CodexTakeoverQueueStatusMessage? queueStatus;
+  final VoidCallback onRefresh;
+  final VoidCallback onQueueTakeover;
+  final VoidCallback onCancelQueue;
+  final VoidCallback onForkContinuation;
+
+  const _CodexTakeoverConflictBanner({
+    super.key,
+    required this.threadId,
+    this.projectPath,
+    this.message,
+    this.queueStatus,
+    required this.onRefresh,
+    required this.onQueueTakeover,
+    required this.onCancelQueue,
+    required this.onForkContinuation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final isQueued = queueStatus?.isQueued ?? false;
+
+    return Container(
+      key: const ValueKey('codex_takeover_conflict_banner'),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF451A03) : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFFB45309) : const Color(0xFFFDE68A),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Codex 活跃写入者冲突',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                  ),
+                ),
+              ),
+              if (isQueued)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '排队中: 第 ${queueStatus!.position} / ${queueStatus!.total} 位',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message ?? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF78350F),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              OutlinedButton.icon(
+                key: const ValueKey('codex_conflict_refresh_button'),
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh, size: 14),
+                label: const Text('刷新'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+              ),
+              if (!isQueued)
+                FilledButton.icon(
+                  key: const ValueKey('codex_conflict_queue_button'),
+                  onPressed: onQueueTakeover,
+                  icon: const Icon(Icons.queue, size: 14),
+                  label: const Text('排队接管'),
+                  style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                )
+              else
+                OutlinedButton.icon(
+                  key: const ValueKey('codex_conflict_cancel_queue_button'),
+                  onPressed: onCancelQueue,
+                  icon: const Icon(Icons.close, size: 14),
+                  label: const Text('取消排队'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: cs.error,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              OutlinedButton.icon(
+                key: const ValueKey('codex_conflict_fork_button'),
+                onPressed: onForkContinuation,
+                icon: const Icon(Icons.fork_right, size: 14),
+                label: const Text('另起继续任务'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CodexReadOnlyMonitorBanner extends StatelessWidget {
+  final String threadId;
+  final CodexReadOnlyInfoMessage? readOnlyInfo;
+  final VoidCallback onRefresh;
+  final VoidCallback onTakeControl;
+
+  const _CodexReadOnlyMonitorBanner({
+    super.key,
+    required this.threadId,
+    this.readOnlyInfo,
+    required this.onRefresh,
+    required this.onTakeControl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isLocal = readOnlyInfo?.isLocalHistory ?? false;
+
+    return Container(
+      key: const ValueKey('codex_read_only_monitor_banner'),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isLocal ? Icons.history_rounded : Icons.visibility_outlined,
+            size: 16,
+            color: const Color(0xFF3B82F6),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isLocal ? '本地历史记录 (只读)' : '只读监控模式',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                if (readOnlyInfo?.status != null || readOnlyInfo?.updatedAt != null)
+                  Text(
+                    '${readOnlyInfo?.status != null ? "状态: ${readOnlyInfo!.status}  " : ""}${readOnlyInfo?.updatedAt != null ? "更新: ${readOnlyInfo!.updatedAt}" : ""}',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('codex_read_only_refresh_button'),
+            icon: const Icon(Icons.refresh, size: 16),
+            tooltip: '刷新',
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            padding: EdgeInsets.zero,
+            onPressed: onRefresh,
+          ),
+          const SizedBox(width: 4),
+          FilledButton(
+            key: const ValueKey('codex_read_only_take_control_button'),
+            onPressed: onTakeControl,
+            style: FilledButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+            ),
+            child: const Text('进入控制'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 String? _previousUserUuidForAssistant(

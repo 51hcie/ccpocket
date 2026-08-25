@@ -68,19 +68,45 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
   String? _selectedCodexModel;
   ReasoningEffort? _selectedReasoningEffort;
   CodexPermissionsMode _codexPermissionsMode = CodexPermissionsMode.defaultPermissions;
+  late final dynamic _historySub;
+
+  List<({String path, String name})> _computeAllProjects() {
+    final map = <String, ({String path, String name})>{};
+    for (final p in widget.recentProjects) {
+      final norm = TaskStatusClassifier.normalizeProjectPath(p.path);
+      if (norm.isEmpty) continue;
+      map[norm] = (
+        path: norm,
+        name: p.name.isNotEmpty ? p.name : TaskStatusClassifier.extractProjectShortName(norm),
+      );
+    }
+    for (final raw in widget.bridge.projectHistory) {
+      final norm = TaskStatusClassifier.normalizeProjectPath(raw);
+      if (norm.isEmpty || map.containsKey(norm)) continue;
+      map[norm] = (
+        path: norm,
+        name: TaskStatusClassifier.extractProjectShortName(norm),
+      );
+    }
+    return map.values.toList();
+  }
 
   @override
   void initState() {
     super.initState();
+    _historySub = widget.bridge.projectHistoryStream.listen((_) {
+      if (mounted) setState(() {});
+    });
     final init = widget.initialParams;
     _selectedProvider = widget.initialProvider ??
         (init?.provider == Provider.antigravity
             ? Provider.antigravity
             : Provider.codex);
 
+    final allProjects = _computeAllProjects();
     final initialPath = widget.initialProjectPath ??
         init?.projectPath ??
-        (widget.recentProjects.isNotEmpty ? widget.recentProjects.first.path : '');
+        (allProjects.isNotEmpty ? allProjects.first.path : '');
 
     _projectPath = initialPath;
     _pathController.text = initialPath;
@@ -90,6 +116,15 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
     _codexPermissionsMode = init?.codexPermissionsMode ?? CodexPermissionsMode.defaultPermissions;
 
     _loadLastSavedPreferences();
+  }
+
+  @override
+  void dispose() {
+    _historySub.cancel();
+    _promptController.dispose();
+    _pathController.dispose();
+    _worktreeBranchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLastSavedPreferences() async {
@@ -359,16 +394,17 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
                       ),
 
                       // Quick Recent Project Chips
-                      if (widget.recentProjects.isNotEmpty) ...[
+                      final allProjects = _computeAllProjects();
+                      if (allProjects.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         SizedBox(
                           height: 28,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
-                            itemCount: widget.recentProjects.take(5).length,
+                            itemCount: allProjects.take(6).length,
                             separatorBuilder: (_, __) => const SizedBox(width: 6),
                             itemBuilder: (context, index) {
-                              final p = widget.recentProjects[index];
+                              final p = allProjects[index];
                               final isSelected = _projectPath == p.path;
                               return InkWell(
                                 onTap: () => _selectProject(p.path),
