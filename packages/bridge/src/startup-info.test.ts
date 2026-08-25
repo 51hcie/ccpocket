@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNetworkInterfaces = vi.fn();
 const mockQrToString = vi.fn();
+const mockExecSync = vi.fn();
+
+vi.mock("node:child_process", () => ({
+  execSync: (...args: unknown[]) => mockExecSync(...args),
+}));
 
 vi.mock("node:os", () => ({
   default: {
@@ -36,6 +41,7 @@ describe("startup-info", () => {
     delete process.env.BRIDGE_PUBLIC_WS_URL;
     delete process.env.BRIDGE_DEMO_MODE;
     mockQrToString.mockResolvedValue("QR");
+    mockExecSync.mockReturnValue("");
     mockNetworkInterfaces.mockReturnValue({
       en0: [
         { family: "IPv4", internal: false, address: "192.168.1.20" },

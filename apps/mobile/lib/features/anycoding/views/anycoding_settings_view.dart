@@ -134,21 +134,21 @@ class AnyCodingSettingsView extends StatelessWidget {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      color: statusColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.desktop_mac_rounded,
                       size: 20,
-                      color: Color(0xFF10B981),
+                      color: statusColor,
                     ),
                   ),
                   title: Text(
-                    'Mac 远程主机',
+                    'Mac 远程主机 (Bridge)',
                     style: AppTypography.titleSmall(context),
                   ),
                   subtitle: Text(
-                    bridge.lastUrl ?? 'Port 8766 · 零配置自动发现',
+                    subtitleText,
                     style: AppTypography.caption(context),
                   ),
                   trailing: Container(
@@ -157,24 +157,100 @@ class AnyCodingSettingsView extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      color: statusColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
+                        Icon(Icons.circle, size: 7, color: statusColor),
                         const SizedBox(width: 4),
                         Text(
-                          '已连接',
+                          statusLabel,
                           style: AppTypography.labelSmall(
                             context,
-                            color: const Color(0xFF10B981),
+                            color: statusColor,
                           ),
                         ),
                       ],
                     ),
                   ),
+                ),
+                if (presetConfig.bridgeUrl != null &&
+                    presetConfig.bridgeUrl!.isNotEmpty) ...[
+                  Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(
+                      Icons.settings_backup_restore_rounded,
+                      size: 18,
+                      color: Color(0xFF00D2B4),
+                    ),
+                    title: Text(
+                      '恢复 AnyCoding 预设连接',
+                      style: AppTypography.bodyMedium(context).copyWith(
+                        color: const Color(0xFF00D2B4),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '预设端点: ${presetConfig.bridgeUrl}',
+                      style: AppTypography.caption(context),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, size: 18),
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      if (!context.mounted) return;
+                      final machineManager = context.read<MachineManagerService>();
+                      final restoredUrl = await restoreMacremotePresetConnection(
+                        prefs: prefs,
+                        machineManager: machineManager,
+                      );
+                      if (restoredUrl != null) {
+                        bridge.connect(restoredUrl);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('已恢复预设连接并正在连接: $restoredUrl')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+                Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
+                ListTile(
+                  dense: true,
+                  leading: Icon(Icons.edit_note_rounded, size: 18, color: cs.primary),
+                  title: Text(
+                    '自定义 Bridge 地址',
+                    style: AppTypography.bodyMedium(context),
+                  ),
+                  subtitle: Text(
+                    '修改 Mac 主机 IP / 端口 / 协议',
+                    style: AppTypography.caption(context),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => _showCustomEndpointDialog(context, bridge),
+                ),
+                Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
+                ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.refresh_rounded, size: 18),
+                  title: Text(
+                    '重新连接 Bridge',
+                    style: AppTypography.bodyMedium(context),
+                  ),
+                  subtitle: Text(
+                    '立即重置退避并连接',
+                    style: AppTypography.caption(context),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () {
+                    bridge.reconnectNow();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('已触发 Bridge 重新连接')),
+                    );
+                  },
                 ),
                 Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
                 ListTile(
@@ -189,25 +265,6 @@ class AnyCodingSettingsView extends StatelessWidget {
                     context: context,
                     bridge: bridge,
                   ),
-                ),
-                Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
-                ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.refresh_rounded, size: 18),
-                  title: Text(
-                    '重新连接 Bridge',
-                    style: AppTypography.bodyMedium(context),
-                  ),
-                  trailing: const Icon(Icons.chevron_right, size: 18),
-                  onTap: () {
-                    final url = bridge.lastUrl;
-                    if (url != null) {
-                      bridge.connect(url);
-                    }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已触发 Bridge 重新连接')),
-                    );
-                  },
                 ),
               ],
             ),
@@ -437,3 +494,90 @@ class _SettingsSectionHeader extends StatelessWidget {
     );
   }
 }
+
+void _showCustomEndpointDialog(BuildContext context, BridgeService bridge) {
+  final controller = TextEditingController(text: bridge.lastUrl ?? '');
+  final formKey = GlobalKey<FormState>();
+
+  showDialog<void>(
+    context: context,
+    builder: (dialogCtx) {
+      return AlertDialog(
+        title: const Text('自定义 Bridge 地址'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '支持 IPv4、IPv6 括号格式、域名以及 ws:// / wss:// 协议：',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Bridge WebSocket URL',
+                  hintText: 'ws://192.168.1.100:8765 或 ws://[2408:...]:8766',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return '请输入 Bridge 地址';
+                  }
+                  final parsed = parseBootstrapEndpoint(val.trim());
+                  if (parsed == null) {
+                    return '无效的 Bridge 地址格式';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() != true) return;
+              final parsed = parseBootstrapEndpoint(controller.text.trim());
+              if (parsed == null) return;
+
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(kPrefKeyBridgeUrl, parsed.wsUrl);
+
+              if (dialogCtx.mounted) {
+                final machineManager = context.read<MachineManagerService>();
+                await machineManager.recordConnection(
+                  host: parsed.host,
+                  port: parsed.port,
+                  useSsl: parsed.useSsl,
+                  name: BrandConfig.isAnyCoding ? 'AnyCoding Mac' : 'Macremote',
+                );
+              }
+
+              bridge.connect(parsed.wsUrl);
+              if (dialogCtx.mounted) {
+                Navigator.pop(dialogCtx);
+              }
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('已切换并正在连接: ${parsed.wsUrl}')),
+                );
+              }
+            },
+            child: const Text('保存并连接'),
+          ),
+        ],
+      );
+    },
+  );
+}
+

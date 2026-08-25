@@ -268,27 +268,175 @@ void main() {
       manager.dispose();
     });
 
-    test('preserves upstream behavior when dart-define is unconfigured or disabled', () async {
+    test('migrates unusable loopback 127.0.0.1 endpoint and machine in AnyCoding builds', () async {
+      SharedPreferences.setMockInitialValues({
+        'bridge_url': 'ws://127.0.0.1:8765',
+      });
       final prefs = await SharedPreferences.getInstance();
       final secureStorage = _FakeSecureStorage();
       final manager = MachineManagerService(prefs, secureStorage);
+      await manager.init();
 
-      // Default unconfigured config
+      // Seed a legacy loopback machine
+      await manager.addMachine(
+        const Machine(
+          id: 'legacy-loopback-1',
+          name: 'Local Bridge',
+          host: '127.0.0.1',
+          port: 8765,
+          useSsl: false,
+          isFavorite: true,
+        ),
+      );
+
       const config = MacremoteBootstrapConfig(
-        bridgeUrl: null,
-        bridgeName: null,
-        autoConnect: false,
+        bridgeUrl: targetIpv6Url,
+        bridgeName: 'AnyCoding Mac',
+        autoConnect: true,
       );
 
       final result = await bootstrapMacremoteBridge(
         prefs: prefs,
         machineManager: manager,
         config: config,
+        isAnyCodingBrand: true,
       );
 
-      expect(result, isFalse);
-      expect(prefs.getString('bridge_url'), isNull);
-      expect(manager.currentMachines, isEmpty);
+      expect(result, isTrue);
+      // bridge_url should be migrated from 127.0.0.1 to preset IPv6 URL
+      expect(prefs.getString('bridge_url'), targetIpv6Url);
+
+      // The loopback machine should be migrated to preset endpoint
+      expect(manager.currentMachines, hasLength(1));
+      final migrated = manager.currentMachines.single;
+      expect(migrated.id, 'legacy-loopback-1');
+      expect(migrated.name, 'AnyCoding Mac');
+      expect(migrated.host, targetIpv6Host);
+      expect(migrated.port, targetPort);
+      expect(migrated.wsUrl, targetIpv6Url);
+      expect(migrated.isFavorite, isTrue);
+
+      manager.dispose();
+    });
+
+    test('preserves genuine custom LAN endpoint in AnyCoding builds', () async {
+      const customLanUrl = 'ws://192.168.1.188:8765';
+      SharedPreferences.setMockInitialValues({
+        'bridge_url': customLanUrl,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final secureStorage = _FakeSecureStorage();
+      final manager = MachineManagerService(prefs, secureStorage);
+      await manager.init();
+
+      await manager.addMachine(
+        const Machine(
+          id: 'custom-lan-1',
+          name: 'My Custom Server',
+          host: '192.168.1.188',
+          port: 8765,
+          useSsl: false,
+          isFavorite: true,
+        ),
+      );
+
+      const config = MacremoteBootstrapConfig(
+        bridgeUrl: targetIpv6Url,
+        bridgeName: 'AnyCoding Mac',
+        autoConnect: true,
+      );
+
+      final result = await bootstrapMacremoteBridge(
+        prefs: prefs,
+        machineManager: manager,
+        config: config,
+        isAnyCodingBrand: true,
+      );
+
+      expect(result, isTrue);
+      // Genuine custom LAN URL must be preserved
+      expect(prefs.getString('bridge_url'), customLanUrl);
+      expect(manager.currentMachines, hasLength(1));
+      expect(manager.currentMachines.single.host, '192.168.1.188');
+
+      manager.dispose();
+    });
+
+    test('deletes loopback machine when preset machine already exists', () async {
+      SharedPreferences.setMockInitialValues({
+        'bridge_url': targetIpv6Url,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final secureStorage = _FakeSecureStorage();
+      final manager = MachineManagerService(prefs, secureStorage);
+      await manager.init();
+
+      await manager.addMachine(
+        const Machine(
+          id: 'preset-machine-1',
+          name: 'AnyCoding Mac',
+          host: targetIpv6Host,
+          port: targetPort,
+          useSsl: false,
+          isFavorite: true,
+        ),
+      );
+      await manager.addMachine(
+        const Machine(
+          id: 'legacy-loopback-2',
+          name: 'Localhost',
+          host: 'localhost',
+          port: 8765,
+          useSsl: false,
+        ),
+      );
+
+      const config = MacremoteBootstrapConfig(
+        bridgeUrl: targetIpv6Url,
+        bridgeName: 'AnyCoding Mac',
+        autoConnect: true,
+      );
+
+      final result = await bootstrapMacremoteBridge(
+        prefs: prefs,
+        machineManager: manager,
+        config: config,
+        isAnyCodingBrand: true,
+      );
+
+      expect(result, isTrue);
+      expect(manager.currentMachines, hasLength(1));
+      expect(manager.currentMachines.single.id, 'preset-machine-1');
+
+      manager.dispose();
+    });
+
+    test('restoreMacremotePresetConnection restores preset endpoint and favorite machine', () async {
+      SharedPreferences.setMockInitialValues({
+        'bridge_url': 'ws://10.0.0.99:8765',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final secureStorage = _FakeSecureStorage();
+      final manager = MachineManagerService(prefs, secureStorage);
+      await manager.init();
+
+      const config = MacremoteBootstrapConfig(
+        bridgeUrl: targetIpv6Url,
+        bridgeName: 'AnyCoding Mac',
+        autoConnect: true,
+      );
+
+      final restoredUrl = await restoreMacremotePresetConnection(
+        prefs: prefs,
+        machineManager: manager,
+        config: config,
+      );
+
+      expect(restoredUrl, targetIpv6Url);
+      expect(prefs.getString('bridge_url'), targetIpv6Url);
+      expect(manager.currentMachines, hasLength(1));
+      expect(manager.currentMachines.single.host, targetIpv6Host);
+      expect(manager.currentMachines.single.isFavorite, isTrue);
 
       manager.dispose();
     });

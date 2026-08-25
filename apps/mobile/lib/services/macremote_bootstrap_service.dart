@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import '../constants/brand_config.dart';
 import '../core/logger.dart';
 import '../models/machine.dart';
 import '../utils/network_endpoint.dart';
@@ -159,18 +160,21 @@ BootstrapEndpoint? parseBootstrapEndpoint(String rawUrl) {
 const String kPrefKeyBridgeUrl = 'bridge_url';
 
 /// Bootstraps preset Macremote bridge configuration into [SharedPreferences]
-/// and [MachineManagerService] on fresh install.
+/// and [MachineManagerService] on fresh install or upgrades from legacy loopback endpoints.
 ///
 /// Rules:
 /// 1. If [config] is unconfigured or disabled, returns `false` (no-op).
-/// 2. If [kPrefKeyBridgeUrl] is already present in [prefs], does NOT overwrite it.
-/// 3. If a machine with matching endpoint identity exists in [machineManager], does NOT overwrite or duplicate it.
+/// 2. If in AnyCoding brand (`isAnyCodingBrand` or `BrandConfig.isAnyCoding`) and [kPrefKeyBridgeUrl]
+///    is empty OR points to a clearly unusable legacy loopback host (e.g. 127.0.0.1, localhost, ::1),
+///    migrates/seeds [kPrefKeyBridgeUrl] to the preset [parsed.wsUrl]. Genuine custom LAN/public endpoints are preserved.
+/// 3. In AnyCoding brand, any legacy loopback [Machine] entries in [machineManager] are migrated/cleaned up.
 /// 4. On fresh install, seeds [kPrefKeyBridgeUrl] and adds the favorite [Machine] into [machineManager].
 Future<bool> bootstrapMacremoteBridge({
   required SharedPreferences prefs,
   required MachineManagerService machineManager,
   MacremoteBootstrapConfig? config,
   Uuid? uuid,
+  bool? isAnyCodingBrand,
 }) async {
   final effectiveConfig = config ?? MacremoteBootstrapConfig.fromEnvironment();
   if (!effectiveConfig.isConfigured) {
@@ -185,29 +189,83 @@ Future<bool> bootstrapMacremoteBridge({
     return false;
   }
 
-  // 1. Seed bridge_url preference if no existing preference is set
+  final isAnyCoding = isAnyCodingBrand ?? BrandConfig.isAnyCoding;
+
+  // 1. Seed or migrate bridge_url preference
   final existingUrl = prefs.getString(kPrefKeyBridgeUrl);
   final hasUserBridgeUrl = existingUrl != null && existingUrl.trim().isNotEmpty;
+  var didMigrateUrl = false;
+
   if (!hasUserBridgeUrl) {
     await prefs.setString(kPrefKeyBridgeUrl, parsed.wsUrl);
     logger.info(
       '[MacremoteBootstrap] Seeded $kPrefKeyBridgeUrl preference: ${parsed.wsUrl}',
     );
+  } else if (isAnyCoding) {
+    final existingParsed = parseBootstrapEndpoint(existingUrl);
+    final isLegacyLoopback =
+        existingParsed != null && isLoopbackOrLocalhost(existingParsed.host);
+    if (isLegacyLoopback) {
+      await prefs.setString(kPrefKeyBridgeUrl, parsed.wsUrl);
+      didMigrateUrl = true;
+      logger.info(
+        '[MacremoteBootstrap] Migrated legacy loopback $kPrefKeyBridgeUrl ($existingUrl) to preset: ${parsed.wsUrl}',
+      );
+    }
   }
 
   // 2. Ensure machines are loaded in MachineManagerService
   await machineManager.init();
-  final existingMachine = machineManager.findByHostPort(
+  var existingPresetMachine = machineManager.findByHostPort(
     parsed.host,
     parsed.port,
   );
 
-  // 3. Seed favorite machine if no machine exists for this endpoint
-  if (existingMachine == null && !hasUserBridgeUrl) {
+  // 3. In AnyCoding builds, migrate legacy loopback machine entries
+  if (isAnyCoding) {
+    final machines = List<Machine>.from(machineManager.currentMachines);
+    for (final m in machines) {
+      if (isLoopbackOrLocalhost(m.host)) {
+        if (existingPresetMachine != null) {
+          // Preset machine already exists, delete unusable loopback machine
+          await machineManager.deleteMachine(m.id);
+          logger.info(
+            '[MacremoteBootstrap] Removed unusable legacy loopback machine: ${m.displayName} (${m.host}:${m.port})',
+          );
+        } else {
+          // Migrate legacy loopback machine to preset endpoint
+          final migratedMachine = m.copyWith(
+            host: parsed.host,
+            port: parsed.port,
+            useSsl: parsed.useSsl,
+            connectionMode: parsed.useSsl
+                ? BridgeConnectionMode.secureOnly
+                : BridgeConnectionMode.standardOnly,
+            hasResolvedTransport: true,
+            isFavorite: true,
+            name: (m.name == null ||
+                    m.name == 'Local Bridge' ||
+                    m.name == 'Macremote' ||
+                    m.name == 'AnyCoding Mac')
+                ? (effectiveConfig.bridgeName ?? 'AnyCoding Mac')
+                : m.name,
+          );
+          await machineManager.updateMachine(migratedMachine);
+          existingPresetMachine = migratedMachine;
+          logger.info(
+            '[MacremoteBootstrap] Migrated legacy loopback machine ${m.id} to preset: ${migratedMachine.displayName} (${parsed.wsUrl})',
+          );
+        }
+      }
+    }
+  }
+
+  // 4. Seed favorite preset machine if no machine exists for this endpoint
+  if (existingPresetMachine == null && (!hasUserBridgeUrl || didMigrateUrl)) {
     final effectiveUuid = uuid ?? const Uuid();
     final machine = Machine(
       id: effectiveUuid.v4(),
-      name: effectiveConfig.bridgeName ?? 'Macremote',
+      name: effectiveConfig.bridgeName ?? (isAnyCoding ? 'AnyCoding Mac' : 'Macremote'),
       host: parsed.host,
       port: parsed.port,
       useSsl: parsed.useSsl,
@@ -225,3 +283,51 @@ Future<bool> bootstrapMacremoteBridge({
 
   return true;
 }
+
+/// Explicitly restores the AnyCoding preset connection into [SharedPreferences]
+/// and [MachineManagerService], returning the restored preset URL.
+Future<String?> restoreMacremotePresetConnection({
+  required SharedPreferences prefs,
+  required MachineManagerService machineManager,
+  MacremoteBootstrapConfig? config,
+}) async {
+  final effectiveConfig = config ?? MacremoteBootstrapConfig.fromEnvironment();
+  if (effectiveConfig.bridgeUrl == null ||
+      effectiveConfig.bridgeUrl!.trim().isEmpty) {
+    return null;
+  }
+  final parsed = parseBootstrapEndpoint(effectiveConfig.bridgeUrl!);
+  if (parsed == null) return null;
+
+  await prefs.setString(kPrefKeyBridgeUrl, parsed.wsUrl);
+
+  await machineManager.init();
+  var machine = machineManager.findByHostPort(parsed.host, parsed.port);
+  if (machine != null) {
+    if (!machine.isFavorite) {
+      await machineManager.updateMachine(machine.copyWith(isFavorite: true));
+    }
+  } else {
+    const uuid = Uuid();
+    machine = Machine(
+      id: uuid.v4(),
+      name: effectiveConfig.bridgeName ??
+          (BrandConfig.isAnyCoding ? 'AnyCoding Mac' : 'Macremote'),
+      host: parsed.host,
+      port: parsed.port,
+      useSsl: parsed.useSsl,
+      connectionMode: parsed.useSsl
+          ? BridgeConnectionMode.secureOnly
+          : BridgeConnectionMode.standardOnly,
+      hasResolvedTransport: true,
+      isFavorite: true,
+    );
+    await machineManager.addMachine(machine);
+  }
+
+  logger.info(
+    '[MacremoteBootstrap] Restored preset connection: ${machine.displayName} (${parsed.wsUrl})',
+  );
+  return parsed.wsUrl;
+}
+

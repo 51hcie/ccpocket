@@ -35,6 +35,34 @@ class SessionLinkResolveResult {
     : this._(SessionLinkResolveSupport.unavailable, null);
 }
 
+enum BridgeDiagnosticType {
+  none,
+  bridgeOffline,
+  ipv6Unavailable,
+  timeout,
+  handshakeFailed,
+  unknownError,
+}
+
+class BridgeConnectionDiagnostics {
+  final BridgeDiagnosticType type;
+  final String message;
+  final String? rawError;
+  final int retryAttempt;
+  final DateTime? lastAttemptTime;
+
+  const BridgeConnectionDiagnostics({
+    this.type = BridgeDiagnosticType.none,
+    this.message = '',
+    this.rawError,
+    this.retryAttempt = 0,
+    this.lastAttemptTime,
+  });
+
+  bool get hasError => type != BridgeDiagnosticType.none;
+}
+
+
 class BridgeService implements BridgeServiceBase {
   void Function(ClientMessage message)? onOutgoingMessage;
   FutureOr<void> Function()? onDisconnect;
@@ -123,6 +151,10 @@ class BridgeService implements BridgeServiceBase {
       StreamController<CodexTakeoverQueueStatusMessage>.broadcast();
   final _codexReadOnlyInfoController =
       StreamController<CodexReadOnlyInfoMessage>.broadcast();
+  BridgeConnectionDiagnostics _diagnostics =
+      const BridgeConnectionDiagnostics();
+  final _diagnosticsController =
+      StreamController<BridgeConnectionDiagnostics>.broadcast();
   BridgeConnectionState _connectionState = BridgeConnectionState.disconnected;
   final List<ClientMessage> _messageQueue = [];
   List<SessionInfo> _sessions = [];
@@ -288,6 +320,9 @@ class BridgeService implements BridgeServiceBase {
   UsageResultMessage? get lastUsageResult => _lastUsageResult;
   List<OfflinePendingAction> get offlinePendingActions =>
       _offlinePendingActions;
+  BridgeConnectionDiagnostics get connectionDiagnostics => _diagnostics;
+  Stream<BridgeConnectionDiagnostics> get connectionDiagnosticsStream =>
+      _diagnosticsController.stream;
 
   BridgeService() {
     unawaited(_ensureOfflineQueueRestored());
@@ -704,6 +739,7 @@ class BridgeService implements BridgeServiceBase {
         onError: (error, stackTrace) {
           if (epoch != _connectionEpoch) return;
           logger.error('WS stream error', error, stackTrace);
+          _recordConnectionFailure(error, stackTrace);
           _setBridgeConnectionState(BridgeConnectionState.disconnected);
           _requeueInFlightInputMessages();
           _requeueInFlightPendingMessages();
@@ -713,11 +749,26 @@ class BridgeService implements BridgeServiceBase {
           if (epoch != _connectionEpoch) return;
           _channel = null;
           if (!_intentionalDisconnect) {
+            if (_connectionState == BridgeConnectionState.connected) {
+              _diagnostics = BridgeConnectionDiagnostics(
+                type: BridgeDiagnosticType.unknownError,
+                message: _formatDiagnosticMessage(
+                  BridgeDiagnosticType.unknownError,
+                  retryAttempt: _reconnectAttempt + 1,
+                ),
+                rawError: 'Connection closed by remote peer',
+                retryAttempt: _reconnectAttempt + 1,
+                lastAttemptTime: DateTime.now(),
+              );
+              _diagnosticsController.add(_diagnostics);
+            }
             _setBridgeConnectionState(BridgeConnectionState.disconnected);
             _requeueInFlightInputMessages();
             _requeueInFlightPendingMessages();
             _scheduleReconnect();
           } else {
+            _diagnostics = const BridgeConnectionDiagnostics();
+            _diagnosticsController.add(_diagnostics);
             _setBridgeConnectionState(BridgeConnectionState.disconnected);
           }
         },
@@ -730,6 +781,8 @@ class BridgeService implements BridgeServiceBase {
                   _intentionalDisconnect) {
                 return;
               }
+              _diagnostics = const BridgeConnectionDiagnostics();
+              _diagnosticsController.add(_diagnostics);
               _setBridgeConnectionState(BridgeConnectionState.connected);
               _reconnectAttempt = 0;
               send(ClientMessage.clientCapabilities());
@@ -739,6 +792,7 @@ class BridgeService implements BridgeServiceBase {
             .catchError((Object error, StackTrace stackTrace) {
               if (epoch != _connectionEpoch || _intentionalDisconnect) return;
               logger.error('WS handshake failed', error, stackTrace);
+              _recordConnectionFailure(error, stackTrace);
               _setBridgeConnectionState(BridgeConnectionState.disconnected);
               _requeueInFlightInputMessages();
               _requeueInFlightPendingMessages();
@@ -747,10 +801,87 @@ class BridgeService implements BridgeServiceBase {
       );
     } catch (e, st) {
       logger.error('WS connect failed', e, st);
+      _recordConnectionFailure(e, st);
       _setBridgeConnectionState(BridgeConnectionState.disconnected);
       _scheduleReconnect();
     }
   }
+
+  BridgeDiagnosticType _diagnoseError(Object error) {
+    final str = error.toString().toLowerCase();
+    if (str.contains('connection refused') ||
+        str.contains('errno = 61') ||
+        str.contains('errno = 111') ||
+        str.contains('os error: connection refused')) {
+      return BridgeDiagnosticType.bridgeOffline;
+    }
+    if (str.contains('network is unreachable') ||
+        str.contains('no route to host') ||
+        str.contains('host unreachable') ||
+        str.contains('errno = 51') ||
+        str.contains('errno = 65') ||
+        str.contains('errno = 101') ||
+        str.contains('errno = 113') ||
+        str.contains('os error: network is unreachable') ||
+        str.contains('os error: no route to host')) {
+      return BridgeDiagnosticType.ipv6Unavailable;
+    }
+    if (str.contains('timed out') ||
+        str.contains('timeout') ||
+        str.contains('errno = 60') ||
+        str.contains('errno = 110')) {
+      return BridgeDiagnosticType.timeout;
+    }
+    if (str.contains('handshake') ||
+        str.contains('websocketchannelexception') ||
+        str.contains('formatexception')) {
+      return BridgeDiagnosticType.handshakeFailed;
+    }
+    return BridgeDiagnosticType.unknownError;
+  }
+
+  String _formatDiagnosticMessage(
+    BridgeDiagnosticType type, {
+    int retryAttempt = 0,
+  }) {
+    switch (type) {
+      case BridgeDiagnosticType.none:
+        return '';
+      case BridgeDiagnosticType.bridgeOffline:
+        return retryAttempt > 0
+            ? 'Bridge 离线或未启动 (正在重试第 $retryAttempt 次)'
+            : 'Bridge 离线或服务未启动';
+      case BridgeDiagnosticType.ipv6Unavailable:
+        return retryAttempt > 0
+            ? '当前网络无 IPv6 路由 / 目标不可达 (正在重试第 $retryAttempt 次)'
+            : '当前网络无 IPv6 路由 / 目标不可达';
+      case BridgeDiagnosticType.timeout:
+        return retryAttempt > 0
+            ? '连接超时 (正在重试第 $retryAttempt 次)'
+            : '连接超时';
+      case BridgeDiagnosticType.handshakeFailed:
+        return 'WebSocket 握手失败';
+      case BridgeDiagnosticType.unknownError:
+        return retryAttempt > 0
+            ? '连接断开 (正在重试第 $retryAttempt 次)'
+            : '连接失败';
+    }
+  }
+
+  void _recordConnectionFailure(Object error, [StackTrace? stackTrace]) {
+    final type = _diagnoseError(error);
+    final attempt = _reconnectAttempt + 1;
+    final message = _formatDiagnosticMessage(type, retryAttempt: attempt);
+    _diagnostics = BridgeConnectionDiagnostics(
+      type: type,
+      message: message,
+      rawError: error.toString(),
+      retryAttempt: attempt,
+      lastAttemptTime: DateTime.now(),
+    );
+    _diagnosticsController.add(_diagnostics);
+  }
+
 
   bool _sameBridgeTarget(String left, String right) {
     final leftUri = Uri.tryParse(left);
@@ -922,6 +1053,18 @@ class BridgeService implements BridgeServiceBase {
     _reconnectAttempt++;
     final delay = min(pow(2, _reconnectAttempt).toInt(), _maxReconnectDelay);
     _setBridgeConnectionState(BridgeConnectionState.reconnecting);
+    _diagnostics = BridgeConnectionDiagnostics(
+      type: _diagnostics.type,
+      message: _formatDiagnosticMessage(
+        _diagnostics.type,
+        retryAttempt: _reconnectAttempt,
+      ),
+      rawError: _diagnostics.rawError,
+      retryAttempt: _reconnectAttempt,
+      lastAttemptTime: DateTime.now(),
+    );
+    _diagnosticsController.add(_diagnostics);
+
     _reconnectTimer = Timer(Duration(seconds: delay), () {
       if (_lastUrl != null && !_intentionalDisconnect) {
         connect(_lastUrl!);
@@ -2511,6 +2654,17 @@ class BridgeService implements BridgeServiceBase {
       connect(_lastUrl!);
     }
     // If reconnecting, do nothing — already in progress.
+  }
+
+  /// Forces an immediate reconnect to the last known bridge URL without waiting for exponential backoff.
+  void reconnectNow() {
+    _intentionalDisconnect = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _reconnectAttempt = 0;
+    if (_lastUrl != null && _lastUrl!.trim().isNotEmpty) {
+      connect(_lastUrl!);
+    }
   }
 
   void disconnect() {

@@ -68,4 +68,33 @@ void main() {
       expect(formatUriOrigin(scheme: 'https', host: '::1'), 'https://[::1]');
     });
   });
+
+  group('isLoopbackOrLocalhost', () {
+    test('identifies loopback IPv4 and localhost aliases', () {
+      expect(isLoopbackOrLocalhost('127.0.0.1'), isTrue);
+      expect(isLoopbackOrLocalhost('127.0.0.2'), isTrue);
+      expect(isLoopbackOrLocalhost('127.10.20.30'), isTrue);
+      expect(isLoopbackOrLocalhost('localhost'), isTrue);
+      expect(isLoopbackOrLocalhost('LOCALHOST'), isTrue);
+      expect(isLoopbackOrLocalhost('0.0.0.0'), isTrue);
+    });
+
+    test('identifies loopback IPv6 literals and forms', () {
+      expect(isLoopbackOrLocalhost('::1'), isTrue);
+      expect(isLoopbackOrLocalhost('[::1]'), isTrue);
+      expect(isLoopbackOrLocalhost('0:0:0:0:0:0:0:1'), isTrue);
+      expect(isLoopbackOrLocalhost('::'), isTrue);
+      expect(isLoopbackOrLocalhost('[::]'), isTrue);
+    });
+
+    test('does not classify LAN, public IPv4, IPv6, or domains as loopback', () {
+      expect(isLoopbackOrLocalhost('192.168.1.1'), isFalse);
+      expect(isLoopbackOrLocalhost('10.0.0.1'), isFalse);
+      expect(isLoopbackOrLocalhost('172.16.0.1'), isFalse);
+      expect(isLoopbackOrLocalhost('2408:824e:158d:5a80:875:122:45bf:5441'), isFalse);
+      expect(isLoopbackOrLocalhost('[2408:824e:158d:5a80:875:122:45bf:5441]'), isFalse);
+      expect(isLoopbackOrLocalhost('macremote.local'), isFalse);
+      expect(isLoopbackOrLocalhost('api.anycoding.com'), isFalse);
+    });
+  });
 }

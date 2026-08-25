@@ -136,9 +136,10 @@ class AnyCodingConsoleView extends StatelessWidget {
         ),
         actions: [
           _MacStatusPill(
-            isConnected: isConnected,
+            connectionState: connectionState,
+            diagnostics: bridge.connectionDiagnostics,
             bridgeLabel: connectedBridgeLabel ?? BrandConfig.defaultBridgeName,
-            onReconnect: onConnect,
+            onReconnect: () => bridge.reconnectNow(),
             onTapMonitor: () => showAnyCodingMonitoringSheet(
               context: context,
               bridge: bridge,
@@ -321,13 +322,15 @@ class AnyCodingConsoleView extends StatelessWidget {
 
 /// Compact Top Mac Online/Offline Status Pill
 class _MacStatusPill extends StatelessWidget {
-  final bool isConnected;
+  final BridgeConnectionState connectionState;
+  final BridgeConnectionDiagnostics? diagnostics;
   final String bridgeLabel;
   final VoidCallback onReconnect;
   final VoidCallback? onTapMonitor;
 
   const _MacStatusPill({
-    required this.isConnected,
+    required this.connectionState,
+    this.diagnostics,
     required this.bridgeLabel,
     required this.onReconnect,
     this.onTapMonitor,
@@ -339,7 +342,7 @@ class _MacStatusPill extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    if (isConnected) {
+    if (connectionState == BridgeConnectionState.connected) {
       return InkWell(
         onTap: onTapMonitor,
         borderRadius: BorderRadius.circular(16),
@@ -383,6 +386,96 @@ class _MacStatusPill extends StatelessWidget {
       );
     }
 
+    if (connectionState == BridgeConnectionState.connecting) {
+      return InkWell(
+        onTap: onReconnect,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF3B82F6).withValues(alpha: isDark ? 0.16 : 0.10),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFF3B82F6),
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '连接中...',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (connectionState == BridgeConnectionState.reconnecting) {
+      final attempt = diagnostics?.retryAttempt ?? 1;
+      return InkWell(
+        onTap: onReconnect,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.16 : 0.10),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFF59E0B),
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '重连中 ($attempt)',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final diag = diagnostics;
+    String label = '离线 · 点击重连';
+    if (diag != null && diag.hasError) {
+      switch (diag.type) {
+        case BridgeDiagnosticType.bridgeOffline:
+          label = 'Bridge 离线 · 重连';
+        case BridgeDiagnosticType.ipv6Unavailable:
+          label = 'IPv6 不可用 · 重连';
+        case BridgeDiagnosticType.timeout:
+          label = '连接超时 · 重连';
+        default:
+          label = '离线 · 点击重连';
+      }
+    }
+
     return InkWell(
       onTap: onReconnect,
       borderRadius: BorderRadius.circular(16),
@@ -406,7 +499,7 @@ class _MacStatusPill extends StatelessWidget {
             ),
             const SizedBox(width: 5),
             Text(
-              '离线 · 点击重连',
+              label,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,

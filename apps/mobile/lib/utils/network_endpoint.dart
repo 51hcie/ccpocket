@@ -120,3 +120,25 @@ String formatUriOrigin({
   final origin = Uri(scheme: scheme, host: normalizeHostInput(host)).toString();
   return port == null ? origin : '$origin:$port';
 }
+
+/// Checks whether a given host is a local/loopback address (e.g. 127.0.0.1, localhost, ::1, 0.0.0.0).
+bool isLoopbackOrLocalhost(String host) {
+  final normalized = normalizeHostInput(host).toLowerCase();
+  if (normalized.isEmpty) return false;
+  if (normalized == 'localhost') return true;
+  if (normalized == '127.0.0.1' ||
+      normalized == '::1' ||
+      normalized == '0.0.0.0' ||
+      normalized == '::') {
+    return true;
+  }
+  if (RegExp(r'^127(?:\.\d{1,3}){3}$').hasMatch(normalized)) {
+    return true;
+  }
+  final canonical = canonicalHostIdentity(normalized);
+  if (canonical == '::1' || canonical == '::') {
+    return true;
+  }
+  return false;
+}
+
