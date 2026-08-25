@@ -7,6 +7,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 private const val APP_ICON_CHANNEL = "ccpocket/app_icon"
+private const val INSTALLER_CHANNEL = "ccpocket/android_installer"
 
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -25,6 +26,43 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     } catch (error: IllegalArgumentException) {
                         result.error("invalid_icon", error.message, null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            INSTALLER_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "installApk" -> {
+                    val filePath = call.argument<String>("filePath")
+                    if (filePath.isNullOrEmpty()) {
+                        result.error("invalid_path", "File path cannot be empty", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val file = java.io.File(filePath)
+                        if (!file.exists()) {
+                            result.error("file_not_found", "APK file does not exist at $filePath", null)
+                            return@setMethodCallHandler
+                        }
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file,
+                        )
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/vnd.android.package-archive")
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        }
+                        context.startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("install_failed", e.message, null)
                     }
                 }
                 else -> result.notImplemented()

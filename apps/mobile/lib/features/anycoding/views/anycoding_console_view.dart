@@ -3,8 +3,10 @@ import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
 import '../../../models/offline_pending_action.dart';
 import '../../../services/bridge_service.dart';
+import '../../../theme/app_typography.dart';
 import '../../../widgets/anycoding_logo.dart';
 import '../services/task_status_classifier.dart';
+import 'anycoding_monitoring_view.dart';
 
 class AnyCodingConsoleView extends StatelessWidget {
   final BridgeConnectionState connectionState;
@@ -137,6 +139,10 @@ class AnyCodingConsoleView extends StatelessWidget {
             isConnected: isConnected,
             bridgeLabel: connectedBridgeLabel ?? BrandConfig.defaultBridgeName,
             onReconnect: onConnect,
+            onTapMonitor: () => showAnyCodingMonitoringSheet(
+              context: context,
+              bridge: bridge,
+            ),
           ),
           const SizedBox(width: 4),
           IconButton(
@@ -318,11 +324,13 @@ class _MacStatusPill extends StatelessWidget {
   final bool isConnected;
   final String bridgeLabel;
   final VoidCallback onReconnect;
+  final VoidCallback? onTapMonitor;
 
   const _MacStatusPill({
     required this.isConnected,
     required this.bridgeLabel,
     required this.onReconnect,
+    this.onTapMonitor,
   });
 
   @override
@@ -332,41 +340,45 @@ class _MacStatusPill extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     if (isConnected) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.16 : 0.10),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 7,
-              height: 7,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF10B981),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF10B981),
-                    blurRadius: 4,
-                    spreadRadius: 0.5,
-                  ),
-                ],
+      return InkWell(
+        onTap: onTapMonitor,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.16 : 0.10),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFF10B981),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF10B981),
+                      blurRadius: 4,
+                      spreadRadius: 0.5,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              'Mac 在线',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+              const SizedBox(width: 5),
+              Text(
+                'Mac 在线',
+                style: AppTypography.labelSmall(
+                  context,
+                  color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }

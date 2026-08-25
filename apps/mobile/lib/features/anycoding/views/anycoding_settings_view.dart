@@ -3,12 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../constants/brand_config.dart';
 import '../../../services/bridge_service.dart';
+import '../../../theme/app_typography.dart';
 import '../../../widgets/anycoding_logo.dart';
 import '../../settings/state/settings_cubit.dart';
 import '../../settings/state/settings_state.dart';
 import '../../settings/widgets/app_locale_bottom_sheet.dart';
 import '../../settings/widgets/speech_locale_bottom_sheet.dart';
 import '../../settings/widgets/theme_bottom_sheet.dart';
+import '../widgets/anycoding_update_sheet.dart';
+import 'anycoding_monitoring_view.dart';
 
 class AnyCodingSettingsView extends StatelessWidget {
   final bool focusConnection;
@@ -46,9 +49,9 @@ class AnyCodingSettingsView extends StatelessWidget {
         backgroundColor: isDark
             ? BrandConfig.anyCodingPrimaryDark
             : cs.surface,
-        title: const Text(
+        title: Text(
           '控制台设置',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+          style: AppTypography.titleLarge(context),
         ),
       ),
       body: ListView(
@@ -72,27 +75,33 @@ class AnyCodingSettingsView extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Text(
+                          Text(
                             'AnyCoding',
-                            style: TextStyle(
-                              fontSize: 17,
+                            style: AppTypography.titleLarge(
+                              context,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1.5,
+                            ),
                             decoration: BoxDecoration(
-                              color: BrandConfig.codexAccent.withValues(alpha: 0.15),
+                              color: BrandConfig.codexAccent.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               'V2.0 Command',
-                              style: TextStyle(
-                                fontSize: 10.5,
+                              style: AppTypography.labelSmall(
+                                context,
+                                color: isDark
+                                    ? BrandConfig.codexAccent
+                                    : const Color(0xFF0D9488),
                                 fontWeight: FontWeight.w800,
-                                color: isDark ? BrandConfig.codexAccent : const Color(0xFF0D9488),
                               ),
                             ),
                           ),
@@ -101,10 +110,7 @@ class AnyCodingSettingsView extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         '手机上的 AI 项目指挥中心 · 远程调度 Mac',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                        ),
+                        style: AppTypography.caption(context),
                       ),
                     ],
                   ),
@@ -115,8 +121,8 @@ class AnyCodingSettingsView extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // 2. Section: Bridge 主机状态
-          const _SettingsSectionHeader(title: 'BRIDGE 主机连接'),
+          // 2. Section: Bridge 主机状态 & 监控
+          const _SettingsSectionHeader(title: 'BRIDGE 主机连接与监控'),
           Material(
             color: cardBgColor,
             shape: RoundedRectangleBorder(
@@ -133,36 +139,39 @@ class AnyCodingSettingsView extends StatelessWidget {
                       color: const Color(0xFF10B981).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.desktop_mac_rounded, size: 20, color: Color(0xFF10B981)),
-                  ),
-                  title: const Text(
-                    'Mac 远程主机',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    'Port 8766 · 零配置自动发现',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    child: const Icon(
+                      Icons.desktop_mac_rounded,
+                      size: 20,
+                      color: Color(0xFF10B981),
                     ),
                   ),
+                  title: Text(
+                    'Mac 远程主机',
+                    style: AppTypography.titleSmall(context),
+                  ),
+                  subtitle: Text(
+                    bridge.lastUrl ?? 'Port 8766 · 零配置自动发现',
+                    style: AppTypography.caption(context),
+                  ),
                   trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF10B981).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
-                        SizedBox(width: 4),
+                        const Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
+                        const SizedBox(width: 4),
                         Text(
                           '已连接',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF10B981),
+                          style: AppTypography.labelSmall(
+                            context,
+                            color: const Color(0xFF10B981),
                           ),
                         ),
                       ],
@@ -172,8 +181,25 @@ class AnyCodingSettingsView extends StatelessWidget {
                 Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
                 ListTile(
                   dense: true,
+                  leading: const Icon(Icons.monitor_heart_rounded, size: 18),
+                  title: Text(
+                    'Mac 监控控制台 (CPU/内存/磁盘/配额)',
+                    style: AppTypography.bodyMedium(context),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => showAnyCodingMonitoringSheet(
+                    context: context,
+                    bridge: bridge,
+                  ),
+                ),
+                Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
+                ListTile(
+                  dense: true,
                   leading: const Icon(Icons.refresh_rounded, size: 18),
-                  title: const Text('重新连接 Bridge', style: TextStyle(fontSize: 13)),
+                  title: Text(
+                    '重新连接 Bridge',
+                    style: AppTypography.bodyMedium(context),
+                  ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () {
                     final url = bridge.lastUrl;
@@ -191,7 +217,44 @@ class AnyCodingSettingsView extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // 3. Section: 偏好设置
+          // 3. Section: 更新与版本
+          const _SettingsSectionHeader(title: '软件更新与版本'),
+          Material(
+            color: cardBgColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: borderColor),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.system_update_alt_rounded,
+                    size: 20,
+                    color: cs.primary,
+                  ),
+                  title: Text(
+                    '检查更新 (In-App Bridge Update)',
+                    style: AppTypography.titleSmall(context),
+                  ),
+                  subtitle: Text(
+                    '从当前连接的 Mac Bridge 检查并下载更新包',
+                    style: AppTypography.caption(context),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => showAnyCodingUpdateSheet(
+                    context: context,
+                    bridge: bridge,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // 4. Section: 偏好设置
           const _SettingsSectionHeader(title: '外观与偏好'),
           Material(
             color: cardBgColor,
@@ -204,53 +267,77 @@ class AnyCodingSettingsView extends StatelessWidget {
               children: [
                 // Theme
                 ListTile(
-                  leading: Icon(Icons.palette_outlined, size: 20, color: cs.primary),
-                  title: const Text('主题外观', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.palette_outlined,
+                    size: 20,
+                    color: cs.primary,
+                  ),
+                  title: Text(
+                    '主题外观',
+                    style: AppTypography.titleSmall(context),
+                  ),
                   subtitle: Text(
                     switch (settingsState.themeMode) {
                       ThemeMode.system => '跟随系统',
                       ThemeMode.light => '浅色模式',
                       ThemeMode.dark => '深色模式',
                     },
-                    style: TextStyle(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    style: AppTypography.caption(context),
                   ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () => showThemeBottomSheet(
                     context: context,
                     current: settingsState.themeMode,
-                    onChanged: (mode) => context.read<SettingsCubit>().setThemeMode(mode),
+                    onChanged: (mode) =>
+                        context.read<SettingsCubit>().setThemeMode(mode),
                   ),
                 ),
                 Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
                 // Language
                 ListTile(
-                  leading: Icon(Icons.language_rounded, size: 20, color: cs.primary),
-                  title: const Text('界面语言', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.language_rounded,
+                    size: 20,
+                    color: cs.primary,
+                  ),
+                  title: Text(
+                    '界面语言',
+                    style: AppTypography.titleSmall(context),
+                  ),
                   subtitle: Text(
                     getAppLocaleLabel(context, settingsState.appLocaleId),
-                    style: TextStyle(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    style: AppTypography.caption(context),
                   ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () => showAppLocaleBottomSheet(
                     context: context,
                     current: settingsState.appLocaleId,
-                    onChanged: (id) => context.read<SettingsCubit>().setAppLocaleId(id),
+                    onChanged: (id) =>
+                        context.read<SettingsCubit>().setAppLocaleId(id),
                   ),
                 ),
                 Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
                 // Speech Locale
                 ListTile(
-                  leading: Icon(Icons.mic_none_rounded, size: 20, color: cs.primary),
-                  title: const Text('语音输入识别语言', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.mic_none_rounded,
+                    size: 20,
+                    color: cs.primary,
+                  ),
+                  title: Text(
+                    '语音输入识别语言',
+                    style: AppTypography.titleSmall(context),
+                  ),
                   subtitle: Text(
                     getSpeechLocaleLabel(context, settingsState.speechLocaleId),
-                    style: TextStyle(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    style: AppTypography.caption(context),
                   ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () => showSpeechLocaleBottomSheet(
                     context: context,
                     current: settingsState.speechLocaleId,
-                    onChanged: (id) => context.read<SettingsCubit>().setSpeechLocaleId(id),
+                    onChanged: (id) =>
+                        context.read<SettingsCubit>().setSpeechLocaleId(id),
                   ),
                 ),
               ],
@@ -259,7 +346,7 @@ class AnyCodingSettingsView extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // 4. Section: 支持引擎
+          // 5. Section: 支持引擎
           const _SettingsSectionHeader(title: '调度引擎支持'),
           Material(
             color: cardBgColor,
@@ -277,25 +364,55 @@ class AnyCodingSettingsView extends StatelessWidget {
                       color: BrandConfig.codexAccent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Icon(Icons.bolt, size: 18, color: BrandConfig.codexAccent),
+                    child: Icon(
+                      Icons.bolt,
+                      size: 18,
+                      color: BrandConfig.codexAccent,
+                    ),
                   ),
-                  title: const Text('Codex (OpenAI)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('支持 GPT-5.4 / 思维链 / 本地 Worktree 隔离', style: TextStyle(fontSize: 11.5)),
-                  trailing: const Icon(Icons.check_circle, size: 18, color: Color(0xFF10B981)),
+                  title: Text(
+                    'Codex (OpenAI)',
+                    style: AppTypography.titleSmall(context),
+                  ),
+                  subtitle: Text(
+                    '支持 GPT-5.4 / 思维链 / 本地 Worktree 隔离',
+                    style: AppTypography.caption(context),
+                  ),
+                  trailing: const Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: Color(0xFF10B981),
+                  ),
                 ),
                 Divider(height: 1, indent: 16, endIndent: 16, color: borderColor),
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: BrandConfig.antigravityAccent.withValues(alpha: 0.15),
+                      color: BrandConfig.antigravityAccent.withValues(
+                        alpha: 0.15,
+                      ),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Icon(Icons.auto_awesome, size: 18, color: BrandConfig.antigravityAccent),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 18,
+                      color: BrandConfig.antigravityAccent,
+                    ),
                   ),
-                  title: const Text('Antigravity (DeepMind)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('支持 Gemini 2.5 / 多代理子任务调度', style: TextStyle(fontSize: 11.5)),
-                  trailing: const Icon(Icons.check_circle, size: 18, color: Color(0xFF10B981)),
+                  title: Text(
+                    'Antigravity (DeepMind)',
+                    style: AppTypography.titleSmall(context),
+                  ),
+                  subtitle: Text(
+                    '支持 Gemini 2.5 / 多代理子任务调度',
+                    style: AppTypography.caption(context),
+                  ),
+                  trailing: const Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: Color(0xFF10B981),
+                  ),
                 ),
               ],
             ),
@@ -313,17 +430,11 @@ class _SettingsSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
-          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-        ),
+        style: AppTypography.labelSmall(context),
       ),
     );
   }

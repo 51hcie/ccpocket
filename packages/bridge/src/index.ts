@@ -23,6 +23,8 @@ import { parseAllowedDirectories } from "./path-utils.js";
 import { parseBridgePort } from "./bridge-port.js";
 import { listenForStartup } from "./server-listen.js";
 import { CodexTakeoverQueueStore } from "./codex-takeover-queue.js";
+import { UpdateService } from "./update-service.js";
+import { MonitoringService } from "./monitoring.js";
 
 function startupErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -138,12 +140,19 @@ export async function startServer() {
 
   const startedAt = Date.now();
   let wsServer: BridgeWebSocketServer | null = null;
+  const updateService = new UpdateService();
+  const monitoringService = new MonitoringService(
+    startedAt,
+    PORT,
+    () => wsServer,
+  );
 
-  const httpServer = createServer((req, res) => {
+  const httpServer = createServer(async (req, res) => {
     // CORS headers for Flutter Web clients
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS, HEAD");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Range");
+    res.setHeader("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges, Content-Length, Content-Disposition, ETag");
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);
@@ -197,6 +206,24 @@ export async function startServer() {
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: String(err) }));
         });
+      return;
+    }
+
+    // Monitoring endpoint (/api/monitor, /monitor)
+    try {
+      if (await monitoringService.handleRequest(req, res)) return;
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: String(err) }));
+      return;
+    }
+
+    // Update service endpoints (/api/update/manifest, /api/update/download)
+    try {
+      if (await updateService.handleRequest(req, res)) return;
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: String(err) }));
       return;
     }
 
