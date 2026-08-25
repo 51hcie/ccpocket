@@ -7,9 +7,7 @@ import '../../../widgets/workspace_pane_chrome.dart';
 Future<void> showAppIconBottomSheet({
   required BuildContext context,
   required AppIconVariant current,
-  required bool isSupporter,
   required ValueChanged<AppIconVariant> onChanged,
-  required VoidCallback onSupporterRequired,
 }) {
   return showModalBottomSheet(
     context: context,
@@ -18,9 +16,7 @@ Future<void> showAppIconBottomSheet({
     showDragHandle: true,
     builder: (ctx) => _AppIconBottomSheetContent(
       current: current,
-      isSupporter: isSupporter,
       onChanged: onChanged,
-      onSupporterRequired: onSupporterRequired,
     ),
   );
 }
@@ -28,15 +24,11 @@ Future<void> showAppIconBottomSheet({
 class _AppIconBottomSheetContent extends StatelessWidget {
   const _AppIconBottomSheetContent({
     required this.current,
-    required this.isSupporter,
     required this.onChanged,
-    required this.onSupporterRequired,
   });
 
   final AppIconVariant current;
-  final bool isSupporter;
   final ValueChanged<AppIconVariant> onChanged;
-  final VoidCallback onSupporterRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -62,38 +54,15 @@ class _AppIconBottomSheetContent extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _AppIconOptionTile(
-              key: const ValueKey('app_icon_option_default'),
-              option: AppIconVariant.defaultIcon,
-              isSelected: current == AppIconVariant.defaultIcon,
-              title: _titleForOption(l, AppIconVariant.defaultIcon),
-              subtitle: _subtitleForOption(l, AppIconVariant.defaultIcon),
-              onTap: () {
-                Navigator.of(context).pop();
-                onChanged(AppIconVariant.defaultIcon);
-              },
-            ),
-            const SizedBox(height: 18),
-            _SupporterPerkDivider(
-              key: const ValueKey('app_icon_supporter_divider'),
-              label: l.appIconSupporterSectionLabel,
-              locked: !isSupporter,
-            ),
-            const SizedBox(height: 12),
-            for (final option in AppIconVariant.values.skip(1)) ...[
+            for (final option in AppIconVariant.values) ...[
               _AppIconOptionTile(
                 key: ValueKey('app_icon_option_${option.id}'),
                 option: option,
                 isSelected: option == current,
                 title: _titleForOption(l, option),
                 subtitle: _subtitleForOption(l, option),
-                locked: !isSupporter,
                 onTap: () {
                   Navigator.of(context).pop();
-                  if (!isSupporter) {
-                    onSupporterRequired();
-                    return;
-                  }
                   onChanged(option);
                 },
               ),
@@ -131,7 +100,6 @@ class _AppIconOptionTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.locked = false,
   });
 
   final AppIconVariant option;
@@ -139,14 +107,13 @@ class _AppIconOptionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool locked;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     return Material(
-      color: isSelected && !locked
+      color: isSelected
           ? cs.primaryContainer.withValues(alpha: 0.65)
           : cs.surface,
       borderRadius: BorderRadius.circular(20),
@@ -186,64 +153,15 @@ class _AppIconOptionTile extends StatelessWidget {
                 ),
               ),
               Icon(
-                locked
-                    ? Icons.lock_outline
-                    : isSelected
+                isSelected
                     ? Icons.radio_button_checked
                     : Icons.radio_button_off_outlined,
-                color: locked
-                    ? cs.outline
-                    : isSelected
-                    ? cs.primary
-                    : cs.outline,
+                color: isSelected ? cs.primary : cs.outline,
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SupporterPerkDivider extends StatelessWidget {
-  const _SupporterPerkDivider({
-    super.key,
-    required this.label,
-    required this.locked,
-  });
-
-  final String label;
-  final bool locked;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    return Row(
-      children: [
-        Expanded(child: Divider(color: cs.outlineVariant)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (locked) ...[
-                Icon(Icons.lock_outline, size: 14, color: cs.onSurfaceVariant),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                label,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(child: Divider(color: cs.outlineVariant)),
-      ],
     );
   }
 }

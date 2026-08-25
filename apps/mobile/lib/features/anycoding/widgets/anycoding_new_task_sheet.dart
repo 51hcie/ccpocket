@@ -171,10 +171,13 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
   }
 
   Future<void> _browseDirectory() async {
+    final allowed = widget.bridge.allowedDirs;
+    final initialPath = _projectPath.isNotEmpty ? _projectPath : allowed.firstOrNull;
     final selected = await showDirectoryBrowserSheet(
       context: context,
       bridge: widget.bridge,
-      initialPath: _projectPath.isNotEmpty ? _projectPath : null,
+      initialPath: initialPath,
+      allowedRoots: allowed,
     );
 
     if (selected != null && selected.isNotEmpty && mounted) {

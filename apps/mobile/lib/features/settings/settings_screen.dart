@@ -27,8 +27,6 @@ import '../../services/in_app_review_service.dart';
 import '../../services/machine_manager_service.dart';
 import '../../services/platform_environment_service.dart';
 import '../../services/prompt_history_service.dart';
-import '../../services/revenuecat_service.dart';
-import '../../services/support_banner_service.dart';
 import '../../utils/platform_helper.dart';
 import '../../widgets/workspace_pane_chrome.dart';
 import '../session_list/workspace_shell_screen.dart';
@@ -37,7 +35,6 @@ import 'state/settings_cubit.dart';
 import 'state/settings_state.dart';
 import 'widgets/app_icon_bottom_sheet.dart';
 import 'widgets/app_locale_bottom_sheet.dart';
-import 'widgets/support_section.dart';
 
 import 'widgets/new_session_tabs_bottom_sheet.dart';
 import 'widgets/speech_locale_bottom_sheet.dart';
@@ -51,13 +48,11 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     this.focusConnection = false,
-    this.focusSupport = false,
     this.embedded = false,
     this.onBack,
   });
 
   final bool focusConnection;
-  final bool focusSupport;
   final bool embedded;
   final VoidCallback? onBack;
 
@@ -68,13 +63,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _scrollController = ScrollController();
   final _connectionSectionKey = GlobalKey();
-  final _supportSectionKey = GlobalKey();
   Timer? _connectionHighlightTimer;
-  Timer? _supportHighlightTimer;
   bool _didHandleConnectionFocus = false;
-  bool _didHandleSupportFocus = false;
   bool _highlightConnectionSection = false;
-  bool _highlightSupportSection = false;
   bool _isIOSAppOnMac = false;
   String _appIconDeviceName = isAndroidPlatform ? 'Android' : 'iPhone';
 
@@ -104,46 +95,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (!mounted) return;
         setState(() {
           _highlightConnectionSection = false;
-        });
-      });
-    });
-  }
-
-  void _maybeFocusSupportSection() {
-    if (!widget.focusSupport || _didHandleSupportFocus) return;
-    _didHandleSupportFocus = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (_supportSectionKey.currentContext == null &&
-          _scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-        await WidgetsBinding.instance.endOfFrame;
-      }
-      if (!mounted) return;
-      final targetContext = _supportSectionKey.currentContext;
-      if (targetContext == null) {
-        _didHandleSupportFocus = false;
-        return;
-      }
-      if (!targetContext.mounted) {
-        _didHandleSupportFocus = false;
-        return;
-      }
-      await Scrollable.ensureVisible(
-        targetContext,
-        duration: const Duration(milliseconds: 450),
-        curve: Curves.easeOutCubic,
-        alignment: 0.12,
-      );
-      if (!mounted) return;
-
-      setState(() {
-        _highlightSupportSection = true;
-      });
-      _supportHighlightTimer?.cancel();
-      _supportHighlightTimer = Timer(const Duration(milliseconds: 1800), () {
-        if (!mounted) return;
-        setState(() {
-          _highlightSupportSection = false;
         });
       });
     });
@@ -189,7 +140,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _connectionHighlightTimer?.cancel();
-    _supportHighlightTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -206,7 +156,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     final l = AppLocalizations.of(context);
     final bridge = context.read<BridgeService>();
-    final revenueCat = context.read<RevenueCatService>();
     final leading = widget.onBack == null
         ? null
         : IconButton(
@@ -261,7 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return ListView(
             key: const PageStorageKey('settings_list'),
             controller: _scrollController,
-            scrollCacheExtent: widget.focusSupport || widget.focusConnection
+            scrollCacheExtent: widget.focusConnection
                 ? const ScrollCacheExtent.pixels(4096)
                 : null,
             children: [
@@ -362,38 +311,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   children: [
                     if (state.appIconSupported) ...[
-                      ValueListenableBuilder<SupporterState>(
-                        valueListenable: revenueCat.supporterState,
-                        builder: (context, supporterState, _) {
-                          return ListTile(
-                            key: const ValueKey('app_icon_tile'),
-                            leading: Icon(
-                              Icons.apps_outlined,
-                              color: cs.primary,
-                            ),
-                            title: Text(l.appIconTitle),
-                            subtitle: Text(
-                              _getAppIconSubtitle(
-                                context,
-                                selectedIcon: state.selectedAppIcon,
-                                isSupporter: supporterState.isSupporter,
-                                deviceName: _appIconDeviceName,
-                              ),
-                            ),
-                            trailing: const Icon(Icons.chevron_right, size: 20),
-                            onTap: () async {
-                              if (!context.mounted) return;
-                              await showAppIconBottomSheet(
-                                context: context,
-                                current: state.selectedAppIcon,
-                                isSupporter: supporterState.isSupporter,
-                                onChanged: (icon) => context
-                                    .read<SettingsCubit>()
-                                    .setSelectedAppIcon(icon),
-                                onSupporterRequired: () =>
-                                    _openSupporterPerk(context),
-                              );
-                            },
+                      ListTile(
+                        key: const ValueKey('app_icon_tile'),
+                        leading: Icon(
+                          Icons.apps_outlined,
+                          color: cs.primary,
+                        ),
+                        title: Text(l.appIconTitle),
+                        subtitle: Text(
+                          _getAppIconSubtitle(
+                            context,
+                            selectedIcon: state.selectedAppIcon,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () async {
+                          if (!context.mounted) return;
+                          await showAppIconBottomSheet(
+                            context: context,
+                            current: state.selectedAppIcon,
+                            onChanged: (icon) => context
+                                .read<SettingsCubit>()
+                                .setSelectedAppIcon(icon),
                           );
                         },
                       ),
@@ -965,33 +904,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
               ],
 
-              if (BrandConfig.showSupporterFeatures)
-                ValueListenableBuilder<SupportCatalogState>(
-                  valueListenable: revenueCat.catalogState,
-                  builder: (context, supportState, _) {
-                    if (!supportState.isAvailable &&
-                        supportState.errorMessage == null) {
-                      return const SizedBox.shrink();
-                    }
-
-                    _maybeFocusSupportSection();
-
-                    return KeyedSubtree(
-                      key: _supportSectionKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _SectionHeader(title: l.sectionSupport),
-                          SupportSectionCard(
-                            highlighted: _highlightSupportSection,
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-
               if (isConnected && BrandConfig.showSharePromotion) ...[
                 // ── Spread ──
                 _SectionHeader(title: l.sectionSpread),
@@ -1229,22 +1141,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static String _getAppIconSubtitle(
     BuildContext context, {
     required AppIconVariant selectedIcon,
-    required bool isSupporter,
-    required String deviceName,
   }) {
     final l = AppLocalizations.of(context);
-    if (!isSupporter) {
-      return l.appIconSettingsSubtitle(deviceName);
-    }
     return switch (selectedIcon) {
       AppIconVariant.defaultIcon => l.appIconOptionDefaultTitle,
       AppIconVariant.lightOutline => l.appIconOptionLightOutlineTitle,
       AppIconVariant.proCopperEmerald => l.appIconOptionCopperEmeraldTitle,
     };
-  }
-
-  static void _openSupporterPerk(BuildContext context) {
-    context.pushRoute(const SupporterRoute());
   }
 
   MachineWithStatus? _activeMachineWithStatus(
@@ -1717,11 +1620,6 @@ class _SpreadAppealMessageState extends State<_SpreadAppealMessage> {
 
   @override
   Widget build(BuildContext context) {
-    final supportBannerService = context.watch<SupportBannerService?>();
-    if (supportBannerService?.shouldForceShowInDebug ?? false) {
-      return const _SpreadAppealMessageContent();
-    }
-
     final eligibilityFuture = _eligibilityFuture;
     if (eligibilityFuture == null) return const SizedBox.shrink();
 

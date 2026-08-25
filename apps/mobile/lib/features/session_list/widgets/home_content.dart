@@ -11,8 +11,6 @@ import '../../../models/offline_pending_action.dart';
 import '../../../services/app_update_service.dart';
 import '../../../services/draft_service.dart';
 import '../../../services/notification_service.dart';
-import '../../../services/revenuecat_service.dart';
-import '../../../services/support_banner_service.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/provider_style.dart';
 import '../../../router/app_router.dart';
@@ -30,7 +28,6 @@ import 'app_update_banner.dart';
 import 'bridge_update_banner.dart';
 import 'macos_native_app_banner.dart';
 import 'session_reconnect_banner.dart';
-import 'support_banner.dart';
 import 'dual_engine_dashboard_card.dart';
 import '../services/dashboard_metrics_calculator.dart';
 
@@ -134,7 +131,6 @@ class HomeContent extends StatefulWidget {
   final VoidCallback? onDismissMacOSNativeAppBanner;
   final VoidCallback? onOpenMacOSNativeAppReleases;
   final VoidCallback? onOpenBridgeSettings;
-  final VoidCallback? onOpenSupportSettings;
   final bool? showInlineStopButtonOverride;
   final String? connectedBridgeLabel;
   final List<String> codexModels;
@@ -190,7 +186,6 @@ class HomeContent extends StatefulWidget {
     this.onDismissMacOSNativeAppBanner,
     this.onOpenMacOSNativeAppReleases,
     this.onOpenBridgeSettings,
-    this.onOpenSupportSettings,
     this.showInlineStopButtonOverride,
     this.connectedBridgeLabel,
     this.codexModels = const [],
@@ -207,14 +202,9 @@ class HomeContentState extends State<HomeContent> {
 
   bool _isSearching = false;
   bool _updateBannerDismissed = false;
-  bool _showSupportBanner = false;
   bool _groupRecentSessions = true;
   final _searchController = TextEditingController();
   SessionDisplayMode _displayMode = SessionDisplayMode.first;
-  RevenueCatService? _revenueCatService;
-  VoidCallback? _catalogStateListener;
-  SupportBannerService? _supportBannerService;
-  VoidCallback? _supportBannerListener;
 
   @override
   void initState() {
@@ -237,32 +227,6 @@ class HomeContentState extends State<HomeContent> {
       }
       _groupRecentSessions = groupRecentSessions;
     });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final revenueCatService = context.read<RevenueCatService>();
-    if (!identical(_revenueCatService, revenueCatService)) {
-      if (_revenueCatService != null && _catalogStateListener != null) {
-        _revenueCatService!.catalogState.removeListener(_catalogStateListener!);
-      }
-      _revenueCatService = revenueCatService;
-      _catalogStateListener = () => _refreshSupportBannerVisibility();
-      revenueCatService.catalogState.addListener(_catalogStateListener!);
-      _refreshSupportBannerVisibility();
-    }
-
-    final supportBannerService = context.read<SupportBannerService>();
-    if (!identical(_supportBannerService, supportBannerService)) {
-      if (_supportBannerService != null && _supportBannerListener != null) {
-        _supportBannerService!.removeListener(_supportBannerListener!);
-      }
-      _supportBannerService = supportBannerService;
-      _supportBannerListener = () => _refreshSupportBannerVisibility();
-      supportBannerService.addListener(_supportBannerListener!);
-      _refreshSupportBannerVisibility();
-    }
   }
 
   void _toggleDisplayMode() async {
@@ -294,18 +258,11 @@ class HomeContentState extends State<HomeContent> {
     // Reset dismiss state when reconnected (new bridgeVersion received)
     if (widget.bridgeVersion != oldWidget.bridgeVersion) {
       _updateBannerDismissed = false;
-      _refreshSupportBannerVisibility();
     }
   }
 
   @override
   void dispose() {
-    if (_revenueCatService != null && _catalogStateListener != null) {
-      _revenueCatService!.catalogState.removeListener(_catalogStateListener!);
-    }
-    if (_supportBannerService != null && _supportBannerListener != null) {
-      _supportBannerService!.removeListener(_supportBannerListener!);
-    }
     _searchController.dispose();
     super.dispose();
   }
@@ -370,37 +327,6 @@ class HomeContentState extends State<HomeContent> {
           AppConstants.expectedBridgeVersion,
           latestBridgeVersion: widget.latestBridgeVersion,
         );
-  }
-
-  Future<void> _refreshSupportBannerVisibility() async {
-    final revenueCatService = _revenueCatService;
-    if (revenueCatService == null) return;
-
-    final supportBannerService = context.read<SupportBannerService>();
-    final shouldShow = await supportBannerService.shouldShow(
-      hasBridgeUpdate: _hasVisibleBridgeUpdateBanner(),
-      catalog: revenueCatService.catalogState.value,
-    );
-    if (!mounted || shouldShow == _showSupportBanner) return;
-    setState(() {
-      _showSupportBanner = shouldShow;
-    });
-  }
-
-  Widget? _buildSupportBanner() {
-    if (!_showSupportBanner) return null;
-    return SupportBanner(
-      onTap:
-          widget.onOpenSupportSettings ??
-          () => context.pushRoute(SettingsRoute(focusSupport: true)),
-      onDismiss: () async {
-        await context.read<SupportBannerService>().dismiss();
-        if (!mounted) return;
-        setState(() {
-          _showSupportBanner = false;
-        });
-      },
-    );
   }
 
   Widget? _buildConnectedBridgeBanner(BuildContext context) {
@@ -474,11 +400,6 @@ class HomeContentState extends State<HomeContent> {
     final isReconnecting =
         widget.connectionState == BridgeConnectionState.reconnecting;
     final updateBanner = _buildUpdateBanner();
-    final supportBannerService = context.read<SupportBannerService>();
-    final supportBanner =
-        updateBanner == null || supportBannerService.shouldForceShowInDebug
-        ? _buildSupportBanner()
-        : null;
     final appUpdateBanner = _buildAppUpdateBanner();
     final macOSNativeAppBanner = _buildMacOSNativeAppBanner();
     final shell = WorkspaceShellScreen.maybeOf(context);
@@ -607,7 +528,6 @@ class HomeContentState extends State<HomeContent> {
             dashboardCard,
             ?connectedBridgeBanner,
             ?updateBanner,
-            ?supportBanner,
             ?appUpdateBanner,
             ?macOSNativeAppBanner,
             SectionHeader(
@@ -631,7 +551,6 @@ class HomeContentState extends State<HomeContent> {
           dashboardCard,
           ?connectedBridgeBanner,
           ?updateBanner,
-          ?supportBanner,
           ?macOSNativeAppBanner,
           const SizedBox(height: 80),
           SessionListEmptyState(onNewSession: widget.onNewSession),
@@ -649,7 +568,6 @@ class HomeContentState extends State<HomeContent> {
         dashboardCard,
         ?connectedBridgeBanner,
         ?updateBanner,
-        ?supportBanner,
         ?macOSNativeAppBanner,
         if (hasRunningSessions) ...[
           SectionHeader(

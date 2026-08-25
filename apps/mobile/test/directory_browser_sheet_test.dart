@@ -348,4 +348,57 @@ void main() {
 
     expect(bridge.requests, [r'\\server\share\project']);
   });
+
+  testWidgets('falls back to allowedRoots.first when initialPath is outside allowedRoots', (
+    tester,
+  ) async {
+    final bridge = _DirectoryBrowserBridge();
+    addTearDown(bridge.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: '/', // outside allowed roots
+            allowedRoots: const ['/Users/lw'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pumpAndSettle();
+
+    // Requests /Users/lw instead of failing on /
+    expect(bridge.requests, ['/Users/lw']);
+  });
+
+  testWidgets('restricts Up navigation so it never navigates above allowedRoots', (
+    tester,
+  ) async {
+    final bridge = _DirectoryBrowserBridge();
+    addTearDown(bridge.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        onOpen: () {
+          showDirectoryBrowserSheet(
+            context: tester.element(find.text('Open browser')),
+            bridge: bridge,
+            initialPath: '/Users/lw',
+            allowedRoots: const ['/Users/lw'],
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('Open browser'));
+    await tester.pumpAndSettle();
+
+    // At /Users/lw, Up button should be disabled because parent /Users is outside allowedRoots
+    final upButton = tester.widget<IconButton>(
+      find.byKey(const ValueKey('directory_browser_up_button')),
+    );
+    expect(upButton.onPressed, isNull);
+  });
 }

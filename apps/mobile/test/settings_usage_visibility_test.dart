@@ -15,9 +15,7 @@ import 'package:ccpocket/services/bridge_service.dart';
 import 'package:ccpocket/services/database_service.dart';
 import 'package:ccpocket/services/in_app_review_service.dart';
 import 'package:ccpocket/services/machine_manager_service.dart';
-import 'package:ccpocket/services/revenuecat_service.dart';
 import 'package:ccpocket/services/ssh_startup_service.dart';
-import 'package:ccpocket/services/support_banner_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -77,13 +75,6 @@ class _FakeBridgeService extends BridgeService {
     _connectionController.close();
     _usageController.close();
     super.dispose();
-  }
-}
-
-class _FakeRevenueCatService extends RevenueCatService {
-  _FakeRevenueCatService({required SupportCatalogState catalog})
-    : super(publicApiKey: '', platform: TargetPlatform.iOS) {
-    catalogState.value = catalog;
   }
 }
 
@@ -304,20 +295,17 @@ Future<Widget> _buildScreen({
   required BridgeService bridge,
   required SettingsCubit settingsCubit,
   required MachineManagerCubit machineManagerCubit,
-  RevenueCatService? revenueCatService,
+  dynamic revenueCatService,
   InAppReviewService? inAppReviewService,
-  SupportBannerService? supportBannerService,
+  dynamic supportBannerService,
   bool focusConnection = false,
   bool focusSupport = false,
   bool embedded = false,
 }) async {
   final prefs = await SharedPreferences.getInstance();
-  final screen = MultiRepositoryProvider(
+  return MultiRepositoryProvider(
     providers: [
       RepositoryProvider<BridgeService>.value(value: bridge),
-      RepositoryProvider<RevenueCatService>.value(
-        value: revenueCatService ?? RevenueCatService(),
-      ),
       RepositoryProvider<DatabaseService>.value(value: DatabaseService()),
       RepositoryProvider<InAppReviewService>.value(
         value: inAppReviewService ?? InAppReviewService(prefs: prefs),
@@ -334,16 +322,10 @@ Future<Widget> _buildScreen({
         locale: const Locale('en'),
         home: SettingsScreen(
           focusConnection: focusConnection,
-          focusSupport: focusSupport,
           embedded: embedded,
         ),
       ),
     ),
-  );
-  if (supportBannerService == null) return screen;
-  return ChangeNotifierProvider<SupportBannerService>.value(
-    value: supportBannerService,
-    child: screen,
   );
 }
 
@@ -1312,66 +1294,6 @@ void main() {
 
       expect(find.text(l.spreadAppealMessage), findsOneWidget);
       expect(find.text(l.shareApp), findsOneWidget);
-
-      await settingsCubit.close();
-      await machineManagerCubit.close();
-      bridge.dispose();
-    });
-
-    testWidgets('focusSupport scrolls support entry into view', (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(390, 560);
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final settingsCubit = _SeededSettingsCubit(
-        prefs,
-        activeMachineId: 'machine-1',
-      );
-      final manager = MachineManagerService(prefs, _FakeSecureStorage());
-      final machineManagerCubit = _createMachineManagerCubit(manager);
-      final bridge = _FakeBridgeService(
-        connected: true,
-        fakeLastUrl: 'ws://127.0.0.1:8765',
-      );
-      final revenueCat = _FakeRevenueCatService(
-        catalog: const SupportCatalogState(
-          isAvailable: true,
-          isLoading: false,
-          isSupporter: false,
-          packages: [
-            SupportPackage(
-              id: r'$rc_monthly',
-              productId: 'supporter_monthly_10',
-              title: 'Supporter \$9.99/mo',
-              priceLabel: '\$9.99',
-              kind: SupportPackageKind.monthly,
-            ),
-          ],
-        ),
-      );
-
-      await tester.pumpWidget(
-        await _buildScreen(
-          bridge: bridge,
-          settingsCubit: settingsCubit,
-          machineManagerCubit: machineManagerCubit,
-          revenueCatService: revenueCat,
-          focusSupport: true,
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 700));
-
-      final supportDy = tester
-          .getTopLeft(find.byKey(const ValueKey('supporter_entry_button')))
-          .dy;
-      expect(supportDy, greaterThanOrEqualTo(0));
-      expect(supportDy, lessThan(560));
 
       await settingsCubit.close();
       await machineManagerCubit.close();

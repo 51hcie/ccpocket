@@ -74,14 +74,15 @@ jobs:
             echo "::error::APK certificate SHA256 mismatch! Got '$APK_SHA256', expected '$EXPECTED_SHA256'"
             exit 1
           fi
-          echo "APK signature successfully verified with stable key!"
+      - name: Verify No IAP & Clean Dep Policy
+        run: bash scripts/check-no-iap.sh
       - name: Verify APK Badging, Run Release Integrity Suite & Publish Manifest
         run: |
           AAPT=$(which aapt 2>/dev/null || find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name aapt | sort -V | tail -n 1)
           echo "Using aapt: $AAPT"
           "$AAPT" dump badging apps/mobile/build/app/outputs/flutter-apk/app-debug.apk | grep "^package: "
           bash scripts/publish-android-release.test.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
-          bash scripts/publish-android-release.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk 218 "1.115.3"
+          bash scripts/publish-android-release.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk 219 "1.115.4"
       - name: Prepare AnyCoding APK
         working-directory: apps/mobile
         run: cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/anycoding.apk

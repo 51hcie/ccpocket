@@ -56,10 +56,8 @@ import 'services/mock_preview_extension.dart';
 import 'services/notification_service.dart';
 import 'services/performance_probe_extension.dart';
 import 'services/prompt_history_service.dart';
-import 'services/revenuecat_service.dart';
 import 'services/ssh_bridge_tunnel_service.dart';
 import 'services/ssh_startup_service.dart';
-import 'services/support_banner_service.dart';
 import 'theme/app_theme.dart';
 import 'services/store_screenshot_extension.dart';
 import 'theme/markdown_style.dart';
@@ -166,10 +164,6 @@ void main() async {
   final draftService = DraftService(prefs);
   final inAppReviewService = InAppReviewService(prefs: prefs);
   unawaited(inAppReviewService.attachToBridge(bridge));
-  final supportBannerService = SupportBannerService(
-    prefs: prefs,
-    reviewService: inAppReviewService,
-  );
   StoreScreenshotState.draftService = draftService;
   final dbService = DatabaseService();
   final promptHistoryService = PromptHistoryService(dbService);
@@ -184,13 +178,11 @@ void main() async {
     }
   });
   final appIconService = AppIconService();
-  final revenueCatService = RevenueCatService();
   final settingsCubit = SettingsCubit(
     prefs,
     bridgeService: bridge,
     machineManager: machineManagerService,
     fcmService: fcmService,
-    revenueCatService: revenueCatService,
     appIconService: appIconService,
   );
   final gitStatusCubit = GitStatusCubit(
@@ -202,7 +194,6 @@ void main() async {
     bridge: bridge,
     gitStatusCubit: gitStatusCubit,
   );
-  unawaited(revenueCatService.initialize());
   runApp(
     MultiRepositoryProvider(
       providers: [
@@ -231,19 +222,10 @@ void main() async {
           lazy: false,
           dispose: (service) => service.dispose(),
         ),
-        ChangeNotifierProvider<SupportBannerService>(
-          create: (_) => supportBannerService,
-          lazy: false,
-        ),
         RepositoryProvider<PromptHistoryService>.value(
           value: promptHistoryService,
         ),
         RepositoryProvider<AppIconService>.value(value: appIconService),
-        RepositoryProvider<RevenueCatService>(
-          create: (_) => revenueCatService,
-          lazy: false,
-          dispose: (service) => unawaited(service.dispose()),
-        ),
         RepositoryProvider<MachineManagerService>(
           create: (_) => machineManagerService,
           lazy: false,

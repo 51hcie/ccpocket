@@ -37,9 +37,6 @@ class BrandConfig {
           ? 'AnyCoding 是用安卓手机远程指挥 Mac 上 Codex 与 Antigravity 的 AI 任务控制台。'
           : 'Claude Code and Codex mobile companion client.';
 
-  /// Whether supporter / monetization features should be visible.
-  static bool get showSupporterFeatures => !isAnyCoding;
-
   /// Whether store review prompt should be visible.
   static bool get showStoreReview => !isAnyCoding;
 

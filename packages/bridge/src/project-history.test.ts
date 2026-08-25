@@ -110,4 +110,141 @@ describe("ProjectHistory", () => {
     await ph.init();
     expect(ph.getProjects()).toEqual([]);
   });
+
+  describe("Project Catalog discovery & union", () => {
+    it("discovers projects under configured roots matching project markers", async () => {
+      const rootDir = join(tempDir, "workspace");
+      const projA = join(rootDir, "proj-a");
+      const projB = join(rootDir, "proj-b");
+      const ignoredDir = join(rootDir, "node_modules", "some-dep");
+      const noMarkerDir = join(rootDir, "plain-dir");
+
+      await mkdir(projA, { recursive: true });
+      await mkdir(projB, { recursive: true });
+      await mkdir(ignoredDir, { recursive: true });
+      await mkdir(noMarkerDir, { recursive: true });
+
+      await writeFile(join(projA, "pubspec.yaml"), "name: proj_a\n");
+      await writeFile(join(projB, "package.json"), '{"name":"proj_b"}\n');
+      await writeFile(join(ignoredDir, "package.json"), '{"name":"ignored"}\n');
+
+      const ph = new ProjectHistory({
+        filePath: historyFile,
+        projectRoots: [rootDir],
+        sessionLoader: async () => [],
+      });
+      await ph.init();
+
+      const projects = ph.getProjects();
+      expect(projects).toContain(projA);
+      expect(projects).toContain(projB);
+      expect(projects).not.toContain(ignoredDir);
+      expect(projects).not.toContain(noMarkerDir);
+    });
+
+    it("unions explicit history, session paths and discovered roots with deduplication", async () => {
+      const rootDir = join(tempDir, "workspace");
+      const projDiscovered = join(rootDir, "discovered-proj");
+      const projSession = join(rootDir, "session-proj");
+      const projExplicit = join(rootDir, "explicit-proj");
+
+      await mkdir(projDiscovered, { recursive: true });
+      await mkdir(projSession, { recursive: true });
+      await mkdir(projExplicit, { recursive: true });
+
+      await writeFile(join(projDiscovered, "Cargo.toml"), "[package]\nname = 'disc'\n");
+      await writeFile(join(projSession, "pyproject.toml"), "[tool.poetry]\n");
+      await writeFile(join(projExplicit, ".git"), "gitdir: ../.git/worktrees/explicit\n");
+
+      // Write explicit history
+      await writeFile(historyFile, JSON.stringify([projExplicit]), "utf-8");
+
+      const ph = new ProjectHistory({
+        filePath: historyFile,
+        projectRoots: [rootDir],
+        sessionLoader: async () => [projSession, projExplicit], // session contains explicit proj too
+      });
+      await ph.init();
+
+      const projects = ph.getProjects();
+      // Explicit history comes first
+      expect(projects[0]).toBe(projExplicit);
+      expect(projects).toContain(projSession);
+      expect(projects).toContain(projDiscovered);
+      // Deduplicated
+      const uniqueCount = new Set(projects).size;
+      expect(projects.length).toBe(uniqueCount);
+    });
+
+    it("respects maxDiscoveredProjects and maxDepth bounds", async () => {
+      const rootDir = join(tempDir, "workspace");
+      const deepDir = join(rootDir, "level1", "level2", "level3", "deep-proj");
+      await mkdir(deepDir, { recursive: true });
+      await writeFile(join(deepDir, "package.json"), "{}");
+
+      const shallowDir = join(rootDir, "level1", "shallow-proj");
+      await mkdir(shallowDir, { recursive: true });
+      await writeFile(join(shallowDir, "package.json"), "{}");
+
+      const ph = new ProjectHistory({
+        filePath: historyFile,
+        projectRoots: [rootDir],
+        maxDepth: 2, // deepDir is at depth 4, so it should be skipped
+        sessionLoader: async () => [],
+      });
+      await ph.init();
+
+      const projects = ph.getProjects();
+      expect(projects).toContain(shallowDir);
+      expect(projects).not.toContain(deepDir);
+    });
+
+    it("handles symlink loops safely without infinite recursion", async () => {
+      const rootDir = join(tempDir, "workspace");
+      const subDir = join(rootDir, "sub");
+      await mkdir(subDir, { recursive: true });
+      await writeFile(join(subDir, "package.json"), "{}");
+
+      // Create symlink loop: sub/loop -> rootDir
+      const loopLink = join(subDir, "loop");
+      try {
+        const { symlink } = await import("node:fs/promises");
+        await symlink(rootDir, loopLink, "dir");
+      } catch {}
+
+      const ph = new ProjectHistory({
+        filePath: historyFile,
+        projectRoots: [rootDir],
+        sessionLoader: async () => [],
+      });
+      await ph.init();
+
+      const projects = ph.getProjects();
+      expect(projects).toContain(subDir);
+    });
+
+    it("refresh updates catalog when new projects are created", async () => {
+      const rootDir = join(tempDir, "workspace");
+      const projA = join(rootDir, "proj-a");
+      await mkdir(projA, { recursive: true });
+      await writeFile(join(projA, "package.json"), "{}");
+
+      const ph = new ProjectHistory({
+        filePath: historyFile,
+        projectRoots: [rootDir],
+        sessionLoader: async () => [],
+      });
+      await ph.init();
+      expect(ph.getProjects()).toEqual([projA]);
+
+      // Add a new project on disk
+      const projB = join(rootDir, "proj-b");
+      await mkdir(projB, { recursive: true });
+      await writeFile(join(projB, "go.mod"), "module projb\n");
+
+      await ph.refresh();
+      expect(ph.getProjects()).toContain(projA);
+      expect(ph.getProjects()).toContain(projB);
+    });
+  });
 });

@@ -77,9 +77,18 @@ Future<String?> showDirectoryBrowserSheet({
   String? initialPath,
   List<String> allowedRoots = const [],
 }) {
-  final fallbackPath = initialPath?.trim().isNotEmpty == true
-      ? initialPath!.trim()
-      : (allowedRoots.isNotEmpty ? allowedRoots.first : '/');
+  final trimmed = initialPath?.trim();
+  String fallbackPath;
+  if (trimmed != null && trimmed.isNotEmpty) {
+    if (allowedRoots.isEmpty ||
+        allowedRoots.any((root) => _isPathWithinRoot(trimmed, root))) {
+      fallbackPath = trimmed;
+    } else {
+      fallbackPath = allowedRoots.first;
+    }
+  } else {
+    fallbackPath = allowedRoots.isNotEmpty ? allowedRoots.first : '/';
+  }
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
@@ -237,7 +246,9 @@ class _DirectoryBrowserSheetState extends State<_DirectoryBrowserSheet> {
 
   void _goUp() {
     final parent = _parentPath(_currentPath);
-    if (parent != null) _requestDirectory(parent);
+    if (parent != null && _isAllowedPath(parent)) {
+      _requestDirectory(parent);
+    }
   }
 
   String? _parentPath(String path) {

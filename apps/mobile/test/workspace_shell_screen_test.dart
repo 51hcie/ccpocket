@@ -15,9 +15,7 @@ import 'package:ccpocket/services/draft_service.dart';
 import 'package:ccpocket/services/in_app_review_service.dart';
 import 'package:ccpocket/services/machine_manager_service.dart';
 import 'package:ccpocket/services/notification_service.dart';
-import 'package:ccpocket/services/revenuecat_service.dart';
 import 'package:ccpocket/services/ssh_startup_service.dart';
-import 'package:ccpocket/services/support_banner_service.dart';
 import 'package:ccpocket/theme/app_theme.dart';
 import 'package:ccpocket/widgets/session_card.dart';
 import 'package:flutter/material.dart';
@@ -184,14 +182,6 @@ class _MockBridgeService extends BridgeService {
     _galleryController.close();
     _projectHistoryController.close();
     _fileListController.close();
-  }
-}
-
-class _FakeRevenueCatService extends RevenueCatService {
-  _FakeRevenueCatService()
-    : super(publicApiKey: '', platform: TargetPlatform.macOS) {
-    supporterState.value = const SupporterState.inactive();
-    catalogState.value = const SupportCatalogState.unavailable();
   }
 }
 
@@ -379,8 +369,8 @@ Widget _buildWorkspaceApp({
   required _MockBridgeService bridge,
   required SettingsCubit settingsCubit,
   required DraftService draftService,
-  required RevenueCatService revenueCatService,
-  required SupportBannerService supportBannerService,
+  dynamic revenueCatService,
+  dynamic supportBannerService,
   List<RecentSession>? debugRecentSessions,
   GlobalKey<WorkspaceShellScreenState>? shellKey,
   TargetPlatform platform = TargetPlatform.macOS,
@@ -408,10 +398,6 @@ Widget _buildWorkspaceApp({
     providers: [
       RepositoryProvider<BridgeService>.value(value: bridge),
       RepositoryProvider<DraftService>.value(value: draftService),
-      RepositoryProvider<RevenueCatService>.value(value: revenueCatService),
-      ChangeNotifierProvider<SupportBannerService>.value(
-        value: supportBannerService,
-      ),
     ],
     child: MultiBlocProvider(
       providers: [
@@ -475,22 +461,15 @@ SessionInfo _runningSession({
 
 Future<SettingsCubit> _createSettingsCubit(_MockBridgeService bridge) async {
   final prefs = await SharedPreferences.getInstance();
-  final revenueCatService = _FakeRevenueCatService();
   return SettingsCubit(
     prefs,
     bridgeService: bridge,
-    revenueCatService: revenueCatService,
     appIconService: AppIconService(platform: TargetPlatform.macOS),
   );
 }
 
-Future<SupportBannerService> _createSupportBannerService() async {
-  final prefs = await SharedPreferences.getInstance();
-  return SupportBannerService(
-    prefs: prefs,
-    reviewService: InAppReviewService(prefs: prefs),
-  );
-}
+Object? _FakeRevenueCatService() => null;
+Future<dynamic> _createSupportBannerService() async => null;
 
 Future<void> _pumpUi(WidgetTester tester) async {
   await tester.pump();

@@ -53,9 +53,13 @@ class _AnyCodingProjectsViewState extends State<AnyCodingProjectsView> {
   }
 
   Future<void> _browseDirectory() async {
+    final allowed = widget.bridge.allowedDirs;
+    final initialPath = widget.projectPaths.firstOrNull ?? allowed.firstOrNull;
     final selected = await showDirectoryBrowserSheet(
       context: context,
       bridge: widget.bridge,
+      initialPath: initialPath,
+      allowedRoots: allowed,
     );
 
     if (selected != null && selected.isNotEmpty && mounted) {

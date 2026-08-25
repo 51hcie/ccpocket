@@ -65,18 +65,13 @@ class AppIconService {
 
   Future<void> sync({
     required AppIconVariant selectedIcon,
-    required bool isSupporter,
     bool force = false,
     bool allowResetToDefault = true,
   }) async {
     final supported = await isSupported();
     if (!supported) return;
 
-    if (!isSupporter && !allowResetToDefault) {
-      return;
-    }
-
-    final targetIcon = isSupporter ? selectedIcon : AppIconVariant.defaultIcon;
+    final targetIcon = selectedIcon;
     if (!force && _lastAppliedIcon == targetIcon) return;
 
     final currentIcon =

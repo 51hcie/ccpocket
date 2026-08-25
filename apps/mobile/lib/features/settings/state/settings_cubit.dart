@@ -17,7 +17,6 @@ import '../../../services/app_icon_service.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/fcm_service.dart';
 import '../../../services/machine_manager_service.dart';
-import '../../../services/revenuecat_service.dart';
 import '../../../theme/code_text_style.dart';
 import '../../../utils/platform_helper.dart';
 import 'settings_state.dart';
@@ -28,12 +27,10 @@ class SettingsCubit extends Cubit<SettingsState> {
   final BridgeService? _bridge;
   final MachineManagerService? _machineManager;
   final FcmService _fcmService;
-  final RevenueCatService? _revenueCat;
   final AppIconService _appIconService;
   StreamSubscription<BridgeConnectionState>? _bridgeSub;
   StreamSubscription<String>? _tokenRefreshSub;
   String? _activeToken;
-  VoidCallback? _supporterListener;
 
   static const _keyThemeMode = 'settings_theme_mode';
   static const _keyAppLocale = 'settings_app_locale';
@@ -77,12 +74,10 @@ class SettingsCubit extends Cubit<SettingsState> {
     BridgeService? bridgeService,
     MachineManagerService? machineManager,
     FcmService? fcmService,
-    RevenueCatService? revenueCatService,
     AppIconService? appIconService,
   }) : _bridge = bridgeService,
        _machineManager = machineManager,
        _fcmService = fcmService ?? FcmService(),
-       _revenueCat = revenueCatService,
        _appIconService = appIconService ?? AppIconService(),
        super(
          _load(_prefs).copyWith(
@@ -106,11 +101,6 @@ class SettingsCubit extends Cubit<SettingsState> {
       if (bridge.isConnected) {
         _updateActiveMachine();
       }
-    }
-    final revenueCat = _revenueCat;
-    if (revenueCat != null) {
-      _supporterListener = _handleSupporterStateChanged;
-      revenueCat.supporterState.addListener(_supporterListener!);
     }
     if (state.fcmEnabledMachines.isNotEmpty) {
       unawaited(_initializePush());
@@ -595,23 +585,13 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(state.copyWith(fcmSyncInProgress: false, fcmStatusKey: statusKey));
   }
 
-  void _handleSupporterStateChanged() {
-    unawaited(_syncAppIcon());
-  }
-
   Future<void> _syncAppIcon({
     bool force = false,
     bool allowResetToDefault = false,
   }) async {
     try {
-      final supporterState = _revenueCat?.supporterState.value;
-      if (supporterState != null &&
-          (!supporterState.isAvailable || supporterState.isLoading)) {
-        return;
-      }
       await _appIconService.sync(
         selectedIcon: state.selectedAppIcon,
-        isSupporter: supporterState?.isSupporter ?? false,
         force: force,
         allowResetToDefault: allowResetToDefault,
       );
@@ -624,10 +604,6 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> close() async {
     await _bridgeSub?.cancel();
     await _tokenRefreshSub?.cancel();
-    final listener = _supporterListener;
-    if (listener != null) {
-      _revenueCat?.supporterState.removeListener(listener);
-    }
     return super.close();
   }
 }

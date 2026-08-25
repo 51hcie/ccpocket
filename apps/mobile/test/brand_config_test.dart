@@ -19,13 +19,11 @@ void main() {
       if (!BrandConfig.isAnyCoding) {
         expect(BrandConfig.appName, 'CC Pocket');
         expect(BrandConfig.notificationTitle, 'CC Pocket');
-        expect(BrandConfig.showSupporterFeatures, isTrue);
         expect(BrandConfig.showStoreReview, isTrue);
         expect(BrandConfig.showSharePromotion, isTrue);
       } else {
         expect(BrandConfig.appName, 'AnyCoding');
         expect(BrandConfig.notificationTitle, 'AnyCoding');
-        expect(BrandConfig.showSupporterFeatures, isFalse);
         expect(BrandConfig.showStoreReview, isFalse);
         expect(BrandConfig.showSharePromotion, isFalse);
       }
