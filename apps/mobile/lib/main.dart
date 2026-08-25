@@ -128,6 +128,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   const secureStorage = FlutterSecureStorage();
   final machineManagerService = MachineManagerService(prefs, secureStorage);
+  await machineManagerService.init();
   try {
     await bootstrapMacremoteBridge(
       prefs: prefs,
