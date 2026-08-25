@@ -294,7 +294,12 @@ export type ClientMessage =
       queueId?: string;
       clientId?: string;
     }
-  | { type: "get_codex_takeover_queue"; threadId: string }
+  | {
+      type: "get_codex_takeover_queue";
+      threadId: string;
+      queueId?: string;
+      clientId?: string;
+    }
   | { type: "list_project_history" }
   | { type: "remove_project_history"; projectPath: string }
   | { type: "list_worktrees"; projectPath: string }
@@ -1517,6 +1522,10 @@ export function parseClientMessage(data: string): ClientMessage | null {
           typeof msg.threadId !== "string" ||
           msg.threadId.trim().length === 0
         )
+          return null;
+        if (msg.queueId !== undefined && typeof msg.queueId !== "string")
+          return null;
+        if (msg.clientId !== undefined && typeof msg.clientId !== "string")
           return null;
         break;
       case "list_project_history":

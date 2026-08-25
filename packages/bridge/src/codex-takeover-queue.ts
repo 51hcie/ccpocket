@@ -53,7 +53,9 @@ export class CodexTakeoverQueueStore {
           .filter((item) => item && typeof item.threadId === "string")
           .map((item) => ({
             ...item,
-            status: item.status === "pending" ? "pending" : item.status,
+            status: (item.status === "pending"
+              ? "pending"
+              : item.status) as CodexTakeoverQueueItem["status"],
           }))
           .sort(
             (a, b) =>

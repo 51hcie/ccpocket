@@ -4702,6 +4702,8 @@ export class BridgeWebSocketServer {
             });
             break;
           }
+          const convId = existingRecord?.antigravityConversationId || sessionRefId;
+          const workspace = existingRecord?.workspacePath || resumeProjectPath;
           const sessionId = this.sessionManager.create(
             workspace,
             { sessionId: convId },
