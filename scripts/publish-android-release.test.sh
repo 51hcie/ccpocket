@@ -4,16 +4,45 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-export PATH="/Users/lw/Windows_Projects/Macremote/tools/runtime/jdk-17.0.20+8/Contents/Home/bin:/Users/lw/Windows_Projects/Macremote/tools/runtime/android-sdk/build-tools/35.0.0:$PATH"
-export JAVA_HOME="/Users/lw/Windows_Projects/Macremote/tools/runtime/jdk-17.0.20+8/Contents/Home"
-
 TEST_TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEST_TEMP_DIR"' EXIT
 
-TEST_APK="/Users/lw/Windows_Projects/Macremote_spike/downloads/ci_batch2_fix/anycoding-debug-apk/anycoding.apk"
+TEST_APK="${1:-${TEST_APK:-}}"
 
-if [ ! -f "$TEST_APK" ]; then
-  echo "[-] ERROR: Test APK fixture not found at $TEST_APK" >&2
+if [ -z "$TEST_APK" ]; then
+  CANDIDATES=(
+    "$REPO_ROOT/apps/mobile/build/app/outputs/flutter-apk/anycoding.apk"
+    "$REPO_ROOT/apps/mobile/build/app/outputs/flutter-apk/app-debug.apk"
+    "/Users/lw/Windows_Projects/Macremote_spike/downloads/ci_batch2_fix2/anycoding-debug-apk/anycoding.apk"
+    "/Users/lw/Windows_Projects/Macremote_spike/downloads/ci_batch2_fix/anycoding-debug-apk/anycoding.apk"
+    "/Users/lw/Windows_Projects/Macremote_spike/evidence/anycoding-batch2-monitor-update-agy/anycoding.apk"
+  )
+  for c in "${CANDIDATES[@]}"; do
+    if [ -f "$c" ]; then
+      TEST_APK="$c"
+      break
+    fi
+  done
+fi
+
+if [ -z "$TEST_APK" ] || [ ! -f "$TEST_APK" ]; then
+  echo "[-] ERROR: Test APK fixture not found. Pass APK as argument or set TEST_APK." >&2
+  exit 1
+fi
+
+AAPT=$(which aapt 2>/dev/null || find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools" -name aapt 2>/dev/null | sort -V | tail -n 1 || true)
+if [ -z "$AAPT" ] || [ ! -x "$AAPT" ]; then
+  echo "[-] ERROR: aapt tool not found for test execution." >&2
+  exit 1
+fi
+
+BADGING_OUTPUT=$("$AAPT" dump badging "$TEST_APK" 2>/dev/null || true)
+PACKAGE_LINE=$(echo "$BADGING_OUTPUT" | grep "^package: " | head -n 1 || true)
+EXPECTED_CODE=$(echo "$PACKAGE_LINE" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")
+EXPECTED_NAME=$(echo "$PACKAGE_LINE" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
+
+if [ -z "$EXPECTED_CODE" ] || [ -z "$EXPECTED_NAME" ]; then
+  echo "[-] ERROR: Failed to extract expected version from $TEST_APK" >&2
   exit 1
 fi
 
@@ -29,21 +58,22 @@ fi
 MANIFEST_CODE=$(grep '"versionCode":' "$BRIDGE_RELEASE_DIR/manifest.json" | sed 's/[^0-9]//g')
 MANIFEST_NAME=$(grep '"versionName":' "$BRIDGE_RELEASE_DIR/manifest.json" | sed 's/.*: *"\([^"]*\)".*/\1/')
 
-if [ "$MANIFEST_CODE" -ne 217 ]; then
-  echo "[-] Failed: expected extracted versionCode 217, got $MANIFEST_CODE" >&2
+if [ "$MANIFEST_CODE" != "$EXPECTED_CODE" ]; then
+  echo "[-] Failed: expected extracted versionCode $EXPECTED_CODE, got $MANIFEST_CODE" >&2
   exit 1
 fi
 
-if [ "$MANIFEST_NAME" != "1.115.2" ]; then
-  echo "[-] Failed: expected extracted versionName 1.115.2, got $MANIFEST_NAME" >&2
+if [ "$MANIFEST_NAME" != "$EXPECTED_NAME" ]; then
+  echo "[-] Failed: expected extracted versionName $EXPECTED_NAME, got $MANIFEST_NAME" >&2
   exit 1
 fi
 echo "[+] Test 1 passed: extracted versionCode=$MANIFEST_CODE, versionName=$MANIFEST_NAME"
 
 echo "=== Test 2: Reject mismatched supplied versionCode ==="
+MISMATCH_CODE=$((EXPECTED_CODE + 1000))
 export BRIDGE_RELEASE_DIR="$TEST_TEMP_DIR/release2"
 set +e
-bash "$SCRIPT_DIR/publish-android-release.sh" "$TEST_APK" 999 "1.115.2" > "$TEST_TEMP_DIR/test2.log" 2>&1
+bash "$SCRIPT_DIR/publish-android-release.sh" "$TEST_APK" "$MISMATCH_CODE" "$EXPECTED_NAME" > "$TEST_TEMP_DIR/test2.log" 2>&1
 EXIT_CODE=$?
 set -e
 
@@ -52,17 +82,18 @@ if [ "$EXIT_CODE" -eq 0 ]; then
   exit 1
 fi
 
-if ! grep -q "Supplied versionCode (999) does not match APK binary versionCode (217)" "$TEST_TEMP_DIR/test2.log"; then
+if ! grep -q "Supplied versionCode ($MISMATCH_CODE) does not match APK binary versionCode ($EXPECTED_CODE)" "$TEST_TEMP_DIR/test2.log"; then
   echo "[-] Failed: expected mismatch error message not found in log" >&2
   cat "$TEST_TEMP_DIR/test2.log"
   exit 1
 fi
-echo "[+] Test 2 passed: mismatched versionCode rejected with code $EXIT_CODE"
+echo "[+] Test 2 passed: mismatched versionCode ($MISMATCH_CODE) rejected with code $EXIT_CODE"
 
 echo "=== Test 3: Reject mismatched supplied versionName ==="
+MISMATCH_NAME="99.99.99"
 export BRIDGE_RELEASE_DIR="$TEST_TEMP_DIR/release3"
 set +e
-bash "$SCRIPT_DIR/publish-android-release.sh" "$TEST_APK" 217 "9.9.9" > "$TEST_TEMP_DIR/test3.log" 2>&1
+bash "$SCRIPT_DIR/publish-android-release.sh" "$TEST_APK" "$EXPECTED_CODE" "$MISMATCH_NAME" > "$TEST_TEMP_DIR/test3.log" 2>&1
 EXIT_CODE=$?
 set -e
 
@@ -71,16 +102,20 @@ if [ "$EXIT_CODE" -eq 0 ]; then
   exit 1
 fi
 
-if ! grep -q "Supplied versionName (9.9.9) does not match APK binary versionName (1.115.2)" "$TEST_TEMP_DIR/test3.log"; then
+if ! grep -q "Supplied versionName ($MISMATCH_NAME) does not match APK binary versionName ($EXPECTED_NAME)" "$TEST_TEMP_DIR/test3.log"; then
   echo "[-] Failed: expected mismatch error message not found in log" >&2
   cat "$TEST_TEMP_DIR/test3.log"
   exit 1
 fi
-echo "[+] Test 3 passed: mismatched versionName rejected with code $EXIT_CODE"
+echo "[+] Test 3 passed: mismatched versionName ($MISMATCH_NAME) rejected with code $EXIT_CODE"
 
 echo "=== Test 4: Verify generated SHA-256 and size match exact APK binary ==="
 MANIFEST_SHA=$(grep '"sha256":' "$TEST_TEMP_DIR/release1/manifest.json" | sed 's/.*: *"\([^"]*\)".*/\1/')
-ACTUAL_SHA=$(shasum -a 256 "$TEST_APK" | awk '{print $1}')
+if command -v shasum >/dev/null 2>&1; then
+  ACTUAL_SHA=$(shasum -a 256 "$TEST_APK" | awk '{print $1}')
+else
+  ACTUAL_SHA=$(sha256sum "$TEST_APK" | awk '{print $1}')
+fi
 
 if [ "$MANIFEST_SHA" != "$ACTUAL_SHA" ]; then
   echo "[-] Failed: manifest SHA ($MANIFEST_SHA) does not match actual SHA ($ACTUAL_SHA)" >&2

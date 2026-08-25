@@ -23,8 +23,7 @@ if [ -z "$APK_INPUT" ]; then
     "$REPO_ROOT/apps/mobile/build/app/outputs/flutter-apk/anycoding.apk"
     "$REPO_ROOT/apps/mobile/build/app/outputs/flutter-apk/app-debug.apk"
     "$REPO_ROOT/apps/mobile/build/app/outputs/flutter-apk/app-release.apk"
-    "/Users/lw/Windows_Projects/Macremote_spike/downloads/ci_batch2_fix/anycoding-debug-apk/anycoding.apk"
-    "/Users/lw/Windows_Projects/Macremote_spike/build_artifacts/anycoding.apk"
+    "$REPO_ROOT/build_artifacts/anycoding.apk"
   )
   for c in "${CANDIDATES[@]}"; do
     if [ -f "$c" ]; then
@@ -42,8 +41,8 @@ fi
 echo "[1/4] Inspecting APK at: $APK_INPUT"
 
 # Locate Android tools
-AAPT=$(which aapt 2>/dev/null || find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools" "/Users/lw/Windows_Projects/Macremote/tools/runtime/android-sdk/build-tools" -name aapt 2>/dev/null | sort -V | tail -n 1 || true)
-APKSIGNER=$(which apksigner 2>/dev/null || find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools" "/Users/lw/Windows_Projects/Macremote/tools/runtime/android-sdk/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1 || true)
+AAPT=$(which aapt 2>/dev/null || find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools" -name aapt 2>/dev/null | sort -V | tail -n 1 || true)
+APKSIGNER=$(which apksigner 2>/dev/null || find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1 || true)
 
 EXTRACTED_VERSION_CODE=""
 EXTRACTED_VERSION_NAME=""
@@ -59,19 +58,7 @@ if [ -n "$AAPT" ] && [ -x "$AAPT" ]; then
 fi
 
 if [ -z "$EXTRACTED_VERSION_CODE" ] || [ -z "$EXTRACTED_VERSION_NAME" ]; then
-  echo "[!] WARNING: aapt badging extraction failed or aapt not found; falling back to pubspec.yaml."
-  PUBSPEC_PATH="$REPO_ROOT/apps/mobile/pubspec.yaml"
-  if [ -f "$PUBSPEC_PATH" ]; then
-    VERSION_LINE=$(grep "^version:" "$PUBSPEC_PATH" | head -n 1 | sed 's/version: *//' | tr -d '\r')
-    if [[ "$VERSION_LINE" == *"+"* ]]; then
-      EXTRACTED_VERSION_NAME=$(echo "$VERSION_LINE" | cut -d'+' -f1)
-      EXTRACTED_VERSION_CODE=$(echo "$VERSION_LINE" | cut -d'+' -f2)
-    fi
-  fi
-fi
-
-if [ -z "$EXTRACTED_VERSION_CODE" ] || [ -z "$EXTRACTED_VERSION_NAME" ]; then
-  echo "[-] ERROR: Unable to determine versionCode/versionName from APK binary or pubspec.yaml." >&2
+  echo "[-] ERROR: aapt APK binary inspection failed or aapt not found. Refusing to publish." >&2
   exit 2
 fi
 
