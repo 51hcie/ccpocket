@@ -15,12 +15,10 @@ import 'anycoding_monitoring_view.dart';
 
 class AnyCodingSettingsView extends StatelessWidget {
   final bool focusConnection;
-  final bool focusSupport;
 
   const AnyCodingSettingsView({
     super.key,
     this.focusConnection = false,
-    this.focusSupport = false,
   });
 
   @override

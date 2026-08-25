@@ -282,6 +282,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   int _settingsPresentationVersion = 0;
   double? _rightPaneUserWidth;
   final ValueNotifier<int> _presentationVersion = ValueNotifier<int>(0);
+  StreamSubscription<String>? _stoppedSessionSub;
 
   bool get canOpenToolPane => _layoutMode != _WorkspaceLayoutMode.single;
   bool get isSinglePane => _layoutMode == _WorkspaceLayoutMode.single;

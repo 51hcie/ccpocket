@@ -295,11 +295,8 @@ Future<Widget> _buildScreen({
   required BridgeService bridge,
   required SettingsCubit settingsCubit,
   required MachineManagerCubit machineManagerCubit,
-  dynamic revenueCatService,
   InAppReviewService? inAppReviewService,
-  dynamic supportBannerService,
   bool focusConnection = false,
-  bool focusSupport = false,
   bool embedded = false,
 }) async {
   final prefs = await SharedPreferences.getInstance();

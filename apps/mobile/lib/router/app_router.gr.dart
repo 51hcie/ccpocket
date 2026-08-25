@@ -875,7 +875,6 @@ class SettingsRoute extends PageRouteInfo<SettingsRouteArgs> {
   SettingsRoute({
     Key? key,
     bool focusConnection = false,
-    bool focusSupport = false,
     bool embedded = false,
     VoidCallback? onBack,
     List<PageRouteInfo>? children,
@@ -884,7 +883,6 @@ class SettingsRoute extends PageRouteInfo<SettingsRouteArgs> {
          args: SettingsRouteArgs(
            key: key,
            focusConnection: focusConnection,
-           focusSupport: focusSupport,
            embedded: embedded,
            onBack: onBack,
          ),
@@ -902,7 +900,6 @@ class SettingsRoute extends PageRouteInfo<SettingsRouteArgs> {
       return SettingsScreen(
         key: args.key,
         focusConnection: args.focusConnection,
-        focusSupport: args.focusSupport,
         embedded: args.embedded,
         onBack: args.onBack,
       );
@@ -914,7 +911,6 @@ class SettingsRouteArgs {
   const SettingsRouteArgs({
     this.key,
     this.focusConnection = false,
-    this.focusSupport = false,
     this.embedded = false,
     this.onBack,
   });
@@ -923,15 +919,13 @@ class SettingsRouteArgs {
 
   final bool focusConnection;
 
-  final bool focusSupport;
-
   final bool embedded;
 
   final VoidCallback? onBack;
 
   @override
   String toString() {
-    return 'SettingsRouteArgs{key: $key, focusConnection: $focusConnection, focusSupport: $focusSupport, embedded: $embedded, onBack: $onBack}';
+    return 'SettingsRouteArgs{key: $key, focusConnection: $focusConnection, embedded: $embedded, onBack: $onBack}';
   }
 
   @override
@@ -940,7 +934,6 @@ class SettingsRouteArgs {
     if (other is! SettingsRouteArgs) return false;
     return key == other.key &&
         focusConnection == other.focusConnection &&
-        focusSupport == other.focusSupport &&
         embedded == other.embedded &&
         onBack == other.onBack;
   }
@@ -949,7 +942,6 @@ class SettingsRouteArgs {
   int get hashCode =>
       key.hashCode ^
       focusConnection.hashCode ^
-      focusSupport.hashCode ^
       embedded.hashCode ^
       onBack.hashCode;
 }
