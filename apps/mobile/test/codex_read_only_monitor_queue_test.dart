@@ -77,6 +77,10 @@ void main() {
   }
 
   group('Codex Read-Only Monitor and Takeover Queue Tests', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     testWidgets('Tapping historical Codex task in AnyCodingTasksView (completed tab) defaults to read-only monitor without calling onResumeRecentSession', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
