@@ -163,14 +163,6 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
     } catch (_) {}
   }
 
-  @override
-  void dispose() {
-    _promptController.dispose();
-    _pathController.dispose();
-    _worktreeBranchController.dispose();
-    super.dispose();
-  }
-
   void _selectProject(String path) {
     setState(() {
       _projectPath = path;
