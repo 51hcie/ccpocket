@@ -423,8 +423,7 @@ void main() {
 
       // 4. History arrives from Bridge with assistant message
       bridge.testHandleMessage(
-        HistoryMessage(
-          sessionId: 'hist-codex-1',
+        const HistoryMessage(
           messages: [
             AssistantServerMessage(
               message: AssistantMessage(
@@ -573,8 +572,7 @@ void main() {
 
       // 3. HistoryMessage arrives -> clears sessionUnavailable
       bridge.testHandleMessage(
-        HistoryMessage(
-          sessionId: 'test-recovery-thread',
+        const HistoryMessage(
           messages: [
             AssistantServerMessage(
               message: AssistantMessage(
