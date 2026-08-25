@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../constants/brand_config.dart';
+import '../../../models/messages.dart';
 import '../../../services/bridge_service.dart';
+import '../../../services/machine_manager_service.dart';
+import '../../../services/macremote_bootstrap_service.dart';
 import '../../../theme/app_typography.dart';
 import '../../../widgets/anycoding_logo.dart';
 import '../../settings/state/settings_cubit.dart';
@@ -12,6 +16,7 @@ import '../../settings/widgets/speech_locale_bottom_sheet.dart';
 import '../../settings/widgets/theme_bottom_sheet.dart';
 import '../widgets/anycoding_update_sheet.dart';
 import 'anycoding_monitoring_view.dart';
+
 
 class AnyCodingSettingsView extends StatelessWidget {
   final bool focusConnection;
