@@ -91,13 +91,11 @@ Future<void> _checkShorebirdUpdate(SharedPreferences prefs) async {
 }
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   if (kDebugMode && !kIsWeb) {
-    MarionetteBinding.ensureInitialized();
     registerStoreScreenshotExtensions();
     registerMockPreviewExtensions();
     registerPerformanceProbeExtensions();
-  } else {
-    WidgetsFlutterBinding.ensureInitialized();
   }
   Bloc.observer = TalkerBlocObserver(talker: logger);
 
