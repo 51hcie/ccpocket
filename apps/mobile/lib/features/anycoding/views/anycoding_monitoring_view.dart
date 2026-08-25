@@ -297,6 +297,8 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
       child: Text(
         '来源: $source',
         style: AppTypography.caption(context),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -320,16 +322,21 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.laptop_mac_rounded, size: 20, color: cs.primary),
-                  const SizedBox(width: 8),
-                  Text('Mac 主机系统', style: AppTypography.titleMedium(context)),
-                ],
+              Icon(Icons.laptop_mac_rounded, size: 20, color: cs.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mac 主机系统',
+                  style: AppTypography.titleMedium(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              _buildProvenanceTag(context, system.source),
+              const SizedBox(width: 8),
+              Flexible(
+                child: _buildProvenanceTag(context, system.source),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -360,10 +367,20 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('CPU 负载 (${system.cpu.cores} 核)', style: AppTypography.caption(context)),
-                        Text('${system.cpu.loadPercent.toStringAsFixed(1)}%', style: AppTypography.mono(context, fontSize: 11)),
+                        Expanded(
+                          child: Text(
+                            'CPU 负载 (${system.cpu.cores} 核)',
+                            style: AppTypography.caption(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${system.cpu.loadPercent.toStringAsFixed(1)}%',
+                          style: AppTypography.mono(context, fontSize: 11),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -382,10 +399,20 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('内存占用', style: AppTypography.caption(context)),
-                        Text('${system.memory.usedPercent.toStringAsFixed(1)}%', style: AppTypography.mono(context, fontSize: 11)),
+                        Expanded(
+                          child: Text(
+                            '内存占用',
+                            style: AppTypography.caption(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${system.memory.usedPercent.toStringAsFixed(1)}%',
+                          style: AppTypography.mono(context, fontSize: 11),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -404,12 +431,16 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
           // Disk
           if (system.disk.available) ...[
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '系统主磁盘 (${_formatBytes(system.disk.usedBytes)} / ${_formatBytes(system.disk.totalBytes)})',
-                  style: AppTypography.caption(context),
+                Expanded(
+                  child: Text(
+                    '系统主磁盘 (${_formatBytes(system.disk.usedBytes)} / ${_formatBytes(system.disk.totalBytes)})',
+                    style: AppTypography.caption(context),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 6),
                 Text(
                   '剩余 ${_formatBytes(system.disk.freeBytes)}',
                   style: AppTypography.mono(context, fontSize: 11),
@@ -448,16 +479,21 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.router_rounded, size: 20, color: Color(0xFF10B981)),
-                  const SizedBox(width: 8),
-                  Text('Bridge 运行时与任务队列', style: AppTypography.titleMedium(context)),
-                ],
+              const Icon(Icons.router_rounded, size: 20, color: Color(0xFF10B981)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Bridge 运行时与任务队列',
+                  style: AppTypography.titleMedium(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              _buildProvenanceTag(context, bridge.source),
+              const SizedBox(width: 8),
+              Flexible(
+                child: _buildProvenanceTag(context, bridge.source),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -542,16 +578,21 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.bolt, size: 20, color: BrandConfig.codexAccent),
-                  const SizedBox(width: 8),
-                  Text('Codex 引擎配额', style: AppTypography.titleMedium(context)),
-                ],
+              Icon(Icons.bolt, size: 20, color: BrandConfig.codexAccent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Codex 引擎配额',
+                  style: AppTypography.titleMedium(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              _buildProvenanceTag(context, codex.source),
+              const SizedBox(width: 8),
+              Flexible(
+                child: _buildProvenanceTag(context, codex.source),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -633,16 +674,21 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.auto_awesome, size: 20, color: BrandConfig.antigravityAccent),
-                  const SizedBox(width: 8),
-                  Text('Antigravity 引擎', style: AppTypography.titleMedium(context)),
-                ],
+              Icon(Icons.auto_awesome, size: 20, color: BrandConfig.antigravityAccent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Antigravity 引擎',
+                  style: AppTypography.titleMedium(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              _buildProvenanceTag(context, agy.source),
+              const SizedBox(width: 8),
+              Flexible(
+                child: _buildProvenanceTag(context, agy.source),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -678,9 +724,13 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
                 Row(
                   children: [
                     Text('实时配额: ', style: AppTypography.labelSmall(context)),
-                    Text(
-                      agy.quota,
-                      style: AppTypography.mono(context, fontSize: 11, fontWeight: FontWeight.w600),
+                    Expanded(
+                      child: Text(
+                        agy.quota,
+                        style: AppTypography.mono(context, fontSize: 11, fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -708,10 +758,20 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: AppTypography.caption(context)),
-            Text('${usedPercent.toStringAsFixed(1)}% 已用', style: AppTypography.mono(context, fontSize: 11)),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTypography.caption(context),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${usedPercent.toStringAsFixed(1)}% 已用',
+              style: AppTypography.mono(context, fontSize: 11),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -734,7 +794,12 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppTypography.caption(context)),
+        Text(
+          label,
+          style: AppTypography.caption(context),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: 2),
         Text(
           value,
@@ -753,16 +818,19 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             count.toString(),
             style: AppTypography.titleMedium(context, color: color),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
@@ -770,6 +838,7 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
             style: AppTypography.caption(context),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
         ],
       ),

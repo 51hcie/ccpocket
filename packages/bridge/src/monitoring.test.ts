@@ -22,6 +22,21 @@ describe("MonitoringService", () => {
     expect(system.loadAverage).toHaveLength(3);
   });
 
+  it("calculates disk metrics with mathematical consistency", async () => {
+    const monitoringService = new MonitoringService(Date.now(), 8766, () => null);
+    const system = await monitoringService.collectSystemMetrics();
+    if (system.disk.available) {
+      expect(system.disk.totalBytes).toBeGreaterThan(0);
+      expect(system.disk.freeBytes).toBeGreaterThanOrEqual(0);
+      expect(system.disk.usedBytes).toBeGreaterThanOrEqual(0);
+      // Assert usedBytes + freeBytes == totalBytes
+      expect(system.disk.freeBytes + system.disk.usedBytes).toBe(system.disk.totalBytes);
+      // Assert usedPercent agrees with usedBytes / totalBytes
+      const expectedPercent = Math.round((system.disk.usedBytes / system.disk.totalBytes) * 1000) / 10;
+      expect(system.disk.usedPercent).toBeCloseTo(expectedPercent, 1);
+    }
+  });
+
   it("collects bridge metrics with task counts", () => {
     const startedAt = Date.now() - 120000;
     const monitoringService = new MonitoringService(startedAt, 8766, () => null);

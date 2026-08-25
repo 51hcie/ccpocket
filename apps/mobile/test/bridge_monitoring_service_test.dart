@@ -102,13 +102,14 @@ void main() {
     Widget buildTestWidget({
       required BridgeMonitoringService service,
       double textScaleFactor = 1.0,
+      Size size = const Size(375, 812),
     }) {
       final bridge = BridgeService();
       return MaterialApp(
         theme: AppTheme.darkTheme,
         home: MediaQuery(
           data: MediaQueryData(
-            size: const Size(412, 915),
+            size: size,
             textScaler: TextScaler.linear(textScaleFactor),
           ),
           child: Scaffold(
@@ -121,9 +122,9 @@ void main() {
       );
     }
 
-    testWidgets('renders monitoring console cleanly at text scale 1.0', (tester) async {
+    testWidgets('renders real monitoring cards cleanly on phone viewport at text scale 1.0', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
+      tester.view.devicePixelRatio = 2.875;
       addTearDown(tester.view.resetPhysicalSize);
 
       final mockClient = MockClient((request) async {
@@ -175,12 +176,15 @@ void main() {
               'codex': {
                 'available': true,
                 'account': 'user_***',
-                'plan': 'ChatGPT Pro (Authoritative)',
+                'plan': 'plus',
                 'fiveHourWindow': {
                   'usedPercent': 12.0,
                   'resetsAt': '2026-08-25T17:00:00Z',
                 },
-                'sevenDayWindow': null,
+                'sevenDayWindow': {
+                  'usedPercent': 54.0,
+                  'resetsAt': '2026-08-30T00:00:00Z',
+                },
                 'source': 'Codex App Server / Local Sessions',
               },
               'antigravity': {
@@ -204,6 +208,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget(service: service, textScaleFactor: 1.0));
       await tester.pumpAndSettle();
 
+      expect(tester.takeException(), isNull);
       expect(find.text('Mac 监控控制台'), findsOneWidget);
       expect(find.text('Lws-MacBook-Pro.local'), findsOneWidget);
       expect(find.text('Mac 主机系统'), findsOneWidget);
@@ -213,9 +218,9 @@ void main() {
       expect(find.text('当前版本暂不可获取'), findsOneWidget);
     });
 
-    testWidgets('renders monitoring console at text scale 1.3 without overflow', (tester) async {
+    testWidgets('renders all real monitoring cards on compact phone viewport at text scale 1.3 without overflow', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
+      tester.view.devicePixelRatio = 2.875;
       addTearDown(tester.view.resetPhysicalSize);
 
       final mockClient = MockClient((request) async {
@@ -224,38 +229,38 @@ void main() {
             'timestamp': '2026-08-25T12:00:00Z',
             'system': {
               'available': true,
-              'hostname': 'Lws-MacBook-Pro.local',
-              'os': 'macOS 15.0',
-              'systemUptime': 10000,
-              'cpu': {'model': 'M3', 'cores': 8, 'speedMHz': 3000, 'loadPercent': 10.0},
-              'memory': {'totalBytes': 16000000000, 'freeBytes': 8000000000, 'usedBytes': 8000000000, 'usedPercent': 50.0},
-              'disk': {'available': true, 'totalBytes': 500000000000, 'freeBytes': 200000000000, 'usedBytes': 300000000000, 'usedPercent': 60.0, 'mountPoint': '/'},
-              'loadAverage': [1.0, 1.0, 1.0],
-              'source': 'macOS Kernel',
+              'hostname': 'lwdeMacBook-Pro.local',
+              'os': 'macOS 13.7.8 (x64)',
+              'systemUptime': 1390800,
+              'cpu': {'model': 'Intel Core i9', 'cores': 8, 'speedMHz': 2300, 'loadPercent': 57.8},
+              'memory': {'totalBytes': 34359738368, 'freeBytes': 1475739648, 'usedBytes': 32884000000, 'usedPercent': 95.7},
+              'disk': {'available': true, 'totalBytes': 250685575168, 'freeBytes': 152290615296, 'usedBytes': 98394959872, 'usedPercent': 39.2, 'mountPoint': '/'},
+              'loadAverage': [4.62, 4.41, 4.31],
+              'source': 'macOS Kernel / OS Runtime',
             },
             'bridge': {
               'available': true,
-              'uptime': 1200,
+              'uptime': 412,
               'port': 8766,
               'connectedClients': 1,
-              'taskCounts': {'running': 0, 'queued': 0, 'completed': 2, 'failed': 0},
-              'source': 'AnyCoding Bridge',
+              'taskCounts': {'running': 0, 'queued': 0, 'completed': 6, 'failed': 0},
+              'source': 'AnyCoding Bridge Runtime',
             },
             'codex': {
               'available': true,
               'account': 'user_***',
-              'plan': 'Pro',
+              'plan': 'plus',
               'fiveHourWindow': null,
-              'sevenDayWindow': null,
-              'source': 'Codex Server',
+              'sevenDayWindow': {'usedPercent': 54.0, 'resetsAt': '2026-08-30T00:00:00Z'},
+              'source': 'Codex App Server / Local Sessions',
             },
             'antigravity': {
               'available': true,
               'model': 'gemini-3.7-flash-high',
               'status': 'Ready',
               'quota': '当前版本暂不可获取',
-              'note': 'Antigravity limitation',
-              'source': 'Antigravity CLI',
+              'note': 'Antigravity CLI 本地接口当前不提供实时配额查询，按实际执行计费',
+              'source': 'Antigravity CLI (Local)',
             },
           }),
           200,
@@ -265,11 +270,21 @@ void main() {
 
       final service = BridgeMonitoringService(client: mockClient);
 
-      await tester.pumpWidget(buildTestWidget(service: service, textScaleFactor: 1.3));
+      await tester.pumpWidget(buildTestWidget(
+        service: service,
+        textScaleFactor: 1.3,
+        size: const Size(360, 800), // Compact logical size
+      ));
       await tester.pumpAndSettle();
 
+      // Assert zero exceptions (no RenderFlex overflow)
       expect(tester.takeException(), isNull);
       expect(find.text('Mac 监控控制台'), findsOneWidget);
+      expect(find.text('Mac 主机系统'), findsOneWidget);
+      expect(find.text('Bridge 运行时与任务队列'), findsOneWidget);
+      expect(find.text('Codex 引擎配额'), findsOneWidget);
+      expect(find.text('Antigravity 引擎'), findsOneWidget);
+      expect(find.text('当前版本暂不可获取'), findsOneWidget);
     });
   });
 }

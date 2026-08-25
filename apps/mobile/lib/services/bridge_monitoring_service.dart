@@ -250,7 +250,7 @@ class CodexMetricsModel {
     return CodexMetricsModel(
       available: json['available'] as bool? ?? false,
       account: json['account'] as String? ?? 'user_***',
-      plan: json['plan'] as String? ?? 'ChatGPT Pro / Plus',
+      plan: json['plan'] as String? ?? 'unknown',
       fiveHourWindow: json['fiveHourWindow'] != null
           ? CodexRateLimitWindowModel.fromJson(
               json['fiveHourWindow'] as Map<String, dynamic>,

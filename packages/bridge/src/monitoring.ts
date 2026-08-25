@@ -1,6 +1,6 @@
 import os from "node:os";
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, statfsSync } from "node:fs";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { BridgeWebSocketServer } from "./websocket.js";
@@ -122,6 +122,26 @@ export class MonitoringService {
 
   private getDiskMetrics(): SystemMetrics["disk"] {
     try {
+      if (typeof statfsSync === "function") {
+        const stats = statfsSync("/");
+        const totalBytes = Number(stats.blocks) * Number(stats.bsize);
+        const freeBytes = Number(stats.bavail) * Number(stats.bsize);
+        const usedBytes = Math.max(0, totalBytes - freeBytes);
+        const usedPercent = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 1000) / 10 : 0;
+        return {
+          available: true,
+          totalBytes,
+          freeBytes,
+          usedBytes,
+          usedPercent,
+          mountPoint: "/",
+        };
+      }
+    } catch {
+      // Fall through to df -k /
+    }
+
+    try {
       const out = execSync("df -k /", {
         encoding: "utf-8",
         timeout: 1500,
@@ -129,16 +149,14 @@ export class MonitoringService {
       }).trim();
       const lines = out.split("\n");
       if (lines.length >= 2) {
-        // e.g. /dev/disk1s5s1 244810132 9126336 149994188 6% ...
         const parts = lines[1].trim().split(/\s+/);
         if (parts.length >= 4) {
           const totalKb = parseInt(parts[1], 10);
-          const usedKb = parseInt(parts[2], 10);
           const availKb = parseInt(parts[3], 10);
-          if (!isNaN(totalKb) && !isNaN(usedKb) && !isNaN(availKb) && totalKb > 0) {
+          if (!isNaN(totalKb) && !isNaN(availKb) && totalKb > 0) {
             const totalBytes = totalKb * 1024;
-            const usedBytes = usedKb * 1024;
             const freeBytes = availKb * 1024;
+            const usedBytes = Math.max(0, totalBytes - freeBytes);
             const usedPercent = Math.round((usedBytes / totalBytes) * 1000) / 10;
             return {
               available: true,
@@ -252,6 +270,31 @@ export class MonitoringService {
     };
   }
 
+  private getAuthoritativeCodexPlan(): string {
+    try {
+      const authFile = join(os.homedir(), ".codex", "auth.json");
+      if (existsSync(authFile)) {
+        const raw = readFileSync(authFile, "utf-8");
+        const data = JSON.parse(raw);
+        if (data.tokens?.id_token) {
+          const parts = data.tokens.id_token.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+            const authClaim = payload["https://api.openai.com/auth"];
+            if (
+              authClaim &&
+              typeof authClaim.chatgpt_plan_type === "string" &&
+              authClaim.chatgpt_plan_type.trim().length > 0
+            ) {
+              return authClaim.chatgpt_plan_type.trim();
+            }
+          }
+        }
+      }
+    } catch {}
+    return "unknown";
+  }
+
   async collectCodexMetrics(): Promise<CodexProviderMetrics> {
     try {
       const usage = await fetchCodexUsage();
@@ -265,10 +308,12 @@ export class MonitoringService {
         maskedAccount = "user_***";
       }
 
+      const plan = this.getAuthoritativeCodexPlan();
+
       return {
         available: !usage.error || hasFiveHour || hasSevenDay,
         account: maskedAccount,
-        plan: "ChatGPT Pro / Plus (Authoritative)",
+        plan,
         fiveHourWindow: usage.fiveHour
           ? {
               usedPercent: usage.fiveHour.utilization,
@@ -289,7 +334,7 @@ export class MonitoringService {
       return {
         available: false,
         account: "user_***",
-        plan: "Codex Local",
+        plan: "unknown",
         fiveHourWindow: null,
         sevenDayWindow: null,
         tokenUsage: null,
