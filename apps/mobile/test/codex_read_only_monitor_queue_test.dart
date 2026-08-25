@@ -58,6 +58,12 @@ Future<Widget> buildTestCodexScreenHarness({
   );
 }
 
+Future<void> pumpN(WidgetTester tester, {int count = 5}) async {
+  for (var i = 0; i < count; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -387,7 +393,7 @@ void main() {
       );
 
       await tester.pumpWidget(harness);
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // 1. Initial active session does not exist in bridge.sessions.
       // Must display read-only monitor banner, refresh, and enter control; must NOT show session unavailable.
@@ -399,7 +405,7 @@ void main() {
 
       // 2. Tapping refresh triggers get_history
       await tester.tap(find.byKey(const ValueKey('codex_read_only_refresh_button')));
-      await tester.pumpAndSettle();
+      await pumpN(tester);
       expect(
         sentClientMessages.any((m) => m.toJson().contains('get_history') && m.toJson().contains('hist-codex-1')),
         isTrue,
@@ -416,7 +422,7 @@ void main() {
         ),
         sessionId: 'hist-codex-1',
       );
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       expect(find.text('本地历史记录 (只读)'), findsOneWidget);
       expect(find.text('会话不可用'), findsNothing);
@@ -437,7 +443,7 @@ void main() {
         ),
         sessionId: 'hist-codex-1',
       );
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // Content must be displayed and session unavailable still NOT shown
       expect(find.text('Historical code inspection complete.'), findsOneWidget);
@@ -446,7 +452,7 @@ void main() {
 
       // 5. Tapping take control triggers resume session
       await tester.tap(find.byKey(const ValueKey('codex_read_only_take_control_button')));
-      await tester.pumpAndSettle();
+      await pumpN(tester);
       expect(
         sentClientMessages.any((m) => m.toJson().contains('resume_session') && m.toJson().contains('hist-codex-1')),
         isTrue,
@@ -469,7 +475,7 @@ void main() {
       );
 
       await tester.pumpWidget(harness);
-      await tester.pump();
+      await pumpN(tester);
 
       // Simulate bridge returning explicit session_not_found error
       bridge.testHandleMessage(
@@ -480,7 +486,7 @@ void main() {
         ),
         sessionId: 'missing-codex-thread',
       );
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // Must show session unavailable view
       expect(find.text('会话不可用'), findsOneWidget);
@@ -503,7 +509,7 @@ void main() {
       );
 
       await tester.pumpWidget(harness);
-      await tester.pump();
+      await pumpN(tester);
 
       // Simulate bridge emitting conflict message
       bridge.testHandleMessage(
@@ -516,7 +522,7 @@ void main() {
         ),
         sessionId: 'conflict-codex-thread',
       );
-      await tester.pumpAndSettle();
+      await pumpN(tester);
 
       // Must NOT show SessionUnavailableView
       expect(find.text('会话不可用'), findsNothing);
