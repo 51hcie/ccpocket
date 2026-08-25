@@ -13,9 +13,7 @@ if [ -z "$TEST_APK" ]; then
   CANDIDATES=(
     "$REPO_ROOT/apps/mobile/build/app/outputs/flutter-apk/anycoding.apk"
     "$REPO_ROOT/apps/mobile/build/app/outputs/flutter-apk/app-debug.apk"
-    "/Users/lw/Windows_Projects/Macremote_spike/downloads/ci_batch2_fix2/anycoding-debug-apk/anycoding.apk"
-    "/Users/lw/Windows_Projects/Macremote_spike/downloads/ci_batch2_fix/anycoding-debug-apk/anycoding.apk"
-    "/Users/lw/Windows_Projects/Macremote_spike/evidence/anycoding-batch2-monitor-update-agy/anycoding.apk"
+    "$REPO_ROOT/build_artifacts/anycoding.apk"
   )
   for c in "${CANDIDATES[@]}"; do
     if [ -f "$c" ]; then
