@@ -565,6 +565,9 @@ class _CodexProviders extends StatelessWidget {
             initialCodexApprovalsReviewer: codexApprovalsReviewer,
             initialCodexPermissionsMode: codexPermissionsMode,
             initialProjectPath: projectPath,
+            isReadOnly: (initialPrompt != null && initialPrompt!.trim().isNotEmpty)
+                ? false
+                : null,
           ),
         ),
       ],
