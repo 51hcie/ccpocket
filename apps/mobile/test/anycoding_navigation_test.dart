@@ -148,7 +148,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('任务中心'), findsOneWidget);
-      expect(find.text('进行中'), findsWidgets);
+      expect(find.text('运行中'), findsWidgets);
       expect(find.text('已完成'), findsWidgets);
 
       // Switch to Tab 2: 项目 (Projects)
