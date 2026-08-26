@@ -771,7 +771,6 @@ class _CodexChatBody extends HookWidget {
       final subReadOnly = bridge.codexReadOnlyInfoStream.listen((msg) {
         if (matchesThread(msg.threadId)) {
           readOnlyInfo.value = msg;
-          isConflict.value = true;
         }
       });
       final subMsg = bridge.messages.listen((msg) {
