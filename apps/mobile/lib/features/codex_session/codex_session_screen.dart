@@ -774,11 +774,10 @@ class _CodexChatBody extends HookWidget {
           isConflict.value = true;
         }
       });
-      final subSessions = bridge.sessionListStream.listen((_) {
-        queryQueue();
-      });
-      final subErr = bridge.messages.listen((msg) {
-        if (msg is ErrorMessage &&
+      final subMsg = bridge.messages.listen((msg) {
+        if (msg is SessionListMessage) {
+          queryQueue();
+        } else if (msg is ErrorMessage &&
             (matchesThread(msg.sessionId ?? '') ||
                 msg.sessionId == sessionId) &&
             (msg.errorCode == 'active_writer_conflict' ||
@@ -794,8 +793,7 @@ class _CodexChatBody extends HookWidget {
         subConflict.cancel();
         subQueue.cancel();
         subReadOnly.cancel();
-        subSessions.cancel();
-        subErr.cancel();
+        subMsg.cancel();
       };
     }, [sessionId]);
 
