@@ -274,20 +274,19 @@ void main() async {
     final loc = lookupAppLocalizations(Locale(lang));
 
     if (msg is PermissionRequestMessage) {
-      if (isBackground || msg.sessionId != activeId) {
+      if (isBackground) {
         NotificationService.instance.showApprovalNotification(
           msg,
           l: loc,
-          id: (msg.sessionId ?? 'perm').hashCode,
-          payload: msg.sessionId,
+          id: msg.toolUseId.hashCode,
+          payload: msg.toolUseId,
         );
       }
     } else if (msg is ResultMessage) {
-      if (isBackground || msg.sessionId != activeId) {
+      if (isBackground) {
         NotificationService.instance.showSessionCompleteNotification(
           body: BrandConfig.isAnyCoding ? '任务已执行完成' : 'Session Complete',
-          id: (msg.sessionId ?? 'res').hashCode,
-          payload: msg.sessionId,
+          id: msg.hashCode,
         );
       }
     }
