@@ -5362,6 +5362,27 @@ export class BridgeWebSocketServer {
         break;
       }
 
+      case "resume_codex_takeover": {
+        const tId = msg.threadId;
+        const allSessions = this.sessionManager.getAll();
+        const broadcastIds = new Set([
+          tId,
+          ...(allSessions.flatMap((s: SessionInfo) => [s.id, s.claudeSessionId])),
+        ].filter(Boolean) as string[]);
+        for (const id of broadcastIds) {
+          const resumedMsg = {
+            type: "codex_takeover_queue_status",
+            threadId: id,
+            position: 0,
+            total: 0,
+            status: "resumed",
+          };
+          this.send(ws, resumedMsg);
+          this.broadcast(resumedMsg);
+        }
+        break;
+      }
+
       case "list_gallery": {
         if (this.galleryStore) {
           const images = this.galleryStore.list({
@@ -7154,27 +7175,39 @@ export class BridgeWebSocketServer {
         }
       }
 
-      // Directly attempt real resume by creating session
-      sessionId = this.sessionManager.create(
-        effectiveProjectPath,
-        undefined,
-        undefined,
-        worktreeOpts,
-        "codex",
-        this.withCodexAutoReviewPolicy({
-          threadId: nextItem.threadId,
-          ...(nextItem.options ?? {}),
-        }),
+      const allSessions = this.sessionManager.getAll();
+      const existingSession = allSessions.find(
+        (s: SessionInfo) =>
+          s.id === nextItem.threadId ||
+          s.claudeSessionId === nextItem.threadId,
       );
 
-      createdSession = this.sessionManager.get(sessionId);
-      if (!createdSession || !(createdSession.process instanceof CodexProcess)) {
-        throw new Error(`Failed to create Codex session ${sessionId}`);
-      }
-      createdSession.codexInitialHistoryPending = true;
+      if (existingSession && existingSession.process instanceof CodexProcess) {
+        createdSession = existingSession;
+        sessionId = existingSession.id;
+      } else {
+        // Directly attempt real resume by creating session
+        sessionId = this.sessionManager.create(
+          effectiveProjectPath,
+          undefined,
+          undefined,
+          worktreeOpts,
+          "codex",
+          this.withCodexAutoReviewPolicy({
+            threadId: nextItem.threadId,
+            ...(nextItem.options ?? {}),
+          }),
+        );
 
-      // Await real resume-ready Promise: verifies thread/resume RPC success and input loop readiness
-      await createdSession.process.waitForReady(15000);
+        createdSession = this.sessionManager.get(sessionId);
+        if (!createdSession || !(createdSession.process instanceof CodexProcess)) {
+          throw new Error(`Failed to create Codex session ${sessionId}`);
+        }
+        createdSession.codexInitialHistoryPending = true;
+
+        // Await real resume-ready Promise: verifies thread/resume RPC success and input loop readiness
+        await createdSession.process.waitForReady(15000);
+      }
     } catch (err) {
       // Clean up temporary/failed session immediately: NO zombie session in sessionManager / session_list
       if (sessionId) {
@@ -7230,12 +7263,14 @@ export class BridgeWebSocketServer {
       await this.codexTakeoverQueueStore.markDispatched(nextItem.id);
       this.threadQueueBackoffs.delete(threadId);
 
-      await this.loadAndSetSessionName(
-        createdSession,
-        "codex",
-        effectiveProjectPath,
-        nextItem.threadId,
-      );
+      if (createdSession) {
+        await this.loadAndSetSessionName(
+          createdSession,
+          "codex",
+          effectiveProjectPath,
+          nextItem.threadId,
+        );
+      }
 
       // Broadcast session_list & takeover resumed status
       this.broadcastSessionList();
@@ -7246,7 +7281,7 @@ export class BridgeWebSocketServer {
         position: 0,
         total: this.codexTakeoverQueueStore.getPendingForThread(threadId).length,
         status: "resumed",
-        sessionId: createdSession.id,
+        sessionId: createdSession?.id ?? sessionId,
       });
 
       // If more pending items exist for this thread, schedule next processing

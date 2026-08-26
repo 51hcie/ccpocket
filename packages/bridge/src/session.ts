@@ -831,6 +831,10 @@ export class SessionManager {
     return this.sessions.get(id);
   }
 
+  getAll(): SessionInfo[] {
+    return Array.from(this.sessions.values());
+  }
+
   async waitForSessionReady(sessionId: string, timeoutMs = 15000): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
