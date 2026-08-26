@@ -694,22 +694,38 @@ class _CodexChatBody extends HookWidget {
     final readOnlyInfo = useState<CodexReadOnlyInfoMessage?>(null);
 
     useEffect(() {
+      bool matchesThread(String threadId) {
+        if (threadId == sessionId) return true;
+        for (final s in bridge.sessions) {
+          if ((s.id == sessionId || s.claudeSessionId == sessionId) &&
+              (s.id == threadId || s.claudeSessionId == threadId)) {
+            return true;
+          }
+        }
+        return false;
+      }
+
       final subConflict = bridge.codexTakeoverConflictStream.listen((msg) {
-        if (msg.threadId == sessionId) {
+        if (matchesThread(msg.threadId)) {
           isConflict.value = true;
           conflictMessage.value = msg.message;
         }
       });
       final subQueue = bridge.codexTakeoverQueueStatusStream.listen((msg) {
-        if (msg.threadId == sessionId) {
+        if (matchesThread(msg.threadId)) {
           queueStatus.value = msg;
-          if (msg.status == 'resumed') {
+          if (msg.status == 'queued') {
+            isConflict.value = true;
+          } else if (msg.status == 'resumed') {
             isConflict.value = false;
+          } else if (msg.status == 'cancelled') {
+            isConflict.value = false;
+            queueStatus.value = null;
           }
         }
       });
       final subReadOnly = bridge.codexReadOnlyInfoStream.listen((msg) {
-        if (msg.threadId == sessionId) {
+        if (matchesThread(msg.threadId)) {
           readOnlyInfo.value = msg;
         }
       });
@@ -1367,7 +1383,9 @@ class _CodexChatBody extends HookWidget {
                 if (bridgeState == BridgeConnectionState.reconnecting ||
                     bridgeState == BridgeConnectionState.disconnected)
                   ReconnectBanner(bridgeState: bridgeState),
-                if (isConflict.value)
+                if (isConflict.value ||
+                    (queueStatus.value != null &&
+                        queueStatus.value!.isQueued))
                   _CodexTakeoverConflictBanner(
                     threadId: sessionId,
                     projectPath: effectiveProjectPath,

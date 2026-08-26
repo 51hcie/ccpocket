@@ -132,12 +132,14 @@ class NotificationService extends ChangeNotifier {
   }) async {
     if (!_initialized) return;
 
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'ccpocket_channel',
-      'ccpocket',
-      channelDescription: 'Claude Code session notifications',
+      BrandConfig.appName,
+      channelDescription: '${BrandConfig.appName} session notifications',
       importance: Importance.high,
       priority: Priority.high,
+      channelShowBadge: true,
+      playSound: true,
     );
     const iosDetails = DarwinNotificationDetails();
     const macosDetails = DarwinNotificationDetails();

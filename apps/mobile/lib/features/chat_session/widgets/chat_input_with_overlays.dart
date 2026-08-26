@@ -917,14 +917,64 @@ class ChatInputWithOverlays extends HookWidget {
       onDiffSelectionCleared?.call();
     }
 
-    void stopSession() {
+    Future<void> stopSession() async {
       HapticFeedback.mediumImpact();
-      context.read<ChatSessionCubit>().stop();
+      if (BrandConfig.isAnyCoding) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('停止任务确认'),
+            content: const Text('确认停止该任务？\n停止后当前正在执行的操作将被中断。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(ctx).colorScheme.error,
+                ),
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('确认停止'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+      }
+      if (context.mounted) {
+        context.read<ChatSessionCubit>().stop();
+      }
     }
 
-    void interruptSession() {
+    Future<void> interruptSession() async {
       HapticFeedback.mediumImpact();
-      context.read<ChatSessionCubit>().interrupt();
+      if (BrandConfig.isAnyCoding) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('停止任务确认'),
+            content: const Text('确认停止该任务？\n停止后当前正在执行的操作将被中断。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(ctx).colorScheme.error,
+                ),
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('确认停止'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+      }
+      if (context.mounted) {
+        context.read<ChatSessionCubit>().interrupt();
+      }
     }
 
     void showPromptHistory() {

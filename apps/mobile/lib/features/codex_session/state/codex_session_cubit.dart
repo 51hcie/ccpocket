@@ -54,8 +54,19 @@ class CodexSessionCubit extends ChatSessionCubit {
   bool get hasPendingResumeCommand => _pendingResumeCommand != null;
 
   void _initTakeoverListeners() {
+    bool matchesThread(String threadId) {
+      if (threadId == sessionId) return true;
+      for (final s in bridge.sessions) {
+        if ((s.id == sessionId || s.claudeSessionId == sessionId) &&
+            (s.id == threadId || s.claudeSessionId == threadId)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     _readOnlySub = bridge.codexReadOnlyInfoStream.listen((msg) {
-      if (msg.threadId == sessionId) {
+      if (matchesThread(msg.threadId)) {
         _isReadOnly = msg.isReadOnly;
         if (state.sessionUnavailable) {
           emit(state.copyWith(sessionUnavailable: false));
@@ -70,19 +81,20 @@ class CodexSessionCubit extends ChatSessionCubit {
             :final sourceSessionId,
             sessionId: final createdSessionId,
           ) when subtype == 'session_created' &&
-              (sourceSessionId == sessionId || createdSessionId == sessionId)) {
+              (matchesThread(sourceSessionId ?? '') ||
+                  matchesThread(createdSessionId ?? ''))) {
         _onSessionResumed();
       }
     });
 
     _queueStatusSub = bridge.codexTakeoverQueueStatusStream.listen((msg) {
-      if (msg.threadId == sessionId && msg.status == 'resumed') {
+      if (matchesThread(msg.threadId) && msg.status == 'resumed') {
         _onSessionResumed();
       }
     });
 
     _conflictSub = bridge.codexTakeoverConflictStream.listen((msg) {
-      if (msg.threadId == sessionId) {
+      if (matchesThread(msg.threadId)) {
         if (state.sessionUnavailable) {
           emit(state.copyWith(sessionUnavailable: false));
         }

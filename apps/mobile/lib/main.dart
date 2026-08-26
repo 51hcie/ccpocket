@@ -199,6 +199,8 @@ void main() async {
   final previousSessionPermissions = <String, String>{};
 
   final bridgeNotificationSub = bridge.sessionList.listen((sessions) {
+    final isBackground =
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed;
     final activeId = NotificationService.instance.activeSessionId;
     final lang = settingsCubit.state.appLocaleId.isNotEmpty
         ? settingsCubit.state.appLocaleId.split('-').first
@@ -206,7 +208,7 @@ void main() async {
     final loc = lookupAppLocalizations(Locale(lang));
 
     for (final s in sessions) {
-      if (s.id == activeId) {
+      if (!isBackground && s.id == activeId) {
         previousSessionStatuses[s.id] = s.status;
         if (s.pendingPermission != null) {
           previousSessionPermissions[s.id] = s.pendingPermission!.toolUseId;
@@ -237,19 +239,56 @@ void main() async {
       previousSessionStatuses[s.id] = s.status;
       if (prevStatus != null && prevStatus != s.status) {
         final norm = s.status.trim().toLowerCase();
-        if (norm == 'completed' || norm == 'done' || norm == 'success') {
+        final prevNorm = prevStatus.trim().toLowerCase();
+        if (norm == 'completed' ||
+            norm == 'done' ||
+            norm == 'success' ||
+            (prevNorm == 'running' && norm == 'idle')) {
           NotificationService.instance.showSessionCompleteNotification(
-            body: s.name ?? '任务已执行完成',
+            body: s.name != null && s.name!.isNotEmpty
+                ? s.name!
+                : (BrandConfig.isAnyCoding ? '任务已执行完成' : 'Session Complete'),
             id: s.id.hashCode,
             payload: s.id,
           );
         } else if (norm == 'failed' || norm == 'error' || norm == 'stopped') {
           NotificationService.instance.showTaskFailedNotification(
-            body: s.name ?? (norm == 'stopped' ? '任务已停止' : '任务执行失败'),
+            body: s.name != null && s.name!.isNotEmpty
+                ? s.name!
+                : (norm == 'stopped' ? '任务已停止' : '任务执行失败'),
             id: s.id.hashCode,
             payload: s.id,
           );
         }
+      }
+    }
+  });
+
+  final bridgeMessageNotificationSub = bridge.messages.listen((msg) {
+    final isBackground =
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed;
+    final activeId = NotificationService.instance.activeSessionId;
+    final lang = settingsCubit.state.appLocaleId.isNotEmpty
+        ? settingsCubit.state.appLocaleId.split('-').first
+        : (BrandConfig.isAnyCoding ? 'zh' : 'en');
+    final loc = lookupAppLocalizations(Locale(lang));
+
+    if (msg is PermissionRequestMessage) {
+      if (isBackground || msg.sessionId != activeId) {
+        NotificationService.instance.showApprovalNotification(
+          msg,
+          l: loc,
+          id: (msg.sessionId ?? 'perm').hashCode,
+          payload: msg.sessionId,
+        );
+      }
+    } else if (msg is ResultMessage) {
+      if (isBackground || msg.sessionId != activeId) {
+        NotificationService.instance.showSessionCompleteNotification(
+          body: BrandConfig.isAnyCoding ? '任务已执行完成' : 'Session Complete',
+          id: (msg.sessionId ?? 'res').hashCode,
+          payload: msg.sessionId,
+        );
       }
     }
   });
@@ -264,6 +303,7 @@ void main() async {
           dispose: (service) {
             unawaited(promptHistorySyncSub.cancel());
             unawaited(bridgeNotificationSub.cancel());
+            unawaited(bridgeMessageNotificationSub.cancel());
             service.dispose();
           },
         ),
