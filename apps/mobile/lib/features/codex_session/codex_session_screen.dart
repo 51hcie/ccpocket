@@ -695,15 +695,59 @@ class _CodexChatBody extends HookWidget {
 
     useEffect(() {
       bool matchesThread(String threadId) {
+        if (threadId.isEmpty) return false;
         if (threadId == sessionId) return true;
+        final cleanThreadId =
+            threadId.replaceFirst(RegExp(r'^(codex|antigravity|claude)-'), '');
+        final cleanSessionId =
+            sessionId.replaceFirst(RegExp(r'^(codex|antigravity|claude)-'), '');
+        if (cleanThreadId.isNotEmpty && cleanThreadId == cleanSessionId) {
+          return true;
+        }
         for (final s in bridge.sessions) {
-          if ((s.id == sessionId || s.claudeSessionId == sessionId) &&
-              (s.id == threadId || s.claudeSessionId == threadId)) {
+          final cleanSId =
+              s.id.replaceFirst(RegExp(r'^(codex|antigravity|claude)-'), '');
+          final cleanClaudeId = s.claudeSessionId
+              ?.replaceFirst(RegExp(r'^(codex|antigravity|claude)-'), '');
+          final matchesThisSession = s.id == sessionId ||
+              s.claudeSessionId == sessionId ||
+              cleanSId == cleanSessionId ||
+              (cleanClaudeId != null && cleanClaudeId == cleanSessionId);
+          final matchesTargetThread = s.id == threadId ||
+              s.claudeSessionId == threadId ||
+              cleanSId == cleanThreadId ||
+              (cleanClaudeId != null && cleanClaudeId == cleanThreadId);
+          if (matchesThisSession && matchesTargetThread) {
             return true;
           }
         }
         return false;
       }
+
+      void queryQueue() {
+        bridge.getCodexTakeoverQueue(sessionId);
+        final cleanId = sessionId.replaceFirst(
+          RegExp(r'^(codex|antigravity|claude)-'),
+          '',
+        );
+        if (cleanId.isNotEmpty && cleanId != sessionId) {
+          bridge.getCodexTakeoverQueue(cleanId);
+        }
+        for (final s in bridge.sessions) {
+          if (matchesThread(s.id)) {
+            if (s.id.isNotEmpty && s.id != sessionId) {
+              bridge.getCodexTakeoverQueue(s.id);
+            }
+            if (s.claudeSessionId != null &&
+                s.claudeSessionId!.isNotEmpty &&
+                s.claudeSessionId != sessionId) {
+              bridge.getCodexTakeoverQueue(s.claudeSessionId!);
+            }
+          }
+        }
+      }
+
+      queryQueue();
 
       final subConflict = bridge.codexTakeoverConflictStream.listen((msg) {
         if (matchesThread(msg.threadId)) {
@@ -719,7 +763,7 @@ class _CodexChatBody extends HookWidget {
           } else if (msg.status == 'resumed') {
             isConflict.value = false;
           } else if (msg.status == 'cancelled') {
-            isConflict.value = false;
+            isConflict.value = true;
             queueStatus.value = null;
           }
         }
@@ -727,13 +771,21 @@ class _CodexChatBody extends HookWidget {
       final subReadOnly = bridge.codexReadOnlyInfoStream.listen((msg) {
         if (matchesThread(msg.threadId)) {
           readOnlyInfo.value = msg;
+          isConflict.value = true;
         }
       });
-      final subErr = bridge.messagesForSession(sessionId).listen((msg) {
+      final subSessions = bridge.sessionListStream.listen((_) {
+        queryQueue();
+      });
+      final subErr = bridge.messages.listen((msg) {
         if (msg is ErrorMessage &&
+            (matchesThread(msg.sessionId ?? '') ||
+                msg.sessionId == sessionId) &&
             (msg.errorCode == 'active_writer_conflict' ||
                 msg.message.contains('active writer conflict') ||
-                msg.message.contains('is running with an active writer'))) {
+                msg.message.contains('already open in another client') ||
+                msg.message.contains('is running with an active writer') ||
+                msg.message.contains('active writer'))) {
           isConflict.value = true;
           conflictMessage.value = msg.message;
         }
@@ -742,6 +794,7 @@ class _CodexChatBody extends HookWidget {
         subConflict.cancel();
         subQueue.cancel();
         subReadOnly.cancel();
+        subSessions.cancel();
         subErr.cancel();
       };
     }, [sessionId]);

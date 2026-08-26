@@ -114,11 +114,17 @@ export class AntigravityProcess extends EventEmitter {
   async start(options: AntigravityStartOptions): Promise<void> {
     this.workspacePath = options.workspacePath || this.workspacePath;
     this.currentMode = options.mode ?? this.currentMode;
-    this.currentModel =
-      options.model ??
-      process.env.BRIDGE_AGY_MODEL ??
-      process.env.MACREMOTE_AGY_MODEL ??
-      "gemini-3.7-flash-high";
+    let model = options.model && options.model !== "default" ? options.model : undefined;
+    if (!model) {
+      model =
+        process.env.BRIDGE_AGY_MODEL ??
+        process.env.MACREMOTE_AGY_MODEL ??
+        "gemini-3.7-flash-high";
+    }
+    if (model.toLowerCase().includes("3.7") && model.toLowerCase().includes("flash")) {
+      model = "gemini-3.7-flash-high";
+    }
+    this.currentModel = model;
     if (options.conversationId) {
       this.conversationId = options.conversationId;
     }

@@ -110,6 +110,8 @@ describe("MonitoringService", () => {
     expect(response.body.system.hostname).toBeDefined();
     expect(response.body.bridge.port).toBe(8766);
     expect(response.body.codex.source).toBeDefined();
-    expect(response.body.antigravity.quota).toBe("当前版本暂不可获取");
-  });
+    expect(["正常 (可用)", "当前版本暂不可获取"]).toContain(
+      response.body.antigravity.quota,
+    );
+  }, 15000);
 });

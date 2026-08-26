@@ -81,7 +81,9 @@ describe("Bridge Antigravity Real Integration Probe", () => {
     let resultMsg: any = null;
     const inputWait = Date.now();
     while (Date.now() - inputWait < 45000) {
-      resultMsg = received.find((m) => m.type === "result");
+      resultMsg = received.find(
+        (m) => m.type === "result" && m.sessionId === sessionId,
+      );
       if (resultMsg) break;
       await new Promise((r) => setTimeout(r, 500));
     }

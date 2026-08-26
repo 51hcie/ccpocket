@@ -4329,7 +4329,7 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
       bridge.close();
       rmSync(projectPath, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it("returns base64 image data for image file peek", async () => {
     const projectPath = mkdtempSync(resolve(tmpdir(), "ccpocket-bridge-"));

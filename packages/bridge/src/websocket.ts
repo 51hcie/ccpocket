@@ -5308,14 +5308,16 @@ export class BridgeWebSocketServer {
           queuedCommand: msg.queuedCommand,
           options: msg.options,
         });
-        this.send(ws, {
+        const statusMsg = {
           type: "codex_takeover_queue_status",
           threadId: msg.threadId,
           queueId: result.item.id,
           position: result.position,
           total: result.total,
           status: "queued",
-        });
+        };
+        this.send(ws, statusMsg);
+        this.broadcast(statusMsg);
         this.scheduleTakeoverQueueProcessing(msg.threadId, 0);
         break;
       }
@@ -5329,14 +5331,16 @@ export class BridgeWebSocketServer {
         if (result.remainingCount === 0) {
           this.stopTakeoverQueueProcessing(msg.threadId);
         }
-        this.send(ws, {
+        const cancelMsg = {
           type: "codex_takeover_queue_status",
           threadId: msg.threadId,
           queueId: msg.queueId,
           position: 0,
           total: result.remainingCount,
           status: "cancelled",
-        });
+        };
+        this.send(ws, cancelMsg);
+        this.broadcast(cancelMsg);
         break;
       }
 

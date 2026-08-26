@@ -104,9 +104,11 @@ export class CodexTakeoverQueueStore {
     const { threadId, projectPath, clientId, queuedCommand, options } = params;
 
     // Check deduplication
+    const clean = (s: string) => s.replace(/^codex-/, "");
+    const target = clean(threadId);
     const existing = this.items.find(
       (it) =>
-        it.threadId === threadId &&
+        (it.threadId === threadId || clean(it.threadId) === target) &&
         it.status === "pending" &&
         ((clientId && it.clientId === clientId) ||
           (queuedCommand && it.queuedCommand === queuedCommand) ||
@@ -159,9 +161,16 @@ export class CodexTakeoverQueueStore {
     await this.ensureInitialized();
     const { threadId, queueId, clientId } = params;
 
+    const clean = (s: string) => s.replace(/^codex-/, "");
+    const target = clean(threadId);
     let matched = false;
     for (const item of this.items) {
-      if (item.threadId !== threadId || item.status !== "pending") continue;
+      if (
+        (item.threadId !== threadId && clean(item.threadId) !== target) ||
+        item.status !== "pending"
+      ) {
+        continue;
+      }
       if (queueId && item.id === queueId) {
         item.status = "cancelled";
         matched = true;
@@ -190,8 +199,14 @@ export class CodexTakeoverQueueStore {
    * Returns all pending items for a specific thread, in strict FIFO order.
    */
   getPendingForThread(threadId: string): CodexTakeoverQueueItem[] {
+    const clean = (s: string) => s.replace(/^codex-/, "");
+    const target = clean(threadId);
     return this.items
-      .filter((it) => it.threadId === threadId && it.status === "pending")
+      .filter(
+        (it) =>
+          (it.threadId === threadId || clean(it.threadId) === target) &&
+          it.status === "pending",
+      )
       .sort(
         (a, b) =>
           new Date(a.enqueuedAt).getTime() - new Date(b.enqueuedAt).getTime(),
