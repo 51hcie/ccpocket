@@ -53,7 +53,7 @@ class NotificationService extends ChangeNotifier {
     );
 
     await _plugin.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: _onNotificationResponse,
     );
 
@@ -150,10 +150,10 @@ class NotificationService extends ChangeNotifier {
     );
 
     await _plugin.show(
-      id,
-      title,
-      body,
-      details,
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: payload,
     );
   }
