@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +10,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ccpocket/services/android_bridge_update_service.dart';
 import 'package:ccpocket/features/anycoding/widgets/anycoding_update_sheet.dart';
 import 'package:ccpocket/services/bridge_service.dart';
+import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/theme/app_theme.dart';
 
 void main() {

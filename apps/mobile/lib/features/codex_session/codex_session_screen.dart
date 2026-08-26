@@ -1407,7 +1407,7 @@ class _CodexChatBody extends HookWidget {
                   )
                 else if (readOnlyInfo.value?.isReadOnly ??
                     (chatSessionCubit is CodexSessionCubit &&
-                        (chatSessionCubit).isReadOnlySession) ||
+                        (chatSessionCubit as CodexSessionCubit).isReadOnlySession) ||
                     !bridge.sessions.any(
                       (s) =>
                           s.id == sessionId || s.claudeSessionId == sessionId,
@@ -1421,14 +1421,14 @@ class _CodexChatBody extends HookWidget {
                       if (composerText.isNotEmpty) {
                         chatInputController.clear();
                         if (chatSessionCubit is CodexSessionCubit) {
-                          (chatSessionCubit)
+                          (chatSessionCubit as CodexSessionCubit)
                               .takeControl(command: composerText);
                         } else {
                           chatSessionCubit.sendMessage(composerText);
                         }
                       } else {
                         if (chatSessionCubit is CodexSessionCubit) {
-                          (chatSessionCubit).takeControl();
+                          (chatSessionCubit as CodexSessionCubit).takeControl();
                         } else if (effectiveProjectPath != null) {
                           bridge.resumeSession(
                             sessionId,
@@ -2109,6 +2109,7 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
   final VoidCallback onForkContinuation;
 
   const _CodexTakeoverConflictBanner({
+    super.key,
     required this.threadId,
     this.projectPath,
     this.message,
@@ -2252,6 +2253,7 @@ class _CodexReadOnlyMonitorBanner extends StatelessWidget {
   final VoidCallback onTakeControl;
 
   const _CodexReadOnlyMonitorBanner({
+    super.key,
     required this.threadId,
     this.readOnlyInfo,
     required this.onRefresh,

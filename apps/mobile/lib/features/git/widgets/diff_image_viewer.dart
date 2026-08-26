@@ -858,7 +858,7 @@ Widget _buildMemoryImage({required Uint8List bytes, required bool isSvg}) {
   return Image.memory(
     bytes,
     fit: BoxFit.contain,
-    errorBuilder: (context, error, stackTrace) => const Center(
+    errorBuilder: (_, _, _) => const Center(
       child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
     ),
   );

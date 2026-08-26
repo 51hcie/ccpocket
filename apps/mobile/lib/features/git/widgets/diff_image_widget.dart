@@ -384,7 +384,7 @@ class _ImageContent extends StatelessWidget {
     return Image.memory(
       bytes,
       fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) =>
+      errorBuilder: (_, _, _) =>
           Center(child: Icon(Icons.broken_image, color: appColors.subtleText)),
     );
   }

@@ -2601,7 +2601,7 @@ class _OptionsSection extends StatelessWidget {
             if (codexProfiles.isNotEmpty) ...[
               DropdownButtonFormField<String?>(
                 key: const ValueKey('dialog_codex_profile'),
-                value: selectedCodexProfile,
+                initialValue: selectedCodexProfile,
                 isExpanded: true,
                 decoration: buildInputDecoration('Profile'),
                 style: TextStyle(
@@ -3228,7 +3228,7 @@ class _ClaudeAdvancedOptions extends StatelessWidget {
         ),
         trailing: DropdownButtonFormField<String?>(
           key: const ValueKey('dialog_claude_fallback_model'),
-          value: selectedClaudeFallbackModel,
+          initialValue: selectedClaudeFallbackModel,
           isExpanded: true,
           decoration: buildInputDecoration(l.fallbackModel),
           style: TextStyle(
@@ -3322,7 +3322,7 @@ class _CodexModelOptions extends StatelessWidget {
     return [
       DropdownButtonFormField<String>(
         key: const ValueKey('dialog_codex_model'),
-        value: models.contains(selectedModel)
+        initialValue: models.contains(selectedModel)
             ? selectedModel
             : models.firstOrNull,
         isExpanded: true,
@@ -3341,7 +3341,7 @@ class _CodexModelOptions extends StatelessWidget {
         key: ValueKey('codex_effort_field_${selectedModel ?? 'default'}'),
         child: DropdownButtonFormField<ReasoningEffort>(
           key: const ValueKey('dialog_codex_effort_advanced'),
-          value: effectiveEffort,
+          initialValue: effectiveEffort,
           isExpanded: true,
           decoration: buildInputDecoration(l.effort),
           items: [
@@ -3358,7 +3358,7 @@ class _CodexModelOptions extends StatelessWidget {
         key: ValueKey('codex_speed_field_${selectedModel ?? 'default'}'),
         child: DropdownButtonFormField<CodexSpeed>(
           key: const ValueKey('dialog_codex_speed_advanced'),
-          value: speed,
+          initialValue: speed,
           isExpanded: true,
           decoration: buildInputDecoration('Speed'),
           items: [
@@ -3412,7 +3412,7 @@ class _CodexAdvancedOptions extends StatelessWidget {
     return [
       DropdownButtonFormField<WebSearchMode?>(
         key: const ValueKey('dialog_codex_web_search_mode'),
-        value: webSearchMode,
+        initialValue: webSearchMode,
         isExpanded: true,
         decoration: buildInputDecoration(l.webSearch),
         style: TextStyle(

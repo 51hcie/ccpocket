@@ -108,7 +108,7 @@ class UserMessageHistorySheet extends StatelessWidget {
                   controller: scrollController,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: messages.length,
-                  separatorBuilder: (_, __) =>
+                  separatorBuilder: (_, _) =>
                       const Divider(height: 1, indent: 56),
                   itemBuilder: (context, index) {
                     // Show newest first

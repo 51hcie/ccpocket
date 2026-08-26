@@ -526,10 +526,10 @@ class HomeContentState extends State<HomeContent> {
           children: [
             if (isReconnecting) const SessionReconnectBanner(),
             dashboardCard,
-            if (connectedBridgeBanner != null) connectedBridgeBanner,
-            if (updateBanner != null) updateBanner,
-            if (appUpdateBanner != null) appUpdateBanner,
-            if (macOSNativeAppBanner != null) macOSNativeAppBanner,
+            ?connectedBridgeBanner,
+            ?updateBanner,
+            ?appUpdateBanner,
+            ?macOSNativeAppBanner,
             SectionHeader(
               icon: Icons.history,
               label: l.recentSessions,
@@ -549,9 +549,9 @@ class HomeContentState extends State<HomeContent> {
         children: [
           if (isReconnecting) const SessionReconnectBanner(),
           dashboardCard,
-          if (connectedBridgeBanner != null) connectedBridgeBanner,
-          if (updateBanner != null) updateBanner,
-          if (macOSNativeAppBanner != null) macOSNativeAppBanner,
+          ?connectedBridgeBanner,
+          ?updateBanner,
+          ?macOSNativeAppBanner,
           const SizedBox(height: 80),
           SessionListEmptyState(onNewSession: widget.onNewSession),
         ],
@@ -566,9 +566,9 @@ class HomeContentState extends State<HomeContent> {
       children: [
         if (isReconnecting) const SessionReconnectBanner(),
         dashboardCard,
-        if (connectedBridgeBanner != null) connectedBridgeBanner,
-        if (updateBanner != null) updateBanner,
-        if (macOSNativeAppBanner != null) macOSNativeAppBanner,
+        ?connectedBridgeBanner,
+        ?updateBanner,
+        ?macOSNativeAppBanner,
         if (hasRunningSessions) ...[
           SectionHeader(
             icon: Icons.play_circle_filled,

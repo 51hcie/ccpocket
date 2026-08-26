@@ -14,7 +14,7 @@ class _SessionArgs {
 Route<dynamic> _route({String? name, Object? arguments}) {
   return PageRouteBuilder<void>(
     settings: RouteSettings(name: name, arguments: arguments),
-    pageBuilder: (context, anim, secAnim) => const SizedBox.shrink(),
+    pageBuilder: (_, _, _) => const SizedBox.shrink(),
   );
 }
 

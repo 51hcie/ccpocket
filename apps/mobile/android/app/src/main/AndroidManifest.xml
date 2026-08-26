@@ -101,6 +101,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <provider
+            android:name="com.superlist.super_native_extensions.DataProvider"
+            android:authorities="com.k9i.ccpocket.SuperClipboardDataProvider"
+            android:exported="true"
+            android:grantUriPermissions="true" />
+        <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.k9i.ccpocket.fileprovider"
             android:exported="false"

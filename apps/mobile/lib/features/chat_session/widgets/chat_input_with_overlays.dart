@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:super_clipboard/super_clipboard.dart';
+import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import '../../../constants/brand_config.dart';
 import '../../../l10n/app_localizations.dart';
@@ -565,6 +567,30 @@ class ChatInputWithOverlays extends HookWidget {
       }
     }
 
+    /// Handle items dropped via OS drag-and-drop (desktop).
+    Future<void> handleDroppedItems(PerformDropEvent event) async {
+      for (final item in event.session.items) {
+        final reader = item.dataReader;
+        if (reader == null) continue;
+        for (final format in [Formats.png, Formats.jpeg]) {
+          if (reader.canProvide(format)) {
+            reader.getFile(format, (file) async {
+              try {
+                final bytes = await file.readAll();
+                final mimeType = format == Formats.png
+                    ? 'image/png'
+                    : 'image/jpeg';
+                addImageBytes(bytes, mimeType);
+              } catch (e) {
+                debugPrint('[drop] Failed to read dropped image: $e');
+              }
+            });
+            break; // Only read one format per item
+          }
+        }
+      }
+    }
+
     void sendMessage() {
       if (inputBlocked) return;
       final text = inputController.text.trim();
@@ -689,17 +715,137 @@ class ChatInputWithOverlays extends HookWidget {
     }
 
     Future<void> pasteFromClipboard() async {
-      // Image paste from clipboard is not supported without native desktop plugin
+      const maxImages = 5;
+      if (attachedImages.value.length >= maxImages) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).imageLimitReached(maxImages),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final clipboard = SystemClipboard.instance;
+      if (clipboard == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).clipboardNotAvailable),
+            ),
+          );
+        }
+        return;
+      }
+
+      try {
+        final reader = await clipboard.read();
+
+        // Try PNG first, then JPEG
+        for (final format in [Formats.png, Formats.jpeg]) {
+          if (reader.canProvide(format)) {
+            reader.getFile(format, (file) async {
+              try {
+                final bytes = await file.readAll();
+                if (context.mounted) {
+                  final mimeType = format == Formats.png
+                      ? 'image/png'
+                      : 'image/jpeg';
+
+                  // Add to list (append, not replace)
+                  final updated = [
+                    ...attachedImages.value,
+                    (bytes: bytes, mimeType: mimeType),
+                  ];
+                  attachedImages.value = updated;
+
+                  // Persist image draft
+                  context.read<DraftService>().saveImageDraft(
+                    sessionId,
+                    updated,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(context).failedToLoadImage,
+                      ),
+                    ),
+                  );
+                }
+              }
+            });
+            return;
+          }
+        }
+
+        // No image found in clipboard
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).noImageInClipboard),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).failedToReadClipboard),
+            ),
+          );
+        }
+      }
     }
 
     /// Try to paste an image from clipboard. Returns true if an image was
     /// found, false if only text (or nothing) is in the clipboard.
+    /// Used by Cmd+V handler to decide whether to fall back to text paste.
     Future<bool> tryPasteImage() async {
-      return false;
+      const maxImages = 5;
+      if (attachedImages.value.length >= maxImages) return false;
+      final clipboard = SystemClipboard.instance;
+      if (clipboard == null) return false;
+      try {
+        final reader = await clipboard.read();
+        for (final format in [Formats.png, Formats.jpeg]) {
+          if (reader.canProvide(format)) {
+            reader.getFile(format, (file) async {
+              try {
+                final bytes = await file.readAll();
+                final mimeType = format == Formats.png
+                    ? 'image/png'
+                    : 'image/jpeg';
+                addImageBytes(bytes, mimeType);
+              } catch (e) {
+                debugPrint('[paste] Failed to read clipboard image: $e');
+              }
+            });
+            return true;
+          }
+        }
+        return false;
+      } catch (e) {
+        debugPrint('[paste] Failed to read clipboard: $e');
+        return false;
+      }
     }
 
     Future<bool> hasClipboardImage() async {
-      return false;
+      final clipboard = SystemClipboard.instance;
+      if (clipboard == null) return false;
+      try {
+        final reader = await clipboard.read();
+        return reader.canProvide(Formats.png) ||
+            reader.canProvide(Formats.jpeg);
+      } catch (_) {
+        return false;
+      }
     }
 
     Future<void> showAttachOptions() async {
@@ -869,59 +1015,86 @@ class ChatInputWithOverlays extends HookWidget {
           ),
           child: CompositedTransformTarget(
             link: layerLink,
-            child: ChatInputBar(
-              inputController: inputController,
-              status: status,
-              hasInputText:
-                  !inputBlocked &&
-                  (hasInputText.value ||
-                      attachedImages.value.isNotEmpty ||
-                      attachedDiffSelection.value != null),
-              isInputEmpty: isInputEmpty.value,
-              isVoiceAvailable:
-                  !context.watch<SettingsCubit>().state.hideVoiceInput &&
-                  voice.isAvailable,
-              isRecording: voice.isRecording,
-              onSend: sendMessage,
-              onStop: stopSession,
-              onInterrupt: interruptSession,
-              onToggleVoice: voice.toggle,
-              onIndent: indent,
-              onDedent: dedent,
-              canDedent: canDedent.value,
-              onSlashCommand: insertSlashPrefix,
-              onMention: insertMention,
-              onDollarMention: isCodex ? insertDollar : null,
-              showDollarButton: isCodex,
-              isInMentionContext: isInMentionContext.value,
-              onShowPromptHistory: showPromptHistory,
-              onAttachImage: showAttachOptions,
-              attachedImages: attachedImages.value,
-              onClearImage: clearAttachment,
-              attachedDiffSelection: attachedDiffSelection.value,
-              onClearDiffSelection: clearDiffSelection,
-              onTapDiffPreview: onOpenGitScreen != null
-                  ? () => onOpenGitScreen!(attachedDiffSelection.value)
-                  : null,
-              hintText: hintText ??
-                  resolveMessagePlaceholder(
-                    provider: chatCubit.provider,
-                    claudePlaceholder: l.messagePlaceholder,
-                    codexPlaceholder: l.codexMessagePlaceholder,
-                    anycodingPlaceholder: BrandConfig.isAnyCoding ? '继续下达指令...' : null,
-                  ),
-              onPasteImage: isDesktopPlatform ? tryPasteImage : null,
-              imagePasteShortcut: context
-                  .watch<SettingsCubit>()
-                  .state
-                  .imagePasteShortcut,
-              onCompletionKeyEvent: handleCompletionKeyEvent,
+            child: _wrapWithDropRegion(
+              enabled: isDesktopPlatform,
+              onPerformDrop: handleDroppedItems,
+              child: ChatInputBar(
+                inputController: inputController,
+                status: status,
+                hasInputText:
+                    !inputBlocked &&
+                    (hasInputText.value ||
+                        attachedImages.value.isNotEmpty ||
+                        attachedDiffSelection.value != null),
+                isInputEmpty: isInputEmpty.value,
+                isVoiceAvailable:
+                    !context.watch<SettingsCubit>().state.hideVoiceInput &&
+                    voice.isAvailable,
+                isRecording: voice.isRecording,
+                onSend: sendMessage,
+                onStop: stopSession,
+                onInterrupt: interruptSession,
+                onToggleVoice: voice.toggle,
+                onIndent: indent,
+                onDedent: dedent,
+                canDedent: canDedent.value,
+                onSlashCommand: insertSlashPrefix,
+                onMention: insertMention,
+                onDollarMention: isCodex ? insertDollar : null,
+                showDollarButton: isCodex,
+                isInMentionContext: isInMentionContext.value,
+                onShowPromptHistory: showPromptHistory,
+                onAttachImage: showAttachOptions,
+                attachedImages: attachedImages.value,
+                onClearImage: clearAttachment,
+                attachedDiffSelection: attachedDiffSelection.value,
+                onClearDiffSelection: clearDiffSelection,
+                onTapDiffPreview: onOpenGitScreen != null
+                    ? () => onOpenGitScreen!(attachedDiffSelection.value)
+                    : null,
+                hintText: hintText ??
+                    resolveMessagePlaceholder(
+                      provider: chatCubit.provider,
+                      claudePlaceholder: l.messagePlaceholder,
+                      codexPlaceholder: l.codexMessagePlaceholder,
+                      anycodingPlaceholder: BrandConfig.isAnyCoding ? '继续下达指令...' : null,
+                    ),
+                onPasteImage: isDesktopPlatform ? tryPasteImage : null,
+                imagePasteShortcut: context
+                    .watch<SettingsCubit>()
+                    .state
+                    .imagePasteShortcut,
+                onCompletionKeyEvent: handleCompletionKeyEvent,
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Wraps child with a [DropRegion] for accepting OS-level drag-and-drop
+/// of images on desktop platforms.
+Widget _wrapWithDropRegion({
+  required bool enabled,
+  required Future<void> Function(PerformDropEvent) onPerformDrop,
+  required Widget child,
+}) {
+  if (!enabled) return child;
+  return DropRegion(
+    formats: Formats.standardFormats,
+    hitTestBehavior: HitTestBehavior.opaque,
+    onDropOver: (event) {
+      // Accept copy if any item has an image
+      final hasImage = event.session.items.any(
+        (item) => item.canProvide(Formats.png) || item.canProvide(Formats.jpeg),
+      );
+      return hasImage ? DropOperation.copy : DropOperation.none;
+    },
+    onPerformDrop: onPerformDrop,
+    child: child,
+  );
 }
 
 bool _isCompletionNextShortcut(KeyEvent event) {

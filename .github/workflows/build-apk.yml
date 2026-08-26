@@ -82,7 +82,7 @@ jobs:
           echo "Using aapt: $AAPT"
           "$AAPT" dump badging apps/mobile/build/app/outputs/flutter-apk/app-debug.apk | grep "^package: "
           bash scripts/publish-android-release.test.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
-          bash scripts/publish-android-release.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk 220 "1.115.5"
+          bash scripts/publish-android-release.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk 221 "1.115.6"
       - name: Prepare AnyCoding APK
         working-directory: apps/mobile
         run: cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/anycoding.apk

@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart' as provider_pkg;
 
 import 'package:ccpocket/features/anycoding/views/anycoding_console_view.dart';
+import 'package:ccpocket/features/anycoding/views/anycoding_projects_view.dart';
 import 'package:ccpocket/features/anycoding/views/anycoding_tasks_view.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/services/bridge_service.dart';
+import 'package:ccpocket/providers/bridge_cubits.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

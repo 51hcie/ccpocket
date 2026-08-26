@@ -8,29 +8,23 @@ Future<BonsoirDiscovery> startDiscovery({
   required void Function(String host, int port) onLost,
 }) async {
   final discovery = BonsoirDiscovery(type: '_ccpocket._tcp');
-  await discovery.ready;
+  await discovery.initialize();
 
   discovery.eventStream?.listen((event) {
-    switch (event.type) {
-      case BonsoirDiscoveryEventType.discoveryServiceResolved:
+    switch (event) {
+      case BonsoirDiscoveryServiceResolvedEvent():
         final service = event.service;
-        if (service is ResolvedBonsoirService) {
-          final host = service.host ?? service.name;
-          onResolved(
-            service.name,
-            host,
-            service.port,
-            service.attributes['auth'] == 'required',
-          );
-        }
-      case BonsoirDiscoveryEventType.discoveryServiceLost:
+        final host = service.host ?? service.name;
+        onResolved(
+          service.name,
+          host,
+          service.port,
+          service.attributes['auth'] == 'required',
+        );
+      case BonsoirDiscoveryServiceLostEvent():
         final service = event.service;
-        if (service != null) {
-          final host = service is ResolvedBonsoirService
-              ? (service.host ?? service.name)
-              : service.name;
-          onLost(host, service.port);
-        }
+        final host = service.host ?? service.name;
+        onLost(host, service.port);
       default:
         break;
     }

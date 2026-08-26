@@ -10,23 +10,11 @@ import 'generated_image_preview_item.dart';
 import 'widgets/generated_image_details_panel.dart';
 import 'widgets/generated_image_preview_page.dart';
 
-class GeneratedImageShareParams {
-  final List<XFile> files;
-  final List<String>? fileNameOverrides;
-  final Rect? sharePositionOrigin;
-
-  const GeneratedImageShareParams({
-    required this.files,
-    this.fileNameOverrides,
-    this.sharePositionOrigin,
-  });
-}
-
 class GeneratedImagePreviewScreen extends StatefulWidget {
   final List<GeneratedImagePreviewItem> items;
   final int initialIndex;
   @visibleForTesting
-  final Future<void> Function(GeneratedImageShareParams params)? shareImage;
+  final Future<void> Function(ShareParams params)? shareImage;
 
   const GeneratedImagePreviewScreen({
     super.key,
@@ -270,11 +258,11 @@ Future<void> _shareGeneratedImage(
   GeneratedImagePreviewItem item, {
   required int index,
   required Rect sharePositionOrigin,
-  Future<void> Function(GeneratedImageShareParams params)? share,
+  Future<void> Function(ShareParams params)? share,
 }) async {
   final bytes = item.bytes ?? await _downloadGeneratedImage(item.url!);
   final extension = _extensionFromMime(item.mimeType);
-  final params = GeneratedImageShareParams(
+  final params = ShareParams(
     files: [XFile.fromData(bytes, mimeType: item.mimeType)],
     fileNameOverrides: ['generated-image-${index + 1}$extension'],
     sharePositionOrigin: sharePositionOrigin,
@@ -282,10 +270,7 @@ Future<void> _shareGeneratedImage(
   if (share != null) {
     await share(params);
   } else {
-    await Share.shareXFiles(
-      params.files,
-      sharePositionOrigin: params.sharePositionOrigin,
-    );
+    await SharePlus.instance.share(params);
   }
 }
 

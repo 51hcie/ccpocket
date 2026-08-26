@@ -205,7 +205,7 @@ class _IntrinsicAspectRatioImageState
         if (!mounted || ratio == _aspectRatio) return;
         setState(() => _aspectRatio = ratio);
       },
-      onError: (exception, stackTrace) {
+      onError: (_, _) {
         // The visible image widget owns the failure UI.
       },
     );
@@ -262,8 +262,7 @@ class _GeneratedImageThumbnail extends StatelessWidget {
         bytes,
         fit: fit,
         gaplessPlayback: true,
-        errorBuilder: (context, error, stackTrace) =>
-            const _ThumbnailLoadFailure(),
+        errorBuilder: (_, _, _) => const _ThumbnailLoadFailure(),
       );
     }
 

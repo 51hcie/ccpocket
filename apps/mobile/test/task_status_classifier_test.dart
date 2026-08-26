@@ -32,7 +32,7 @@ void main() {
       );
     });
 
-    test('classifies active idle session as inProgress (never falsely completed)', () {
+    test('classifies active idle session as completed/standby with 待命 label (does not increase inProgress count)', () {
       const idleSession = SessionInfo(
         id: 'idle-1',
         provider: 'codex',
@@ -41,14 +41,21 @@ void main() {
         createdAt: '2026-08-24T00:00:00Z',
         lastActivityAt: '2026-08-24T00:00:00Z',
       );
-      // Active idle session is awaiting user next command -> inProgress
+      // Active idle session is standing by -> category is completed (standby group)
       expect(
         TaskStatusClassifier.classifySessionInfo(idleSession),
-        equals(AnyCodingTaskCategory.inProgress),
+        equals(AnyCodingTaskCategory.completed),
       );
       expect(
         TaskStatusClassifier.classifySessionInfo(idleSession),
-        isNot(equals(AnyCodingTaskCategory.completed)),
+        isNot(equals(AnyCodingTaskCategory.inProgress)),
+      );
+      expect(
+        TaskStatusClassifier.statusLabelForCategory(
+          AnyCodingTaskCategory.completed,
+          'idle',
+        ),
+        equals('待命'),
       );
     });
 
@@ -381,6 +388,62 @@ void main() {
       );
       expect(searchResult.length, equals(1));
       expect(searchResult.first.projectName, equals('repo-b'));
+    });
+
+    test('buildUnifiedTaskList deduplicates active and recent sessions', () {
+      final unified = TaskStatusClassifier.buildUnifiedTaskList(
+        activeSessions: const [
+          SessionInfo(
+            id: 'codex-sess-dup',
+            provider: 'codex',
+            projectPath: '/proj',
+            status: 'idle',
+            createdAt: '2026-08-24T10:00:00Z',
+            lastActivityAt: '2026-08-24T10:00:00Z',
+          ),
+        ],
+        recentSessions: const [
+          RecentSession(
+            sessionId: 'sess-dup',
+            provider: 'codex',
+            firstPrompt: 'dup prompt',
+            gitBranch: 'main',
+            isSidechain: false,
+            created: '2026-08-24T09:00:00Z',
+            modified: '2026-08-24T09:00:00Z',
+            projectPath: '/proj',
+          ),
+          RecentSession(
+            sessionId: 'recent-only',
+            provider: 'antigravity',
+            firstPrompt: 'recent only',
+            gitBranch: 'main',
+            isSidechain: false,
+            created: '2026-08-24T08:00:00Z',
+            modified: '2026-08-24T08:00:00Z',
+            projectPath: '/proj',
+          ),
+        ],
+      );
+
+      // 'sess-dup' should be deduplicated, so only 2 total tasks
+      expect(unified.length, equals(2));
+      expect(unified.map((t) => t.id).toList(), containsAll(['codex-sess-dup', 'recent-only']));
+
+      // InProgress count should be 0 since codex-sess-dup is idle (standby)
+      final inProgressTasks = TaskStatusClassifier.filterTasks(
+        tasks: unified,
+        category: AnyCodingTaskCategory.inProgress,
+      );
+      expect(inProgressTasks.length, equals(0));
+
+      final completedTasks = TaskStatusClassifier.filterTasks(
+        tasks: unified,
+        category: AnyCodingTaskCategory.completed,
+      );
+      expect(completedTasks.length, equals(2));
+      final idleItem = completedTasks.firstWhere((t) => t.id == 'codex-sess-dup');
+      expect(idleItem.statusLabel, equals('待命'));
     });
 
     test('builds unique project summaries with accurate counts', () {

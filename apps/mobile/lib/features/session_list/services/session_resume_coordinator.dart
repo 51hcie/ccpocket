@@ -285,15 +285,12 @@ class SessionResumeCoordinator {
           'permissionMode': permissionMode,
           'executionMode': executionMode,
           'planMode': planMode,
-          if (claudeSandboxMode != null) 'sandboxMode': claudeSandboxMode,
-          if (claudeEffort != null) 'claudeEffort': claudeEffort,
-          if (claudeModel != null) 'claudeModel': claudeModel,
-          if (claudeFallbackModel != null)
-            'claudeFallbackModel': claudeFallbackModel,
-          if (claudeForkSession != null)
-            'claudeForkSession': claudeForkSession,
-          if (claudePersistSession != null)
-            'claudePersistSession': claudePersistSession,
+          'sandboxMode': ?claudeSandboxMode,
+          'claudeEffort': ?claudeEffort,
+          'claudeModel': ?claudeModel,
+          'claudeFallbackModel': ?claudeFallbackModel,
+          'claudeForkSession': ?claudeForkSession,
+          'claudePersistSession': ?claudePersistSession,
         }),
       );
     }

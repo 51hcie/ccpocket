@@ -44,7 +44,7 @@ void main() {
                 },
               ],
             },
-            onAnswer: (_, __) {},
+            onAnswer: (_, _) {},
           ),
         ),
       );
@@ -163,7 +163,7 @@ void main() {
                 },
               ],
             },
-            onAnswer: (_, __) {},
+            onAnswer: (_, _) {},
           ),
         ),
       );
@@ -237,7 +237,7 @@ void main() {
                 },
               ],
             },
-            onAnswer: (_, __) {},
+            onAnswer: (_, _) {},
           ),
         ),
       );
@@ -343,7 +343,7 @@ void main() {
                 },
               ],
             },
-            onAnswer: (_, __) {},
+            onAnswer: (_, _) {},
           ),
         ),
       );
@@ -388,7 +388,7 @@ void main() {
                 },
               ],
             },
-            onAnswer: (_, __) => answered = true,
+            onAnswer: (_, _) => answered = true,
           ),
         ),
       );
@@ -476,7 +476,7 @@ void main() {
                 },
               ],
             },
-            onAnswer: (_, __) {},
+            onAnswer: (_, _) {},
           ),
         ),
       );
@@ -571,7 +571,7 @@ void main() {
                 },
               ],
             },
-            onAnswer: (_, __) {},
+            onAnswer: (_, _) {},
           ),
         ),
       );
@@ -636,7 +636,7 @@ void main() {
             AskUserQuestionWidget(
               toolUseId: 'bad-$i',
               input: malformedInputs[i],
-              onAnswer: (_, __) {},
+              onAnswer: (_, _) {},
             ),
           ),
         );

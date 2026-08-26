@@ -74,7 +74,11 @@ class AnyCodingTaskItem {
     this.isPinned = false,
   });
 
-  bool get isActive => activeSession != null || offlineAction != null;
+  bool get isActive =>
+      (activeSession != null && activeSession!.status.trim().toLowerCase() != 'idle') ||
+      offlineAction != null;
+  bool get isStandby =>
+      activeSession != null && activeSession!.status.trim().toLowerCase() == 'idle';
   bool get hasPendingAction =>
       pendingPermission != null ||
       category == AnyCodingTaskCategory.waitingApproval;
@@ -162,8 +166,10 @@ class TaskStatusClassifier {
   /// CRITICAL: Unknown statuses FAIL-CLOSED to [AnyCodingTaskCategory.failed]
   /// or [AnyCodingTaskCategory.inProgress], NEVER [AnyCodingTaskCategory.completed]!
   ///
-  /// Active sessions with `status == 'idle'` are waiting for user instructions,
-  /// so they are classified as [AnyCodingTaskCategory.inProgress] (active), NOT completed.
+  /// Truly active sessions (running, starting, compacting, streaming) are classified
+  /// as [AnyCodingTaskCategory.inProgress].
+  /// Sessions with `status == 'idle'` are standing by and classified under the
+  /// completed/standby category with label '待命', without incrementing the running count.
   static AnyCodingTaskCategory classifySessionInfo(
     SessionInfo session, {
     CodexTakeoverQueueStatusMessage? takeoverQueueStatus,
@@ -193,8 +199,10 @@ class TaskStatusClassifier {
       case 'compacting':
       case 'in_progress':
       case 'streaming':
-      case 'idle': // Active session awaiting next user prompt
         return AnyCodingTaskCategory.inProgress;
+
+      case 'idle': // Active session in standby awaiting next prompt
+        return AnyCodingTaskCategory.completed;
 
       case 'completed':
       case 'done':
@@ -246,7 +254,6 @@ class TaskStatusClassifier {
         if (rawStatus == 'running' || rawStatus == 'streaming') return '运行中';
         if (rawStatus == 'starting') return '启动中';
         if (rawStatus == 'compacting') return '整理上下文';
-        if (rawStatus == 'idle') return '运行中 · 空闲';
         return '运行中';
       case AnyCodingTaskCategory.waitingApproval:
         if (rawStatus == 'waiting_approval') return '等待审批';
@@ -260,6 +267,7 @@ class TaskStatusClassifier {
         }
         return '接管排队中';
       case AnyCodingTaskCategory.completed:
+        if (rawStatus == 'idle') return '待命';
         return '已完成';
       case AnyCodingTaskCategory.failed:
         if (rawStatus == 'stopped') return '已停止';
@@ -309,6 +317,12 @@ class TaskStatusClassifier {
       final updatedAt = parseDateTime(s.lastActivityAt) ?? parseDateTime(s.createdAt);
 
       seenActiveSessionIds.add(s.id);
+      final strippedId = s.id.replaceFirst(RegExp(r'^(codex|antigravity|claude)-'), '');
+      if (strippedId.isNotEmpty) {
+        seenActiveSessionIds.add(strippedId);
+        seenActiveSessionIds.add('codex-$strippedId');
+        seenActiveSessionIds.add('antigravity-$strippedId');
+      }
       if (s.claudeSessionId != null && s.claudeSessionId!.isNotEmpty) {
         seenActiveSessionIds.add(s.claudeSessionId!);
       }
@@ -369,7 +383,13 @@ class TaskStatusClassifier {
     // 3. Process historical recent sessions (excluding duplicates)
     for (final r in recentSessions) {
       if (r.provider == 'claude') continue;
-      if (seenActiveSessionIds.contains(r.sessionId)) continue;
+      final strippedRecentId = r.sessionId.replaceFirst(RegExp(r'^(codex|antigravity|claude)-'), '');
+      if (seenActiveSessionIds.contains(r.sessionId) ||
+          seenActiveSessionIds.contains(strippedRecentId) ||
+          seenActiveSessionIds.contains('codex-$strippedRecentId') ||
+          seenActiveSessionIds.contains('antigravity-$strippedRecentId')) {
+        continue;
+      }
 
       final queueStatus = takeoverQueueByThread[r.sessionId];
       final category = (queueStatus != null && queueStatus.status == 'queued')

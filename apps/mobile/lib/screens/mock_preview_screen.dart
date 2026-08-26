@@ -6,6 +6,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../l10n/app_localizations.dart';
 import '../features/generated_image_preview/generated_image_preview_item.dart';
 import '../features/generated_image_preview/generated_image_preview_screen.dart';
 import '../features/session_list/state/session_list_cubit.dart';
