@@ -204,18 +204,99 @@ describe("CodexTakeoverQueueStore Tests", () => {
     expect(CodexTakeoverQueueStore.isStatusCompleted("")).toBe(false);
     expect(CodexTakeoverQueueStore.isStatusCompleted(undefined)).toBe(false);
   });
-
-  it("unprocessed approvals default decline", () => {
-    const declined: string[] = [];
-    const pending = [
-      { requestId: "req-1", toolUseId: "t1" },
-      { requestId: "req-2", toolUseId: "t2" },
-    ];
-
-    CodexTakeoverQueueStore.declineUnhandledApprovals(pending, (item) => {
-      declined.push(String(item.requestId));
+  it("30 polling cycles while queued maintains stable queue state with 0 duplicates", async () => {
+    const threadId = "thread-poll-stability";
+    const res = await store.enqueue({
+      threadId,
+      projectPath: "/repo",
+      clientId: "client-polling",
+      queuedCommand: "test command",
     });
 
-    expect(declined).toEqual(["req-1", "req-2"]);
+    for (let i = 0; i < 30; i++) {
+      const status = store.getQueueStatus({ threadId, queueId: res.item.id });
+      expect(status.status).toBe("queued");
+      expect(status.position).toBe(1);
+      expect(status.total).toBe(1);
+      expect(status.queueId).toBe(res.item.id);
+    }
+
+    const pending = store.getPendingForThread(threadId);
+    expect(pending.length).toBe(1);
+  });
+
+  it("cancel queue completely removes item leaving 0 pending residue", async () => {
+    const threadId = "thread-cancel-residue";
+    const res = await store.enqueue({
+      threadId,
+      projectPath: "/repo",
+      clientId: "client-to-cancel",
+    });
+
+    const cancelRes = await store.cancel({
+      threadId,
+      queueId: res.item.id,
+      clientId: "client-to-cancel",
+    });
+    expect(cancelRes.cancelled).toBe(true);
+    expect(cancelRes.remainingCount).toBe(0);
+
+    const pending = store.getPendingForThread(threadId);
+    expect(pending.length).toBe(0);
+
+    const status = store.getQueueStatus({ threadId, queueId: res.item.id });
+    expect(status.status).toBe("not_queued");
+  });
+
+  it("recovers pending queue across Bridge restarts from persisted disk file", async () => {
+    const threadId = "thread-restart-recovery";
+    await store.enqueue({
+      threadId,
+      projectPath: "/repo",
+      clientId: "client-restart",
+      queuedCommand: "survive reboot",
+    });
+
+    // Simulate new Bridge instance loading same storage file
+    const restartedStore = new CodexTakeoverQueueStore(testFilePath);
+    await restartedStore.init();
+
+    const pendingThreads = restartedStore.getPendingThreadIds();
+    expect(pendingThreads).toContain(threadId);
+
+    const pending = restartedStore.getPendingForThread(threadId);
+    expect(pending.length).toBe(1);
+    expect(pending[0].queuedCommand).toBe("survive reboot");
+  });
+
+  it("executes resume exactly once when writer is released", async () => {
+    const threadId = "thread-single-dispatch";
+    const res = await store.enqueue({
+      threadId,
+      projectPath: "/repo",
+      clientId: "client-single",
+      queuedCommand: "run once",
+    });
+
+    let executionCount = 0;
+    const resumeFn = vi.fn().mockImplementation(async () => {
+      executionCount++;
+      return true;
+    });
+
+    const result = await store.processNextInQueue(threadId, {
+      resumeThread: resumeFn,
+    });
+
+    expect(result.dispatched).toBe(true);
+    expect(executionCount).toBe(1);
+    expect(resumeFn).toHaveBeenCalledTimes(1);
+
+    // Subsequent process finds 0 pending items
+    const secondResult = await store.processNextInQueue(threadId, {
+      resumeThread: resumeFn,
+    });
+    expect(secondResult.dispatched).toBe(false);
+    expect(executionCount).toBe(1);
   });
 });

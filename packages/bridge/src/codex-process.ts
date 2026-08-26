@@ -16,6 +16,10 @@ import {
 } from "./codex-transport.js";
 import { codexCliJoinTarget } from "./codex-app-server-config.js";
 import { resolvePlatformPath } from "./path-utils.js";
+import {
+  ensureCodexCodeModeHost,
+  type CodexCodeModeStatus,
+} from "./codex-host-helper.js";
 
 export { buildCodexSpawnSpec };
 
@@ -348,6 +352,14 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
 
   get apps(): CodexAppMetadata[] {
     return this._apps;
+  }
+
+  private _codeModeStatus?: CodexCodeModeStatus;
+  get codeModeStatus(): CodexCodeModeStatus | undefined {
+    return this._codeModeStatus;
+  }
+  get codeModeAvailable(): boolean {
+    return this._codeModeStatus ? this._codeModeStatus.available : false;
   }
 
   private rpcSeq = 1;
@@ -833,6 +845,30 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     projectPath: string,
     options?: CodexStartOptions,
   ): void {
+    try {
+      this._codeModeStatus = ensureCodexCodeModeHost();
+      if (!this._codeModeStatus.available) {
+        console.warn(
+          `[codex-process] Code Mode host self-healing warning: ${
+            this._codeModeStatus.error ?? "host missing"
+          } (Code Mode will be unavailable/downgraded)`,
+        );
+      } else if (this._codeModeStatus.repaired) {
+        console.log(
+          `[codex-process] Code Mode host repaired successfully -> ${this._codeModeStatus.hostPath}`,
+        );
+      }
+    } catch (hostErr) {
+      this._codeModeStatus = {
+        available: false,
+        downgraded: true,
+        error: hostErr instanceof Error ? hostErr.message : String(hostErr),
+      };
+      console.error(
+        `[codex-process] Failed to ensure codex code-mode host:`,
+        hostErr,
+      );
+    }
     this.stopped = false;
     this._threadId = null;
     this._agentNickname = null;

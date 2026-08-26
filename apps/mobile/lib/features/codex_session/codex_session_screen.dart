@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/brand_config.dart';
@@ -747,6 +748,15 @@ class _CodexChatBody extends HookWidget {
         }
       }
 
+      final queuePrefsKey = 'codex_takeover_queue_$sessionId';
+      SharedPreferences.getInstance().then((prefs) {
+        final savedQueueId = prefs.getString(queuePrefsKey);
+        if (savedQueueId != null && savedQueueId.isNotEmpty) {
+          bridge.getCodexTakeoverQueue(sessionId);
+          isConflict.value = true;
+        }
+      });
+
       queryQueue();
 
       final subConflict = bridge.codexTakeoverConflictStream.listen((msg) {
@@ -760,11 +770,22 @@ class _CodexChatBody extends HookWidget {
           queueStatus.value = msg;
           if (msg.status == 'queued') {
             isConflict.value = true;
+            if (msg.queueId != null && msg.queueId!.isNotEmpty) {
+              SharedPreferences.getInstance().then((prefs) {
+                prefs.setString(queuePrefsKey, msg.queueId!);
+              });
+            }
           } else if (msg.status == 'resumed') {
             isConflict.value = false;
+            SharedPreferences.getInstance().then((prefs) {
+              prefs.remove(queuePrefsKey);
+            });
           } else if (msg.status == 'cancelled') {
             isConflict.value = true;
             queueStatus.value = null;
+            SharedPreferences.getInstance().then((prefs) {
+              prefs.remove(queuePrefsKey);
+            });
           }
         }
       });

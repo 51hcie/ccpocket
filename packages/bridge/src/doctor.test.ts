@@ -15,7 +15,12 @@ const mockAccessSync = vi.fn();
 vi.mock("node:fs", () => ({
   existsSync: (...args: unknown[]) => mockExistsSync(...args),
   accessSync: (...args: unknown[]) => mockAccessSync(...args),
-  constants: { R_OK: 4, W_OK: 2 },
+  realpathSync: (p: string) => p,
+  lstatSync: () => ({ isSymbolicLink: () => false }),
+  readlinkSync: (p: string) => p,
+  symlinkSync: () => {},
+  unlinkSync: () => {},
+  constants: { R_OK: 4, W_OK: 2, X_OK: 1 },
 }));
 
 // Import after mocks
@@ -70,6 +75,7 @@ describe("doctor checks", () => {
       vi.stubEnv("BRIDGE_ALLOW_CLAUDE_OAUTH", "1");
       vi.stubEnv("ANTHROPIC_API_KEY", "");
       vi.stubEnv("ANTHROPIC_AUTH_TOKEN", "");
+      mockExistsSync.mockReturnValue(true);
     });
 
     afterEach(() => {
@@ -157,6 +163,7 @@ describe("doctor checks", () => {
         if (cmd === "claude auth status") return "not logged in";
         throw new Error("command not found");
       });
+      mockExistsSync.mockReturnValue(false);
       const result = await checkCliProviders();
       expect(result.status).toBe("warn");
       const claude = result.providers.find((p: ProviderResult) => p.name === "Claude Code CLI");
@@ -183,6 +190,28 @@ describe("doctor checks", () => {
       expect(claude?.authenticated).toBe(false);
       expect(claude?.authMessage).toContain("explicit opt-in required");
       expect(claude?.remediation).toContain("BRIDGE_ALLOW_CLAUDE_OAUTH=1");
+    });
+
+    it("warns and downgrades when Codex code-mode host is missing", async () => {
+      const originalEnv = process.env.OPENAI_API_KEY;
+      process.env.OPENAI_API_KEY = "test-key";
+      try {
+        mockExecSync.mockImplementation((cmd: string) => {
+          if (cmd === "codex --version") return "0.150.0";
+          throw new Error("command not found");
+        });
+        mockExistsSync.mockReturnValue(false);
+
+        const result = await checkCliProviders();
+        expect(result.status).toBe("warn");
+        const codex = result.providers.find((p: ProviderResult) => p.name === "Codex CLI");
+        expect(codex?.installed).toBe(true);
+        expect(codex?.codeModeAvailable).toBe(false);
+        expect(codex?.authMessage).toContain("Code Mode");
+      } finally {
+        if (originalEnv === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = originalEnv;
+      }
     });
   });
 

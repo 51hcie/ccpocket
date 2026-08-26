@@ -175,6 +175,10 @@ class ChatMessageHandler {
   /// Used to suppress duplicate git errors in the chat stream.
   bool _gitTipShown = false;
 
+  /// Whether an active_writer_conflict error card has been shown in this session.
+  /// Used to deduplicate error storm cards during takeover queueing.
+  bool _activeWriterConflictShown = false;
+
   ChatStateUpdate handle(
     ServerMessage msg, {
     required bool isBackground,
@@ -329,6 +333,19 @@ class ChatMessageHandler {
         // Suppress duplicate git errors when the tip was already shown
         if (errorCode == 'git_not_available' && _gitTipShown) {
           return const ChatStateUpdate();
+        }
+        // Suppress duplicate active-writer conflict cards during polling/takeover queueing
+        if (errorCode == 'active_writer_conflict' ||
+            message.contains('active writer conflict') ||
+            message.contains('already open in another client') ||
+            message.contains('is running with an active writer')) {
+          if (_activeWriterConflictShown) {
+            logger.info(
+              '[handler] suppressed duplicate active_writer_conflict card',
+            );
+            return const ChatStateUpdate();
+          }
+          _activeWriterConflictShown = true;
         }
         // New Bridge (≥ 1.23.0): includes errorCode + original message type
         if (errorCode == 'unsupported_message') {

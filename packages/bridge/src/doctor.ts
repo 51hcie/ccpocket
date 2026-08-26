@@ -14,7 +14,7 @@ import {
 import net from "node:net";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { ensureCodexCodeModeHost } from "./codex-host-helper.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,6 +43,8 @@ export interface ProviderResult {
   installed: boolean;
   version?: string;
   authenticated: boolean;
+  codeModeAvailable?: boolean;
+  hostPath?: string;
   authMessage?: string;
   remediation?: string;
 }
@@ -165,6 +167,9 @@ export async function checkCliProviders(): Promise<
     let authMessage: string | undefined;
     let remediation: string | undefined;
 
+    let codeModeAvailable: boolean | undefined;
+    let hostPath: string | undefined;
+
     try {
       const out = execQuiet("codex --version");
       installed = true;
@@ -182,6 +187,19 @@ export async function checkCliProviders(): Promise<
           remediation = "Run: codex login";
         }
       }
+
+      // Check code-mode host self-healing & health
+      const hostStatus = ensureCodexCodeModeHost();
+      codeModeAvailable = hostStatus.available;
+      hostPath = hostStatus.hostPath;
+      if (!hostStatus.available) {
+        authMessage = authMessage
+          ? `${authMessage}; Code Mode host missing`
+          : "Code Mode host missing (Code Mode downgraded)";
+        remediation =
+          remediation ??
+          "Ensure codex-code-mode-host is present in ~/.codex/plugins/.plugin-appserver/ or Codex installation directory";
+      }
     } catch {
       remediation =
         "Install Codex CLI: curl -fsSL https://chatgpt.com/codex/install.sh | sh";
@@ -192,6 +210,8 @@ export async function checkCliProviders(): Promise<
       installed,
       version,
       authenticated,
+      codeModeAvailable,
+      hostPath,
       authMessage,
       remediation,
     });
@@ -210,11 +230,15 @@ export async function checkCliProviders(): Promise<
     };
   }
 
-  // At least one installed — check if any auth warnings
-  const hasAuthWarn = providers.some((p) => p.installed && !p.authenticated);
+  // At least one installed — check if any auth or code-mode warnings
+  const hasWarn = providers.some(
+    (p) =>
+      p.installed &&
+      (!p.authenticated || (p.name === "Codex CLI" && p.codeModeAvailable === false)),
+  );
   return {
     name: "CLI providers",
-    status: hasAuthWarn ? "warn" : "pass",
+    status: hasWarn ? "warn" : "pass",
     message: `${installedCount} of ${total} available`,
     providers,
   };

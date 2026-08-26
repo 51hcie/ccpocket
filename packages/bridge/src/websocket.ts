@@ -2452,6 +2452,29 @@ export class BridgeWebSocketServer {
               });
               break;
             }
+
+            // If this thread already has an active pending takeover queue item,
+            // return queue status immediately rather than spawning a transient session
+            // that triggers active-writer conflict error storm!
+            if (msg.sessionId) {
+              await this.codexTakeoverQueueStore.ensureInitialized();
+              const pending = this.codexTakeoverQueueStore.getPendingForThread(msg.sessionId);
+              if (pending.length > 0) {
+                const status = this.codexTakeoverQueueStore.getQueueStatus({
+                  threadId: msg.sessionId,
+                });
+                this.send(ws, {
+                  type: "codex_takeover_queue_status",
+                  threadId: msg.sessionId,
+                  queueId: status.queueId,
+                  position: status.position,
+                  total: status.total,
+                  status: status.status,
+                });
+                this.scheduleTakeoverQueueProcessing(msg.sessionId, 0);
+                break;
+              }
+            }
           }
           const additionalWritableRoots =
             provider === "codex"

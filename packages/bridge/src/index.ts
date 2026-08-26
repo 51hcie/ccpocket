@@ -25,6 +25,7 @@ import { listenForStartup } from "./server-listen.js";
 import { CodexTakeoverQueueStore } from "./codex-takeover-queue.js";
 import { UpdateService } from "./update-service.js";
 import { MonitoringService } from "./monitoring.js";
+import { ensureCodexCodeModeHost } from "./codex-host-helper.js";
 
 function startupErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -93,9 +94,38 @@ export async function startServer() {
   const codexTakeoverQueueStore = new CodexTakeoverQueueStore();
   const mdns = MDNS_ENABLED ? new MdnsAdvertiser() : undefined;
 
+  // Check and self-heal Codex code-mode host
+  try {
+    const hostStatus = ensureCodexCodeModeHost();
+    if (hostStatus.available) {
+      console.log(
+        `[bridge] Codex code-mode-host ready: ${hostStatus.hostPath}${
+          hostStatus.repaired ? " (repaired symlink)" : ""
+        }`,
+      );
+    } else {
+      console.warn(
+        `[bridge] Codex code-mode-host unavailable: ${hostStatus.error} (Code Mode downgraded)`,
+      );
+    }
+  } catch (err) {
+    console.warn(`[bridge] Failed to check codex code-mode-host:`, err);
+  }
+
   // Initialize stores (async)
   codexTakeoverQueueStore.init().then(() => {
     console.log("[bridge] Codex takeover queue store initialized");
+    if (wsServer) {
+      const pendingThreads = codexTakeoverQueueStore.getPendingThreadIds();
+      if (pendingThreads.length > 0) {
+        console.log(
+          `[bridge] Resuming takeover queue processing for threads: ${pendingThreads.join(", ")}`,
+        );
+        for (const threadId of pendingThreads) {
+          wsServer.scheduleTakeoverQueueProcessing(threadId, 500);
+        }
+      }
+    }
   }).catch((err) => {
     console.error("[bridge] Failed to initialize codex takeover queue store:", err);
   });
