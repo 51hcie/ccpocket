@@ -144,7 +144,7 @@ class NotificationService extends ChangeNotifier {
     const iosDetails = DarwinNotificationDetails();
     const macosDetails = DarwinNotificationDetails();
     const linuxDetails = LinuxNotificationDetails();
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
       macOS: macosDetails,
