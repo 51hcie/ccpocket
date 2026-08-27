@@ -210,6 +210,7 @@ export type ClientMessage =
   | { type: "install_tool_suggestion"; toolUseId: string; sessionId?: string }
   | { type: "list_sessions" }
   | { type: "stop_session"; sessionId: string }
+  | { type: "destroy_session"; sessionId: string }
   | {
       type: "rename_session";
       sessionId: string;
@@ -1303,6 +1304,7 @@ export function parseClientMessage(data: string): ClientMessage | null {
       case "list_sessions":
         break;
       case "stop_session":
+      case "destroy_session":
         if (typeof msg.sessionId !== "string") return null;
         break;
       case "rename_session":

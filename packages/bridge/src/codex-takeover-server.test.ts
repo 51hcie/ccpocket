@@ -579,4 +579,111 @@ describe("BridgeWebSocketServer Codex Takeover Queue Integration", () => {
 
     ws.close();
   });
+
+  it("does not hijack active writer session while open, and automatically claims and runs after writer releases", async () => {
+    const { ws, waitForMessage, received } = await connectClient();
+    const threadId = "thread-writer-release-auto";
+
+    vi.spyOn(bridge as any, "getCodexThreadHistory").mockResolvedValue([
+      { type: "user", text: "initial turn" },
+    ]);
+
+    let commandSentCount = 0;
+    vi.spyOn(CodexProcess.prototype, "waitForReady").mockImplementation(
+      async function (this: CodexProcess) {
+        (this as any).inputResolve = vi.fn();
+        this.emit("input_ready");
+      },
+    );
+
+    vi.spyOn(CodexProcess.prototype, "sendInputStructured").mockImplementation(
+      function (this: CodexProcess) {
+        commandSentCount++;
+      },
+    );
+
+    // 1. Client A starts an active writer session on this thread
+    const writerSessionId = (bridge["sessionManager"] as any).create(
+      "/repo",
+      undefined,
+      undefined,
+      undefined,
+      "codex",
+      { threadId },
+    );
+    const writerSession = (bridge["sessionManager"] as any).get(writerSessionId);
+    expect(writerSession).toBeDefined();
+
+    // 2. Client B enqueues a takeover
+    ws.send(
+      JSON.stringify({
+        type: "enqueue_codex_takeover",
+        threadId,
+        projectPath: "/repo",
+        clientId: "client-b-waiting",
+        queuedCommand: "post-release command",
+      }),
+    );
+
+    // 3. Receives queued status
+    const queuedMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" && m.status === "queued",
+    );
+    const queueId = queuedMsg.queueId;
+    expect(queueId).toBeDefined();
+
+    // 4. While Client A's session is alive, queue processing MUST NOT claim it
+    await new Promise((r) => setTimeout(r, 100));
+    const pendingBeforeRelease = queueStore.getPendingForThread(threadId);
+    expect(pendingBeforeRelease.length).toBe(1);
+    expect(pendingBeforeRelease[0].status).toBe("pending");
+
+    // No running or completed messages broadcasted yet
+    const runningBefore = received.filter(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        (m.status === "running" || m.status === "completed"),
+    );
+    expect(runningBefore.length).toBe(0);
+    expect(commandSentCount).toBe(0);
+
+    // 5. Now release writer session via stop_session
+    ws.send(
+      JSON.stringify({
+        type: "stop_session",
+        sessionId: writerSessionId,
+      }),
+    );
+
+    // 6. Should automatically claim and broadcast running with SAME queueId
+    const runningMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        m.status === "running" &&
+        m.queueId === queueId,
+      5000,
+    );
+    expect(runningMsg.queueId).toBe(queueId);
+    expect(runningMsg.sessionId).not.toBe(writerSessionId);
+
+    // 7. Complete the turn
+    (bridge as any).broadcastSessionMessage(runningMsg.sessionId, {
+      type: "status",
+      status: "idle",
+      sessionId: runningMsg.sessionId,
+    });
+
+    // 8. Receives completed status with SAME queueId
+    const completedMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        m.status === "completed" &&
+        m.queueId === queueId,
+    );
+    expect(completedMsg.queueId).toBe(queueId);
+    expect(commandSentCount).toBe(1);
+
+    ws.close();
+  });
 });

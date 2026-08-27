@@ -143,10 +143,13 @@ export class CodexTakeoverQueueStore {
     );
 
     if (existing) {
+      if (clientId && !existing.clientId) {
+        existing.clientId = clientId;
+      }
       if (queuedCommand && !existing.queuedCommand) {
         existing.queuedCommand = queuedCommand;
-        await this.save();
       }
+      await this.save();
       const threadPending = this.getPendingForThread(threadId);
       const pos = threadPending.findIndex((it) => it.id === existing.id) + 1;
       return {
@@ -154,6 +157,24 @@ export class CodexTakeoverQueueStore {
         isNew: false,
         position: pos > 0 ? pos : 1,
         total: threadPending.length,
+      };
+    }
+
+    const existingRunning = this.items.find(
+      (it) =>
+        (it.threadId === threadId || clean(it.threadId) === target) &&
+        (it.status === "running" ||
+          it.status === "resumed" ||
+          it.status === "dispatched") &&
+        (!clientId || !it.clientId || it.clientId === clientId),
+    );
+
+    if (existingRunning) {
+      return {
+        item: existingRunning,
+        isNew: false,
+        position: 0,
+        total: 0,
       };
     }
 
