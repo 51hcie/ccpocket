@@ -3,6 +3,15 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 
+export type CodexTakeoverQueueItemStatus =
+  | "pending"
+  | "resumed"
+  | "running"
+  | "completed"
+  | "dispatched"
+  | "cancelled"
+  | "failed";
+
 export interface CodexTakeoverQueueItem {
   id: string;
   threadId: string;
@@ -11,8 +20,11 @@ export interface CodexTakeoverQueueItem {
   clientId?: string;
   queuedCommand?: string;
   options?: Record<string, unknown>;
-  status: "pending" | "dispatched" | "cancelled";
+  status: CodexTakeoverQueueItemStatus;
   dispatchedAt?: string;
+  completedAt?: string;
+  sessionId?: string;
+  result?: string;
 }
 
 export interface CodexTakeoverQueueState {
@@ -48,20 +60,37 @@ export class CodexTakeoverQueueStore {
       const raw = await readFile(this.filePath, "utf-8");
       const data = JSON.parse(raw) as CodexTakeoverQueueState;
       if (Array.isArray(data.items)) {
-        // Keep pending items and restore them in FIFO order
-        this.items = data.items
+        const clean = (s: string) => s.replace(/^codex-/, "");
+        const seenPending = new Set<string>();
+        const restored: CodexTakeoverQueueItem[] = [];
+
+        // Sort items chronologically
+        const sorted = data.items
           .filter((item) => item && typeof item.threadId === "string")
-          .map((item) => ({
-            ...item,
-            status: (item.status === "pending"
-              ? "pending"
-              : item.status) as CodexTakeoverQueueItem["status"],
-          }))
           .sort(
             (a, b) =>
               new Date(a.enqueuedAt).getTime() -
               new Date(b.enqueuedAt).getTime(),
           );
+
+        for (const item of sorted) {
+          if (item.status === "pending") {
+            const threadKey = clean(item.threadId);
+            const dedupKey = item.clientId
+              ? `${threadKey}:${item.clientId}`
+              : threadKey;
+            if (seenPending.has(dedupKey)) {
+              // Reconcile and eliminate duplicate pending items on disk
+              restored.push({ ...item, status: "cancelled" });
+            } else {
+              seenPending.add(dedupKey);
+              restored.push({ ...item, status: "pending" });
+            }
+          } else {
+            restored.push(item);
+          }
+        }
+        this.items = restored;
       }
     } catch {
       // File doesn't exist yet or is empty
@@ -110,12 +139,14 @@ export class CodexTakeoverQueueStore {
       (it) =>
         (it.threadId === threadId || clean(it.threadId) === target) &&
         it.status === "pending" &&
-        ((clientId && it.clientId === clientId) ||
-          (queuedCommand && it.queuedCommand === queuedCommand) ||
-          (!clientId && !queuedCommand)),
+        (!clientId || !it.clientId || it.clientId === clientId),
     );
 
     if (existing) {
+      if (queuedCommand && !existing.queuedCommand) {
+        existing.queuedCommand = queuedCommand;
+        await this.save();
+      }
       const threadPending = this.getPendingForThread(threadId);
       const pos = threadPending.findIndex((it) => it.id === existing.id) + 1;
       return {
@@ -256,57 +287,138 @@ export class CodexTakeoverQueueStore {
     queueId?: string;
     position: number;
     total: number;
-    status: "queued" | "not_queued";
+    status: "queued" | "running" | "completed" | "cancelled" | "not_queued";
     item?: CodexTakeoverQueueItem;
   } {
+    const clean = (s: string) => s.replace(/^codex-/, "");
+    const target = clean(params.threadId);
     const pending = this.getPendingForThread(params.threadId);
-    if (pending.length === 0) {
-      return {
-        queueId: params.queueId,
-        position: 0,
-        total: 0,
-        status: "not_queued",
-      };
-    }
 
-    let item: CodexTakeoverQueueItem | undefined;
+    // 1. If explicit queueId specified, check that specific item
     if (params.queueId) {
-      item = pending.find((it) => it.id === params.queueId);
-    } else if (params.clientId) {
-      item = pending.find((it) => it.clientId === params.clientId);
+      const item = this.items.find(
+        (it) =>
+          (it.threadId === params.threadId || clean(it.threadId) === target) &&
+          it.id === params.queueId,
+      );
+      if (item) {
+        if (item.status === "pending") {
+          const idx = pending.findIndex((it) => it.id === item.id);
+          return {
+            queueId: item.id,
+            position: idx >= 0 ? idx + 1 : 1,
+            total: pending.length,
+            status: "queued",
+            item,
+          };
+        }
+        if (
+          item.status === "running" ||
+          item.status === "resumed" ||
+          item.status === "dispatched"
+        ) {
+          return {
+            queueId: item.id,
+            position: 0,
+            total: 0,
+            status: "running",
+            item,
+          };
+        }
+        if (item.status === "completed") {
+          return {
+            queueId: item.id,
+            position: 0,
+            total: 0,
+            status: "completed",
+            item,
+          };
+        }
+        if (item.status === "cancelled") {
+          return {
+            queueId: item.id,
+            position: 0,
+            total: pending.length,
+            status: "not_queued",
+            item,
+          };
+        }
+      } else {
+        return {
+          queueId: params.queueId,
+          position: 0,
+          total: pending.length,
+          status: "not_queued",
+        };
+      }
     }
 
-    if (item) {
-      const idx = pending.findIndex((it) => it.id === item!.id);
+    // 2. If explicit clientId specified
+    if (params.clientId) {
+      const item = pending.find((it) => it.clientId === params.clientId);
+      if (item) {
+        const idx = pending.findIndex((it) => it.id === item.id);
+        return {
+          queueId: item.id,
+          position: idx >= 0 ? idx + 1 : 1,
+          total: pending.length,
+          status: "queued",
+          item,
+        };
+      } else {
+        return {
+          queueId: undefined,
+          position: 0,
+          total: pending.length,
+          status: "not_queued",
+        };
+      }
+    }
+
+    // 3. If there are pending items for this thread
+    if (pending.length > 0) {
+      const item = pending[0];
       return {
         queueId: item.id,
-        position: idx + 1,
+        position: 1,
         total: pending.length,
         status: "queued",
         item,
       };
     }
 
-    if (params.queueId || params.clientId) {
+    // 4. Check for recently running or completed item
+    const recent = this.items
+      .slice()
+      .reverse()
+      .find(
+        (it) =>
+          (it.threadId === params.threadId || clean(it.threadId) === target) &&
+          (it.status === "running" ||
+            it.status === "completed" ||
+            it.status === "resumed" ||
+            it.status === "dispatched"),
+      );
+    if (recent) {
       return {
-        queueId: params.queueId,
+        queueId: recent.id,
         position: 0,
-        total: pending.length,
-        status: "not_queued",
+        total: 0,
+        status: recent.status === "completed" ? "completed" : "running",
+        item: recent,
       };
     }
 
     return {
-      queueId: pending[0].id,
-      position: 1,
-      total: pending.length,
-      status: "queued",
-      item: pending[0],
+      queueId: undefined,
+      position: 0,
+      total: 0,
+      status: "not_queued",
     };
   }
 
   /**
-   * Marks a queue item as dispatched.
+   * Marks a queue item as dispatched / running.
    */
   async markDispatched(queueId: string): Promise<boolean> {
     await this.ensureInitialized();
@@ -318,6 +430,73 @@ export class CodexTakeoverQueueStore {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Marks a queue item as running with associated session id.
+   */
+  async markRunning(queueId: string, sessionId?: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const item = this.items.find((it) => it.id === queueId);
+    if (
+      item &&
+      (item.status === "pending" ||
+        item.status === "resumed" ||
+        item.status === "dispatched")
+    ) {
+      item.status = "running";
+      item.dispatchedAt = item.dispatchedAt ?? new Date().toISOString();
+      if (sessionId) item.sessionId = sessionId;
+      await this.save();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Marks a queue item as completed with optional result.
+   */
+  async markCompleted(queueId: string, result?: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const item = this.items.find((it) => it.id === queueId);
+    if (item && item.status !== "completed" && item.status !== "cancelled") {
+      item.status = "completed";
+      item.completedAt = new Date().toISOString();
+      if (result) item.result = result;
+      await this.save();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Marks the most recent active/running queue item for a thread as completed.
+   */
+  async markCompletedForThread(
+    threadId: string,
+    result?: string,
+  ): Promise<CodexTakeoverQueueItem | null> {
+    await this.ensureInitialized();
+    const clean = (s: string) => s.replace(/^codex-/, "");
+    const target = clean(threadId);
+    const item = this.items
+      .slice()
+      .reverse()
+      .find(
+        (it) =>
+          (it.threadId === threadId || clean(it.threadId) === target) &&
+          (it.status === "running" ||
+            it.status === "resumed" ||
+            it.status === "dispatched"),
+      );
+    if (item) {
+      item.status = "completed";
+      item.completedAt = new Date().toISOString();
+      if (result) item.result = result;
+      await this.save();
+      return item;
+    }
+    return null;
   }
 
   /**

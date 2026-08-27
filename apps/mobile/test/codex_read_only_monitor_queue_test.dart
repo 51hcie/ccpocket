@@ -23,8 +23,9 @@ import 'package:ccpocket/theme/app_theme.dart';
 Future<Widget> buildTestCodexScreenHarness({
   required BridgeService bridge,
   required Widget child,
+  Map<String, Object> initialPrefs = const {},
 }) async {
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues(initialPrefs);
   final prefs = await SharedPreferences.getInstance();
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -601,6 +602,101 @@ void main() {
 
       await cubit.close();
       await streamingCubit.close();
+    });
+
+    testWidgets('CodexSessionScreen renders queued -> running -> completed states maintaining same queueId', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final bridge = BridgeService();
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: const CodexSessionScreen(
+          sessionId: 'thread-lifecycle-ui',
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      // 1. Queued state
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-lifecycle-ui',
+          queueId: 'q-ui-1234',
+          position: 1,
+          total: 1,
+          status: 'queued',
+        ),
+        sessionId: 'thread-lifecycle-ui',
+      );
+      await pumpN(tester);
+
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      expect(find.text('Codex 活跃写入者冲突'), findsOneWidget);
+      expect(find.textContaining('排队中: 第 1 / 1 位 (Queue ID: q-ui-1234)'), findsOneWidget);
+      expect(find.byKey(const ValueKey('codex_conflict_cancel_queue_button')), findsOneWidget);
+
+      // 2. Running / Resumed state
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-lifecycle-ui',
+          queueId: 'q-ui-1234',
+          position: 0,
+          total: 0,
+          status: 'running',
+        ),
+        sessionId: 'thread-lifecycle-ui',
+      );
+      await pumpN(tester);
+
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      expect(find.text('Codex 接管执行中'), findsOneWidget);
+      expect(find.textContaining('执行中 (Queue ID: q-ui-1234)'), findsOneWidget);
+
+      // 3. Completed state
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-lifecycle-ui',
+          queueId: 'q-ui-1234',
+          position: 0,
+          total: 0,
+          status: 'completed',
+        ),
+        sessionId: 'thread-lifecycle-ui',
+      );
+      await pumpN(tester);
+
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      expect(find.text('Codex 接管已完成'), findsOneWidget);
+      expect(find.textContaining('已完成 (Queue ID: q-ui-1234)'), findsOneWidget);
+    });
+
+    testWidgets('CodexSessionScreen restores queued state and queueId from SharedPreferences on restart', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final bridge = BridgeService();
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        initialPrefs: {
+          'codex_takeover_queue_thread-persisted-restore': 'q-restored-888',
+        },
+        child: const CodexSessionScreen(
+          sessionId: 'thread-persisted-restore',
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      // The banner should be restored from SharedPreferences immediately with queueId
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      expect(find.text('排队中: 第 1 / 1 位 (Queue ID: q-restored-888)'), findsOneWidget);
     });
   });
 }

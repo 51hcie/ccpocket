@@ -507,4 +507,76 @@ describe("BridgeWebSocketServer Codex Takeover Queue Integration", () => {
     secondBridge.close();
     secondServer.close();
   });
+
+  it("broadcasts queued -> running -> completed status with the same queueId and exactly-once command dispatch", async () => {
+    const { ws, waitForMessage } = await connectClient();
+    const threadId = "thread-full-lifecycle";
+
+    vi.spyOn(bridge as any, "getCodexThreadHistory").mockResolvedValue([
+      { type: "user", text: "initial turn" },
+    ]);
+
+    let commandSentCount = 0;
+    const readySpy = vi
+      .spyOn(CodexProcess.prototype, "waitForReady")
+      .mockImplementation(async function (this: CodexProcess) {
+        (this as any).inputResolve = vi.fn();
+        this.emit("input_ready");
+      });
+
+    vi.spyOn(CodexProcess.prototype, "sendInputStructured").mockImplementation(
+      function (this: CodexProcess) {
+        commandSentCount++;
+      },
+    );
+
+    ws.send(
+      JSON.stringify({
+        type: "enqueue_codex_takeover",
+        threadId,
+        projectPath: "/repo",
+        clientId: "client-lifecycle",
+        queuedCommand: "echo takeover_verified",
+      }),
+    );
+
+    // 1. Receives queued status
+    const queuedMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" && m.status === "queued",
+    );
+    expect(queuedMsg.queueId).toBeDefined();
+    const queueId = queuedMsg.queueId;
+
+    // 2. Receives resumed/running status with SAME queueId
+    const runningMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        m.status === "running" &&
+        m.queueId === queueId,
+    );
+    expect(runningMsg.queueId).toBe(queueId);
+    expect(runningMsg.sessionId).toBeDefined();
+
+    // 3. Simulate turn completion (session becomes idle)
+    (bridge as any).broadcastSessionMessage(runningMsg.sessionId, {
+      type: "status",
+      status: "idle",
+      sessionId: runningMsg.sessionId,
+    });
+
+    // 4. Receives completed status with SAME queueId
+    const completedMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        m.status === "completed" &&
+        m.queueId === queueId,
+    );
+    expect(completedMsg.queueId).toBe(queueId);
+
+    // 5. Command was dispatched exactly once
+    expect(commandSentCount).toBe(1);
+
+    ws.close();
+  });
 });

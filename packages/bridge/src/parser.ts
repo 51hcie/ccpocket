@@ -614,7 +614,14 @@ export type ServerMessage =
       queueId?: string;
       position: number;
       total: number;
-      status: "queued" | "dispatched" | "cancelled" | "not_queued" | "resumed";
+      status:
+        | "queued"
+        | "dispatched"
+        | "cancelled"
+        | "not_queued"
+        | "resumed"
+        | "running"
+        | "completed";
       sessionId?: string;
     }
   | {

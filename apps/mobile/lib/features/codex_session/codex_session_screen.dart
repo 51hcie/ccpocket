@@ -752,8 +752,15 @@ class _CodexChatBody extends HookWidget {
       SharedPreferences.getInstance().then((prefs) {
         final savedQueueId = prefs.getString(queuePrefsKey);
         if (savedQueueId != null && savedQueueId.isNotEmpty) {
-          bridge.getCodexTakeoverQueue(sessionId);
+          queueStatus.value = CodexTakeoverQueueStatusMessage(
+            threadId: sessionId,
+            queueId: savedQueueId,
+            position: 1,
+            total: 1,
+            status: 'queued',
+          );
           isConflict.value = true;
+          bridge.getCodexTakeoverQueue(sessionId, queueId: savedQueueId);
         }
       });
 
@@ -775,13 +782,21 @@ class _CodexChatBody extends HookWidget {
                 prefs.setString(queuePrefsKey, msg.queueId!);
               });
             }
-          } else if (msg.status == 'resumed') {
+          } else if (msg.status == 'resumed' || msg.status == 'running') {
             isConflict.value = false;
-            SharedPreferences.getInstance().then((prefs) {
-              prefs.remove(queuePrefsKey);
-            });
-          } else if (msg.status == 'cancelled') {
-            isConflict.value = true;
+            if (msg.queueId != null && msg.queueId!.isNotEmpty) {
+              SharedPreferences.getInstance().then((prefs) {
+                prefs.setString(queuePrefsKey, msg.queueId!);
+              });
+            }
+          } else if (msg.status == 'completed') {
+            isConflict.value = false;
+            if (msg.queueId != null && msg.queueId!.isNotEmpty) {
+              SharedPreferences.getInstance().then((prefs) {
+                prefs.setString(queuePrefsKey, msg.queueId!);
+              });
+            }
+          } else if (msg.status == 'cancelled' || msg.status == 'not_queued') {
             queueStatus.value = null;
             SharedPreferences.getInstance().then((prefs) {
               prefs.remove(queuePrefsKey);
@@ -1456,7 +1471,10 @@ class _CodexChatBody extends HookWidget {
                   ReconnectBanner(bridgeState: bridgeState),
                 if (isConflict.value ||
                     (queueStatus.value != null &&
-                        queueStatus.value!.isQueued))
+                        (queueStatus.value!.status == 'queued' ||
+                            queueStatus.value!.status == 'resumed' ||
+                            queueStatus.value!.status == 'running' ||
+                            queueStatus.value!.status == 'completed')))
                   _CodexTakeoverConflictBanner(
                     threadId: sessionId,
                     projectPath: effectiveProjectPath,
@@ -2215,17 +2233,55 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final isQueued = queueStatus?.isQueued ?? false;
+    final isRunning = queueStatus?.isRunning ?? false;
+    final isCompleted = queueStatus?.isCompleted ?? false;
+    final queueId = queueStatus?.queueId;
+
+    String bannerTitle;
+    String bannerDesc;
+    Color borderColor;
+    Color bgColor;
+    Color iconColor;
+    IconData iconData;
+
+    if (isCompleted) {
+      bannerTitle = 'Codex 接管已完成';
+      bannerDesc =
+          '接管任务已成功执行完成${queueId != null ? ' (Queue ID: $queueId)' : ''}';
+      bgColor = isDark ? const Color(0xFF064E3B) : const Color(0xFFECFDF5);
+      borderColor =
+          isDark ? const Color(0xFF059669) : const Color(0xFFA7F3D0);
+      iconColor = isDark ? const Color(0xFF34D399) : const Color(0xFF059669);
+      iconData = Icons.check_circle_outline;
+    } else if (isRunning) {
+      bannerTitle = 'Codex 接管执行中';
+      bannerDesc =
+          '前序写入者已释放，已自动接管会话并派发指令...${queueId != null ? ' (Queue ID: $queueId)' : ''}';
+      bgColor = isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF);
+      borderColor =
+          isDark ? const Color(0xFF3B82F6) : const Color(0xFFBFDBFE);
+      iconColor = isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+      iconData = Icons.sync;
+    } else {
+      bannerTitle = 'Codex 活跃写入者冲突';
+      bannerDesc = isQueued
+          ? '已加入接管排队，正在等待前序写入者释放...${queueId != null ? ' (Queue ID: $queueId)' : ''}'
+          : (message ?? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。');
+      bgColor = isDark ? const Color(0xFF451A03) : const Color(0xFFFFFBEB);
+      borderColor =
+          isDark ? const Color(0xFFB45309) : const Color(0xFFFDE68A);
+      iconColor = isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
+      iconData = Icons.warning_amber_rounded;
+    }
 
     return Container(
       key: const ValueKey('codex_takeover_conflict_banner'),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF451A03) : const Color(0xFFFFFBEB),
+        color: bgColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDark ? const Color(0xFFB45309) : const Color(0xFFFDE68A),
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2233,31 +2289,64 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                size: 18,
-                color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-              ),
+              Icon(iconData, size: 18, color: iconColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Codex 活跃写入者冲突',
+                  bannerTitle,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                    color: isDark
+                        ? const Color(0xFFFDE68A)
+                        : const Color(0xFF92400E),
                   ),
                 ),
               ),
-              if (isQueued)
+              if (isCompleted)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '已完成${queueId != null ? ' (Queue ID: $queueId)' : ''}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                )
+              else if (isRunning)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    '排队中: 第 ${queueStatus!.position} / ${queueStatus!.total} 位',
+                    '执行中${queueId != null ? ' (Queue ID: $queueId)' : ''}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                )
+              else if (isQueued)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '排队中: 第 ${queueStatus!.position} / ${queueStatus!.total} 位${queueId != null ? ' (Queue ID: $queueId)' : ''}',
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -2269,10 +2358,12 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            message ?? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。',
+            bannerDesc,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF78350F),
+              color: isDark
+                  ? const Color(0xFFFDE68A)
+                  : const Color(0xFF78350F),
             ),
           ),
           const SizedBox(height: 10),
@@ -2287,11 +2378,12 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
                 label: const Text('刷新'),
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   textStyle: const TextStyle(fontSize: 12),
                 ),
               ),
-              if (!isQueued)
+              if (!isQueued && !isRunning && !isCompleted)
                 FilledButton.icon(
                   key: const ValueKey('codex_conflict_queue_button'),
                   onPressed: onQueueTakeover,
@@ -2299,11 +2391,12 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
                   label: const Text('排队接管'),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     textStyle: const TextStyle(fontSize: 12),
                   ),
                 )
-              else
+              else if (isQueued)
                 OutlinedButton.icon(
                   key: const ValueKey('codex_conflict_cancel_queue_button'),
                   onPressed: onCancelQueue,
@@ -2312,21 +2405,24 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     foregroundColor: cs.error,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),
-              OutlinedButton.icon(
-                key: const ValueKey('codex_conflict_fork_button'),
-                onPressed: onForkContinuation,
-                icon: const Icon(Icons.fork_right, size: 14),
-                label: const Text('另起继续任务'),
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  textStyle: const TextStyle(fontSize: 12),
+              if (!isRunning && !isCompleted)
+                OutlinedButton.icon(
+                  key: const ValueKey('codex_conflict_fork_button'),
+                  onPressed: onForkContinuation,
+                  icon: const Icon(Icons.fork_right, size: 14),
+                  label: const Text('另起继续任务'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
                 ),
-              ),
             ],
           ),
         ],

@@ -291,12 +291,79 @@ describe("CodexTakeoverQueueStore Tests", () => {
     expect(result.dispatched).toBe(true);
     expect(executionCount).toBe(1);
     expect(resumeFn).toHaveBeenCalledTimes(1);
+  });
 
-    // Subsequent process finds 0 pending items
-    const secondResult = await store.processNextInQueue(threadId, {
-      resumeThread: resumeFn,
+  it("transitions through queued -> running -> completed maintaining the same queueId", async () => {
+    const threadId = "thread-lifecycle-id";
+    const res = await store.enqueue({
+      threadId,
+      projectPath: "/repo",
+      clientId: "client-lifecycle",
+      queuedCommand: "execute turn",
     });
-    expect(secondResult.dispatched).toBe(false);
-    expect(executionCount).toBe(1);
+
+    const queueId = res.item.id;
+    expect(res.item.status).toBe("pending");
+
+    // 1. Check initial queued status
+    const queuedStatus = store.getQueueStatus({ threadId, queueId });
+    expect(queuedStatus.status).toBe("queued");
+    expect(queuedStatus.queueId).toBe(queueId);
+
+    // 2. Mark running upon writer acquisition
+    const ran = await store.markRunning(queueId, "session-123");
+    expect(ran).toBe(true);
+
+    const runningStatus = store.getQueueStatus({ threadId, queueId });
+    expect(runningStatus.status).toBe("running");
+    expect(runningStatus.queueId).toBe(queueId);
+
+    // 3. Mark completed upon turn execution finished
+    const completed = await store.markCompletedForThread(threadId, "ok");
+    expect(completed).not.toBeNull();
+    expect(completed?.id).toBe(queueId);
+
+    const completedStatus = store.getQueueStatus({ threadId, queueId });
+    expect(completedStatus.status).toBe("completed");
+    expect(completedStatus.queueId).toBe(queueId);
+
+    // 4. Verify persisted state reloaded from disk keeps completed status and same queueId
+    const reloaded = new CodexTakeoverQueueStore(testFilePath);
+    await reloaded.init();
+    const diskStatus = reloaded.getQueueStatus({ threadId, queueId });
+    expect(diskStatus.status).toBe("completed");
+    expect(diskStatus.queueId).toBe(queueId);
+  });
+
+  it("reconciles and deduplicates duplicate pending items on disk initialization", async () => {
+    const threadId = "thread-dedup-init";
+    // Directly inject duplicate items
+    const rawData = {
+      items: [
+        {
+          id: "q1",
+          threadId,
+          projectPath: "/repo",
+          enqueuedAt: "2026-08-27T00:00:00Z",
+          status: "pending",
+        },
+        {
+          id: "q2",
+          threadId,
+          projectPath: "/repo",
+          enqueuedAt: "2026-08-27T00:01:00Z",
+          status: "pending",
+        },
+      ],
+    };
+    const { writeFile } = await import("node:fs/promises");
+    await writeFile(testFilePath, JSON.stringify(rawData, null, 2), "utf-8");
+
+    const newStore = new CodexTakeoverQueueStore(testFilePath);
+    await newStore.init();
+
+    const pending = newStore.getPendingForThread(threadId);
+    expect(pending.length).toBe(1);
+    expect(pending[0].id).toBe("q1");
   });
 });

@@ -2799,8 +2799,16 @@ class BridgeService implements BridgeServiceBase {
     ));
   }
 
-  void getCodexTakeoverQueue(String threadId) {
-    send(ClientMessage.getCodexTakeoverQueue(threadId: threadId));
+  void getCodexTakeoverQueue(
+    String threadId, {
+    String? queueId,
+    String? clientId,
+  }) {
+    send(ClientMessage.getCodexTakeoverQueue(
+      threadId: threadId,
+      queueId: queueId,
+      clientId: clientId,
+    ));
   }
 
   @visibleForTesting

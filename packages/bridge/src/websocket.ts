@@ -7272,7 +7272,7 @@ export class BridgeWebSocketServer {
         this.platform,
       );
 
-      // Safe handover of queuedCommand to SessionManager queue / runtime queue BEFORE markDispatched
+      // Safe handover of queuedCommand to SessionManager queue / runtime queue BEFORE markRunning / markDispatched
       if (nextItem.queuedCommand && createdSession) {
         this.sessionManager.queueCodexInput(createdSession.id, {
           itemId: randomUUID(),
@@ -7282,8 +7282,11 @@ export class BridgeWebSocketServer {
         });
       }
 
-      // Mark dispatched in store AFTER command has been safely handed over
-      await this.codexTakeoverQueueStore.markDispatched(nextItem.id);
+      // Mark running in store AFTER command has been safely handed over
+      await this.codexTakeoverQueueStore.markRunning(
+        nextItem.id,
+        createdSession?.id ?? sessionId,
+      );
       this.threadQueueBackoffs.delete(threadId);
 
       if (createdSession) {
@@ -7295,17 +7298,42 @@ export class BridgeWebSocketServer {
         );
       }
 
-      // Broadcast session_list & takeover resumed status
+      // Broadcast session_list & takeover resumed & running status with SAME queueId
       this.broadcastSessionList();
       this.broadcast({
         type: "codex_takeover_queue_status",
         threadId: nextItem.threadId,
         queueId: nextItem.id,
         position: 0,
-        total: this.codexTakeoverQueueStore.getPendingForThread(threadId).length,
+        total: 0,
         status: "resumed",
         sessionId: createdSession?.id ?? sessionId,
       });
+      this.broadcast({
+        type: "codex_takeover_queue_status",
+        threadId: nextItem.threadId,
+        queueId: nextItem.id,
+        position: 0,
+        total: 0,
+        status: "running",
+        sessionId: createdSession?.id ?? sessionId,
+      });
+
+      // If no command was queued, transition to completed immediately
+      if (!nextItem.queuedCommand) {
+        void (async () => {
+          await this.codexTakeoverQueueStore.markCompleted(nextItem.id);
+          this.broadcast({
+            type: "codex_takeover_queue_status",
+            threadId: nextItem.threadId,
+            queueId: nextItem.id,
+            position: 0,
+            total: 0,
+            status: "completed",
+            sessionId: createdSession?.id ?? sessionId,
+          });
+        })();
+      }
 
       // If more pending items exist for this thread, schedule next processing
       const remaining = this.codexTakeoverQueueStore.getPendingForThread(threadId);
@@ -7501,6 +7529,33 @@ export class BridgeWebSocketServer {
     this.flushSessionDeltaBatches(sessionId);
     this.trackSessionMessage(sessionId, msg);
     this.broadcastSessionMessageNow(sessionId, msg, exclude);
+
+    // Track completion of queued takeover commands
+    const anyMsg = msg as any;
+    if (
+      (anyMsg.type === "status" &&
+        (anyMsg.status === "idle" || anyMsg.status === "completed")) ||
+      anyMsg.type === "turn_complete"
+    ) {
+      const session = this.sessionManager.get(sessionId);
+      const threadId = session?.claudeSessionId ?? sessionId;
+      void (async () => {
+        const completedItem =
+          await this.codexTakeoverQueueStore.markCompletedForThread(threadId);
+        if (completedItem) {
+          const queueCompletedMsg = {
+            type: "codex_takeover_queue_status",
+            threadId: completedItem.threadId,
+            queueId: completedItem.id,
+            position: 0,
+            total: 0,
+            status: "completed",
+            sessionId,
+          };
+          this.broadcast(queueCompletedMsg);
+        }
+      })();
+    }
   }
 
   private shouldBatchDelta(

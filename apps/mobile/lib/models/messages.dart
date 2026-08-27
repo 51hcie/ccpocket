@@ -1356,6 +1356,8 @@ class CodexTakeoverQueueStatusMessage implements ServerMessage {
   });
 
   bool get isQueued => status == 'queued' && position > 0;
+  bool get isRunning => status == 'running' || status == 'resumed';
+  bool get isCompleted => status == 'completed';
 }
 
 class CodexReadOnlyInfoMessage implements ServerMessage {
@@ -4504,9 +4506,13 @@ class ClientMessage {
 
   factory ClientMessage.getCodexTakeoverQueue({
     required String threadId,
+    String? queueId,
+    String? clientId,
   }) => ClientMessage._(<String, dynamic>{
     'type': 'get_codex_takeover_queue',
     'threadId': threadId,
+    'queueId': ?queueId,
+    'clientId': ?clientId,
   });
 
   factory ClientMessage.listProjectHistory() =>

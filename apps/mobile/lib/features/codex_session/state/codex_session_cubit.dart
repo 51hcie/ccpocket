@@ -88,7 +88,8 @@ class CodexSessionCubit extends ChatSessionCubit {
     });
 
     _queueStatusSub = bridge.codexTakeoverQueueStatusStream.listen((msg) {
-      if (matchesThread(msg.threadId) && msg.status == 'resumed') {
+      if (matchesThread(msg.threadId) &&
+          (msg.status == 'resumed' || msg.status == 'running')) {
         _onSessionResumed();
       }
     });
