@@ -139,7 +139,7 @@ export class CodexTakeoverQueueStore {
       (it) =>
         (it.threadId === threadId || clean(it.threadId) === target) &&
         it.status === "pending" &&
-        (!clientId || !it.clientId || it.clientId === clientId),
+        (!clientId ? !it.clientId : it.clientId === clientId),
     );
 
     if (existing) {
@@ -166,7 +166,7 @@ export class CodexTakeoverQueueStore {
         (it.status === "running" ||
           it.status === "resumed" ||
           it.status === "dispatched") &&
-        (!clientId || !it.clientId || it.clientId === clientId),
+        (!clientId ? !it.clientId : it.clientId === clientId),
     );
 
     if (existingRunning) {
