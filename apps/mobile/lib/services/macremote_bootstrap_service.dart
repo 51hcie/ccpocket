@@ -87,8 +87,8 @@ class BootstrapEndpoint {
 /// Parses a raw bridge URL into a validated [BootstrapEndpoint].
 ///
 /// Supports:
-/// - `ws://[2408:824e:158d:5a80:875:122:45bf:5441]:8766`
-/// - `[2408:824e:158d:5a80:875:122:45bf:5441]:8766`
+/// - `ws://[2408:824e:158f:a0b0:1073:8a93:6e80:75b1]:8766`
+/// - `[2408:824e:158f:a0b0:1073:8a93:6e80:75b1]:8766`
 /// - `ws://192.168.1.100:8765`
 /// - `wss://example.com:8765`
 BootstrapEndpoint? parseBootstrapEndpoint(String rawUrl) {
@@ -292,11 +292,14 @@ Future<String?> restoreMacremotePresetConnection({
   MacremoteBootstrapConfig? config,
 }) async {
   final effectiveConfig = config ?? MacremoteBootstrapConfig.fromEnvironment();
-  if (effectiveConfig.bridgeUrl == null ||
-      effectiveConfig.bridgeUrl!.trim().isEmpty) {
+  var bridgeUrl = effectiveConfig.bridgeUrl;
+  if ((bridgeUrl == null || bridgeUrl.trim().isEmpty) && BrandConfig.isAnyCoding) {
+    bridgeUrl = BrandConfig.defaultAnyCodingBridgeUrl;
+  }
+  if (bridgeUrl == null || bridgeUrl.trim().isEmpty) {
     return null;
   }
-  final parsed = parseBootstrapEndpoint(effectiveConfig.bridgeUrl!);
+  final parsed = parseBootstrapEndpoint(bridgeUrl);
   if (parsed == null) return null;
 
   await prefs.setString(kPrefKeyBridgeUrl, parsed.wsUrl);

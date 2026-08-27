@@ -60,7 +60,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
 
     try {
       _currentVersionName = await _service.getCurrentVersionName();
-      final bridgeUrl = widget.bridge.lastUrl ?? 'ws://127.0.0.1:8766';
+      final bridgeUrl = widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
       final manifest = await _service.fetchManifest(bridgeUrl);
       final hasUpdate = await _service.isUpdateAvailable(manifest);
 
@@ -92,7 +92,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
     });
 
     try {
-      final bridgeUrl = widget.bridge.lastUrl ?? 'ws://127.0.0.1:8766';
+      final bridgeUrl = widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
       final apkPath = await _service.downloadAndVerifyApk(
         bridgeUrl: bridgeUrl,
         manifest: _manifest!,
@@ -213,7 +213,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.bridge.lastUrl ?? 'ws://127.0.0.1:8766',
+                        widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl,
                         style: AppTypography.caption(context),
                       ),
                     ],

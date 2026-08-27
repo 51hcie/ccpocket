@@ -71,7 +71,7 @@ class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
     }
 
     try {
-      final bridgeUrl = widget.bridge.lastUrl ?? 'ws://127.0.0.1:8766';
+      final bridgeUrl = widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
       final result = await _service.fetchMonitoringData(bridgeUrl);
       if (mounted) {
         setState(() {
