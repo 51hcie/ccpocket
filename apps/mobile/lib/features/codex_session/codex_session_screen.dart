@@ -705,6 +705,11 @@ class _CodexChatBody extends HookWidget {
         if (cleanThreadId.isNotEmpty && cleanThreadId == cleanSessionId) {
           return true;
         }
+        if (readOnlyInfo.value != null &&
+            (readOnlyInfo.value!.threadId == threadId ||
+                readOnlyInfo.value!.threadId == cleanThreadId)) {
+          return true;
+        }
         for (final s in bridge.sessions) {
           final cleanSId =
               s.id.replaceFirst(RegExp(r'^(codex|antigravity|claude)-'), '');
@@ -749,17 +754,19 @@ class _CodexChatBody extends HookWidget {
       }
 
       final queuePrefsKey = 'codex_takeover_queue_$sessionId';
+      final queueStatusPrefsKey = 'codex_takeover_queue_status_$sessionId';
       SharedPreferences.getInstance().then((prefs) {
         final savedQueueId = prefs.getString(queuePrefsKey);
+        final savedStatus = prefs.getString(queueStatusPrefsKey) ?? 'queued';
         if (savedQueueId != null && savedQueueId.isNotEmpty) {
           queueStatus.value = CodexTakeoverQueueStatusMessage(
             threadId: sessionId,
             queueId: savedQueueId,
-            position: 1,
-            total: 1,
-            status: 'queued',
+            position: savedStatus == 'queued' ? 1 : 0,
+            total: savedStatus == 'queued' ? 1 : 0,
+            status: savedStatus,
           );
-          isConflict.value = true;
+          isConflict.value = savedStatus == 'queued';
           bridge.getCodexTakeoverQueue(sessionId, queueId: savedQueueId);
         }
       });
@@ -773,13 +780,19 @@ class _CodexChatBody extends HookWidget {
         }
       });
       final subQueue = bridge.codexTakeoverQueueStatusStream.listen((msg) {
-        if (matchesThread(msg.threadId)) {
+        final currentQueueId = queueStatus.value?.queueId;
+        if (matchesThread(msg.threadId) ||
+            (msg.sessionId != null && matchesThread(msg.sessionId!)) ||
+            (msg.queueId != null &&
+                currentQueueId != null &&
+                msg.queueId == currentQueueId)) {
           queueStatus.value = msg;
           if (msg.status == 'queued') {
             isConflict.value = true;
             if (msg.queueId != null && msg.queueId!.isNotEmpty) {
               SharedPreferences.getInstance().then((prefs) {
                 prefs.setString(queuePrefsKey, msg.queueId!);
+                prefs.setString(queueStatusPrefsKey, 'queued');
               });
             }
           } else if (msg.status == 'resumed' || msg.status == 'running') {
@@ -787,6 +800,7 @@ class _CodexChatBody extends HookWidget {
             if (msg.queueId != null && msg.queueId!.isNotEmpty) {
               SharedPreferences.getInstance().then((prefs) {
                 prefs.setString(queuePrefsKey, msg.queueId!);
+                prefs.setString(queueStatusPrefsKey, 'running');
               });
             }
           } else if (msg.status == 'completed') {
@@ -794,12 +808,14 @@ class _CodexChatBody extends HookWidget {
             if (msg.queueId != null && msg.queueId!.isNotEmpty) {
               SharedPreferences.getInstance().then((prefs) {
                 prefs.setString(queuePrefsKey, msg.queueId!);
+                prefs.setString(queueStatusPrefsKey, 'completed');
               });
             }
           } else if (msg.status == 'cancelled' || msg.status == 'not_queued') {
             queueStatus.value = null;
             SharedPreferences.getInstance().then((prefs) {
               prefs.remove(queuePrefsKey);
+              prefs.remove(queueStatusPrefsKey);
             });
           }
         }
@@ -820,8 +836,11 @@ class _CodexChatBody extends HookWidget {
                 msg.message.contains('already open in another client') ||
                 msg.message.contains('is running with an active writer') ||
                 msg.message.contains('active writer'))) {
-          isConflict.value = true;
-          conflictMessage.value = msg.message;
+          if (queueStatus.value == null ||
+              queueStatus.value!.status == 'queued') {
+            isConflict.value = true;
+            conflictMessage.value = msg.message;
+          }
         }
       });
       return () {
@@ -1480,7 +1499,10 @@ class _CodexChatBody extends HookWidget {
                     projectPath: effectiveProjectPath,
                     message: conflictMessage.value,
                     queueStatus: queueStatus.value,
-                    onRefresh: () => bridge.requestSessionHistory(sessionId),
+                    onRefresh: () {
+                      bridge.requestSessionHistory(sessionId);
+                      bridge.getCodexTakeoverQueue(sessionId);
+                    },
                     onQueueTakeover: () {
                       if (effectiveProjectPath != null) {
                         final composerText = chatInputController.text.trim();
@@ -2264,9 +2286,15 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
       iconData = Icons.sync;
     } else {
       bannerTitle = 'Codex 活跃写入者冲突';
+      final friendlyDesc = (message != null &&
+              (message!.contains('already open in another client') ||
+                  message!.contains('active_writer_conflict') ||
+                  message!.contains('active writer conflict')))
+          ? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。'
+          : (message ?? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。');
       bannerDesc = isQueued
           ? '已加入接管排队，正在等待前序写入者释放...${queueId != null ? ' (Queue ID: $queueId)' : ''}'
-          : (message ?? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。');
+          : friendlyDesc;
       bgColor = isDark ? const Color(0xFF451A03) : const Color(0xFFFFFBEB);
       borderColor =
           isDark ? const Color(0xFFB45309) : const Color(0xFFFDE68A);

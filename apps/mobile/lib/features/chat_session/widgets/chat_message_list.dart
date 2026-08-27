@@ -376,7 +376,21 @@ class _ChatMessageListState extends State<ChatMessageList> {
     _notifyScrollMetricsAfterLayout();
     final chatState = context.watch<ChatSessionCubit>().state;
     final hiddenToolUseIds = chatState.hiddenToolUseIds;
-    final allEntries = chatState.entries;
+    final allEntries = chatState.entries.where((entry) {
+      if (entry is ServerChatEntry) {
+        final msg = entry.message;
+        if (msg is ErrorMessage) {
+          if (msg.errorCode == 'active_writer_conflict' ||
+              msg.message.contains('already open in another client') ||
+              msg.message.contains('active writer conflict') ||
+              msg.message.contains('is running with an active writer') ||
+              msg.message.contains('active writer')) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }).toList();
 
     // Watch only the isStreaming flag (not the full streaming text) so the
     // list rebuilds when streaming starts/stops (to adjust itemCount) but NOT

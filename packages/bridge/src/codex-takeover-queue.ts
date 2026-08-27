@@ -25,6 +25,8 @@ export interface CodexTakeoverQueueItem {
   completedAt?: string;
   sessionId?: string;
   result?: string;
+  dispatchCount?: number;
+  dispatchMarker?: string;
 }
 
 export interface CodexTakeoverQueueState {
@@ -310,6 +312,9 @@ export class CodexTakeoverQueueStore {
     total: number;
     status: "queued" | "running" | "completed" | "cancelled" | "not_queued";
     item?: CodexTakeoverQueueItem;
+    dispatchCount?: number;
+    dispatchMarker?: string;
+    sessionId?: string;
   } {
     const clean = (s: string) => s.replace(/^codex-/, "");
     const target = clean(params.threadId);
@@ -317,11 +322,14 @@ export class CodexTakeoverQueueStore {
 
     // 1. If explicit queueId specified, check that specific item
     if (params.queueId) {
-      const item = this.items.find(
+      let item = this.items.find(
         (it) =>
           (it.threadId === params.threadId || clean(it.threadId) === target) &&
           it.id === params.queueId,
       );
+      if (!item) {
+        item = this.items.find((it) => it.id === params.queueId);
+      }
       if (item) {
         if (item.status === "pending") {
           const idx = pending.findIndex((it) => it.id === item.id);
@@ -331,6 +339,9 @@ export class CodexTakeoverQueueStore {
             total: pending.length,
             status: "queued",
             item,
+            dispatchCount: item.dispatchCount ?? 0,
+            dispatchMarker: item.dispatchMarker,
+            sessionId: item.sessionId,
           };
         }
         if (
@@ -344,6 +355,9 @@ export class CodexTakeoverQueueStore {
             total: 0,
             status: "running",
             item,
+            dispatchCount: item.dispatchCount ?? 1,
+            dispatchMarker: item.dispatchMarker,
+            sessionId: item.sessionId,
           };
         }
         if (item.status === "completed") {
@@ -353,6 +367,9 @@ export class CodexTakeoverQueueStore {
             total: 0,
             status: "completed",
             item,
+            dispatchCount: item.dispatchCount ?? 1,
+            dispatchMarker: item.dispatchMarker,
+            sessionId: item.sessionId,
           };
         }
         if (item.status === "cancelled") {
@@ -362,6 +379,9 @@ export class CodexTakeoverQueueStore {
             total: pending.length,
             status: "not_queued",
             item,
+            dispatchCount: item.dispatchCount,
+            dispatchMarker: item.dispatchMarker,
+            sessionId: item.sessionId,
           };
         }
       } else {
@@ -385,6 +405,9 @@ export class CodexTakeoverQueueStore {
           total: pending.length,
           status: "queued",
           item,
+          dispatchCount: item.dispatchCount ?? 0,
+          dispatchMarker: item.dispatchMarker,
+          sessionId: item.sessionId,
         };
       } else {
         return {
@@ -405,6 +428,9 @@ export class CodexTakeoverQueueStore {
         total: pending.length,
         status: "queued",
         item,
+        dispatchCount: item.dispatchCount ?? 0,
+        dispatchMarker: item.dispatchMarker,
+        sessionId: item.sessionId,
       };
     }
 
@@ -427,6 +453,9 @@ export class CodexTakeoverQueueStore {
         total: 0,
         status: recent.status === "completed" ? "completed" : "running",
         item: recent,
+        dispatchCount: recent.dispatchCount ?? 1,
+        dispatchMarker: recent.dispatchMarker,
+        sessionId: recent.sessionId,
       };
     }
 
@@ -456,7 +485,11 @@ export class CodexTakeoverQueueStore {
   /**
    * Marks a queue item as running with associated session id.
    */
-  async markRunning(queueId: string, sessionId?: string): Promise<boolean> {
+  async markRunning(
+    queueId: string,
+    sessionId?: string,
+    dispatchMarker?: string,
+  ): Promise<boolean> {
     await this.ensureInitialized();
     const item = this.items.find((it) => it.id === queueId);
     if (
@@ -467,6 +500,9 @@ export class CodexTakeoverQueueStore {
     ) {
       item.status = "running";
       item.dispatchedAt = item.dispatchedAt ?? new Date().toISOString();
+      item.dispatchCount = (item.dispatchCount ?? 0) + 1;
+      item.dispatchMarker =
+        dispatchMarker ?? item.dispatchMarker ?? randomUUID();
       if (sessionId) item.sessionId = sessionId;
       await this.save();
       return true;

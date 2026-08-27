@@ -625,6 +625,8 @@ export type ServerMessage =
         | "running"
         | "completed";
       sessionId?: string;
+      dispatchCount?: number;
+      dispatchMarker?: string;
     }
   | {
       type: "codex_read_only_info";

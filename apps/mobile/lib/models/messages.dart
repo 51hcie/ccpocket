@@ -910,6 +910,9 @@ sealed class ServerMessage {
         position: json['position'] as int? ?? 0,
         total: json['total'] as int? ?? 0,
         status: json['status'] as String? ?? 'not_queued',
+        sessionId: json['sessionId'] as String?,
+        dispatchCount: json['dispatchCount'] as int?,
+        dispatchMarker: json['dispatchMarker'] as String?,
       ),
       'codex_read_only_info' => CodexReadOnlyInfoMessage(
         threadId: json['threadId'] as String? ?? '',
@@ -1346,6 +1349,9 @@ class CodexTakeoverQueueStatusMessage implements ServerMessage {
   final int position;
   final int total;
   final String status;
+  final String? sessionId;
+  final int? dispatchCount;
+  final String? dispatchMarker;
 
   const CodexTakeoverQueueStatusMessage({
     required this.threadId,
@@ -1353,6 +1359,9 @@ class CodexTakeoverQueueStatusMessage implements ServerMessage {
     required this.position,
     required this.total,
     required this.status,
+    this.sessionId,
+    this.dispatchCount,
+    this.dispatchMarker,
   });
 
   bool get isQueued => status == 'queued' && position > 0;

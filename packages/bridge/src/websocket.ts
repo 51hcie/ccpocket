@@ -713,6 +713,7 @@ export class BridgeWebSocketServer {
   private threadQueueTimers = new Map<string, NodeJS.Timeout>();
   private threadQueueBackoffs = new Map<string, number>();
   private threadQueueProcessing = new Set<string>();
+  private sessionToThreadMap = new Map<string, string>();
 
   private recentSessionsRequestId = 0;
   private debugEvents = new Map<string, DebugTraceEvent[]>();
@@ -2574,6 +2575,12 @@ export class BridgeWebSocketServer {
                   usedFallback: false,
                 };
           const createdSession = this.sessionManager.get(sessionId);
+          if (sessionId && ((msg as any).threadId || msg.sessionId)) {
+            this.sessionToThreadMap.set(
+              sessionId,
+              (msg as any).threadId || msg.sessionId,
+            );
+          }
           const cached = this.sessionManager.getCachedCommands(
             provider,
             createdSession?.worktreePath ?? projectPath,
@@ -5334,15 +5341,17 @@ export class BridgeWebSocketServer {
           options: msg.options,
         });
         const statusMsg = {
-          type: "codex_takeover_queue_status",
+          type: "codex_takeover_queue_status" as const,
           threadId: msg.threadId,
           queueId: result.item.id,
           position: result.position,
           total: result.total,
-          status: "queued",
+          status: "queued" as const,
+          dispatchCount: result.item.dispatchCount ?? 0,
+          dispatchMarker: result.item.dispatchMarker,
         };
         this.send(ws, statusMsg);
-        this.broadcast(statusMsg);
+        this.broadcastTakeoverStatus(statusMsg);
         this.scheduleTakeoverQueueProcessing(msg.threadId, 0);
         break;
       }
@@ -5357,25 +5366,42 @@ export class BridgeWebSocketServer {
           this.stopTakeoverQueueProcessing(msg.threadId);
         }
         const cancelMsg = {
-          type: "codex_takeover_queue_status",
+          type: "codex_takeover_queue_status" as const,
           threadId: msg.threadId,
           queueId: msg.queueId,
           position: 0,
           total: result.remainingCount,
-          status: "cancelled",
+          status: "cancelled" as const,
         };
         this.send(ws, cancelMsg);
-        this.broadcast(cancelMsg);
+        this.broadcastTakeoverStatus(cancelMsg);
         break;
       }
 
       case "get_codex_takeover_queue": {
         await this.codexTakeoverQueueStore.ensureInitialized();
-        const status = this.codexTakeoverQueueStore.getQueueStatus({
-          threadId: msg.threadId,
+        let targetThreadId =
+          this.sessionToThreadMap.get(msg.threadId) ?? msg.threadId;
+        const session = this.sessionManager.get(msg.threadId);
+        if (session?.claudeSessionId) {
+          targetThreadId = session.claudeSessionId;
+          this.sessionToThreadMap.set(msg.threadId, targetThreadId);
+        } else if ((session as any)?.threadId) {
+          targetThreadId = (session as any).threadId;
+          this.sessionToThreadMap.set(msg.threadId, targetThreadId);
+        }
+        let status = this.codexTakeoverQueueStore.getQueueStatus({
+          threadId: targetThreadId,
           queueId: msg.queueId,
           clientId: msg.clientId,
         });
+        if (!status.status && targetThreadId !== msg.threadId) {
+          status = this.codexTakeoverQueueStore.getQueueStatus({
+            threadId: msg.threadId,
+            queueId: msg.queueId,
+            clientId: msg.clientId,
+          });
+        }
         this.send(ws, {
           type: "codex_takeover_queue_status",
           threadId: msg.threadId,
@@ -5383,6 +5409,9 @@ export class BridgeWebSocketServer {
           position: status.position,
           total: status.total,
           status: status.status,
+          sessionId: status.sessionId,
+          dispatchCount: status.dispatchCount,
+          dispatchMarker: status.dispatchMarker,
         });
         break;
       }
@@ -7118,6 +7147,20 @@ export class BridgeWebSocketServer {
     }
   }
 
+  private broadcastTakeoverStatus(statusMsg: {
+    type: "codex_takeover_queue_status";
+    threadId: string;
+    queueId?: string;
+    position: number;
+    total: number;
+    status: string;
+    sessionId?: string;
+    dispatchCount?: number;
+    dispatchMarker?: string;
+  }): void {
+    this.broadcast(statusMsg);
+  }
+
   scheduleTakeoverQueueProcessing(threadId: string, delayMs = 0): void {
     if (this.threadQueueTimers.has(threadId)) {
       clearTimeout(this.threadQueueTimers.get(threadId)!);
@@ -7268,10 +7311,11 @@ export class BridgeWebSocketServer {
         this.platform,
       );
 
+      const dispatchMarker = randomUUID();
       // Safe handover of queuedCommand to SessionManager queue / runtime queue BEFORE markRunning / markDispatched
       if (nextItem.queuedCommand && createdSession) {
         this.sessionManager.queueCodexInput(createdSession.id, {
-          itemId: randomUUID(),
+          itemId: dispatchMarker,
           text: nextItem.queuedCommand,
           createdAt: new Date().toISOString(),
           userMessageUuid: nextCodexUserTurnUuid(createdSession),
@@ -7282,10 +7326,12 @@ export class BridgeWebSocketServer {
       await this.codexTakeoverQueueStore.markRunning(
         nextItem.id,
         createdSession?.id ?? sessionId,
+        dispatchMarker,
       );
       this.threadQueueBackoffs.delete(threadId);
 
       if (createdSession) {
+        this.sessionToThreadMap.set(createdSession.id, nextItem.threadId);
         await this.loadAndSetSessionName(
           createdSession,
           "codex",
@@ -7296,7 +7342,7 @@ export class BridgeWebSocketServer {
 
       // Broadcast session_list & takeover resumed & running status with SAME queueId
       this.broadcastSessionList();
-      this.broadcast({
+      this.broadcastTakeoverStatus({
         type: "codex_takeover_queue_status",
         threadId: nextItem.threadId,
         queueId: nextItem.id,
@@ -7304,8 +7350,10 @@ export class BridgeWebSocketServer {
         total: 0,
         status: "resumed",
         sessionId: createdSession?.id ?? sessionId,
+        dispatchCount: 1,
+        dispatchMarker,
       });
-      this.broadcast({
+      this.broadcastTakeoverStatus({
         type: "codex_takeover_queue_status",
         threadId: nextItem.threadId,
         queueId: nextItem.id,
@@ -7313,13 +7361,15 @@ export class BridgeWebSocketServer {
         total: 0,
         status: "running",
         sessionId: createdSession?.id ?? sessionId,
+        dispatchCount: 1,
+        dispatchMarker,
       });
 
       // If no command was queued, transition to completed immediately
       if (!nextItem.queuedCommand) {
         void (async () => {
           await this.codexTakeoverQueueStore.markCompleted(nextItem.id);
-          this.broadcast({
+          this.broadcastTakeoverStatus({
             type: "codex_takeover_queue_status",
             threadId: nextItem.threadId,
             queueId: nextItem.id,
@@ -7327,6 +7377,8 @@ export class BridgeWebSocketServer {
             total: 0,
             status: "completed",
             sessionId: createdSession?.id ?? sessionId,
+            dispatchCount: 1,
+            dispatchMarker,
           });
         })();
       }
@@ -7534,21 +7586,27 @@ export class BridgeWebSocketServer {
       anyMsg.type === "turn_complete"
     ) {
       const session = this.sessionManager.get(sessionId);
-      const threadId = session?.claudeSessionId ?? sessionId;
+      const threadId =
+        session?.claudeSessionId ??
+        (session as any)?.threadId ??
+        this.sessionToThreadMap.get(sessionId) ??
+        sessionId;
       void (async () => {
         const completedItem =
           await this.codexTakeoverQueueStore.markCompletedForThread(threadId);
         if (completedItem) {
           const queueCompletedMsg = {
-            type: "codex_takeover_queue_status",
+            type: "codex_takeover_queue_status" as const,
             threadId: completedItem.threadId,
             queueId: completedItem.id,
             position: 0,
             total: 0,
-            status: "completed",
+            status: "completed" as const,
             sessionId,
+            dispatchCount: completedItem.dispatchCount ?? 1,
+            dispatchMarker: completedItem.dispatchMarker,
           };
-          this.broadcast(queueCompletedMsg);
+          this.broadcastTakeoverStatus(queueCompletedMsg);
         }
       })();
     }
@@ -7665,7 +7723,14 @@ export class BridgeWebSocketServer {
 
   private destroySession(sessionId: string): void {
     const session = this.sessionManager.get(sessionId);
-    const threadId = session?.claudeSessionId ?? sessionId;
+    const threadId =
+      session?.claudeSessionId ??
+      (session as any)?.threadId ??
+      this.sessionToThreadMap.get(sessionId) ??
+      sessionId;
+    if (threadId) {
+      this.sessionToThreadMap.set(sessionId, threadId);
+    }
     this.flushSessionDeltaBatches(sessionId);
     this.sessionManager.destroy(sessionId);
     if (threadId) {

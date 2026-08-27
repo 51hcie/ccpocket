@@ -698,5 +698,38 @@ void main() {
       expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
       expect(find.text('排队中: 第 1 / 1 位 (Queue ID: q-restored-888)'), findsOneWidget);
     });
+
+    testWidgets('Active writer conflict ErrorMessage is suppressed from chat message list in CodexSessionScreen', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final bridge = BridgeService();
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: const CodexSessionScreen(
+          sessionId: 'thread-no-error-card',
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      bridge.testHandleMessage(
+        const ErrorMessage(
+          message: 'This Codex thread is already open in another client. Close it there and try again.',
+          errorCode: 'active_writer_conflict',
+          sessionId: 'thread-no-error-card',
+        ),
+        sessionId: 'thread-no-error-card',
+      );
+      await pumpN(tester);
+
+      // The conflict banner should be shown
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      // But NO error message card containing 'already open in another client' should exist in the chat message list
+      expect(find.textContaining('This Codex thread is already open in another client'), findsNothing);
+    });
   });
 }

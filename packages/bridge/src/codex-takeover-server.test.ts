@@ -682,7 +682,82 @@ describe("BridgeWebSocketServer Codex Takeover Queue Integration", () => {
         m.queueId === queueId,
     );
     expect(completedMsg.queueId).toBe(queueId);
+    expect(completedMsg.dispatchCount).toBe(1);
+    expect(completedMsg.dispatchMarker).toBeDefined();
     expect(commandSentCount).toBe(1);
+
+    ws.close();
+  });
+
+  it("get_codex_takeover_queue looks up by queueId fallback and returns dispatchCount", async () => {
+    const threadId = "thread-fallback-test";
+    const { item } = await queueStore.enqueue({
+      threadId,
+      projectPath: "/repo",
+      clientId: "client-fallback",
+      queuedCommand: "echo fallback",
+    });
+
+    await queueStore.markRunning(item.id, "session-123", "marker-xyz");
+
+    const { ws, waitForMessage } = await connectClient();
+
+    // Query with queueId only on different alias thread
+    ws.send(
+      JSON.stringify({
+        type: "get_codex_takeover_queue",
+        threadId: "different-thread-or-session-alias",
+        queueId: item.id,
+      }),
+    );
+
+    const statusMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" && m.queueId === item.id,
+    );
+
+    expect(statusMsg.queueId).toBe(item.id);
+    expect(statusMsg.status).toBe("running");
+    expect(statusMsg.dispatchCount).toBe(1);
+    expect(statusMsg.dispatchMarker).toBe("marker-xyz");
+
+    ws.close();
+  });
+
+  it("broadcastTakeoverStatus broadcasts exactly once with dispatch metadata", async () => {
+    const threadId = "thread-single-broadcast-test";
+
+    const { ws, received, waitForMessage } = await connectClient();
+
+    (bridge as any).broadcastTakeoverStatus({
+      type: "codex_takeover_queue_status",
+      threadId,
+      queueId: "q-single-1",
+      position: 0,
+      total: 0,
+      status: "running",
+      dispatchCount: 1,
+      dispatchMarker: "marker-abc",
+    });
+
+    const msg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        m.queueId === "q-single-1" &&
+        m.status === "running",
+    );
+    expect(msg.queueId).toBe("q-single-1");
+    expect(msg.dispatchCount).toBe(1);
+    expect(msg.dispatchMarker).toBe("marker-abc");
+
+    // Ensure exactly 1 message was broadcasted
+    await new Promise((r) => setTimeout(r, 50));
+    const all = received.filter(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        m.queueId === "q-single-1",
+    );
+    expect(all.length).toBe(1);
 
     ws.close();
   });

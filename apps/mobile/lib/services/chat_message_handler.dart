@@ -334,18 +334,17 @@ class ChatMessageHandler {
         if (errorCode == 'git_not_available' && _gitTipShown) {
           return const ChatStateUpdate();
         }
-        // Suppress duplicate active-writer conflict cards during polling/takeover queueing
+        // Suppress active-writer conflict cards during polling/takeover queueing;
+        // active writer conflict is exclusively presented via the takeover conflict banner and queue stream.
         if (errorCode == 'active_writer_conflict' ||
             message.contains('active writer conflict') ||
             message.contains('already open in another client') ||
-            message.contains('is running with an active writer')) {
-          if (_activeWriterConflictShown) {
-            logger.info(
-              '[handler] suppressed duplicate active_writer_conflict card',
-            );
-            return const ChatStateUpdate();
-          }
-          _activeWriterConflictShown = true;
+            message.contains('is running with an active writer') ||
+            message.contains('active writer')) {
+          logger.info(
+            '[handler] suppressed active_writer_conflict card (handled by takeover banner)',
+          );
+          return const ChatStateUpdate();
         }
         // New Bridge (≥ 1.23.0): includes errorCode + original message type
         if (errorCode == 'unsupported_message') {
