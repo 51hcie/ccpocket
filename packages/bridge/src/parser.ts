@@ -110,6 +110,7 @@ export type ClientMessage =
       projectPath: string;
       provider?: Provider;
       sessionId?: string;
+      threadId?: string;
       continue?: boolean;
       permissionMode?: PermissionMode;
       executionMode?: ExecutionMode;
@@ -976,6 +977,8 @@ export function parseClientMessage(data: string): ClientMessage | null {
         break;
       case "start":
         if (typeof msg.projectPath !== "string") return null;
+        if (msg.threadId !== undefined && typeof msg.threadId !== "string")
+          return null;
         if (msg.model !== undefined && typeof msg.model !== "string")
           return null;
         if (
