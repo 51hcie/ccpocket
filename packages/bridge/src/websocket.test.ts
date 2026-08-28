@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolvePlatformPath } from "./path-utils.js";
+import { globalAntigravityStore } from "./antigravity-store.js";
 
 const {
   getSessionHistoryMock,
@@ -22,6 +23,9 @@ const {
   saveCodexSessionProfileMock,
   generateCommitMessageMock,
   gitCommitMock,
+  findCodexSessionJsonlPathMock,
+  findSessionJsonlPathMock,
+  loadCodexSessionNamesMock,
 } = vi.hoisted(() => ({
   getSessionHistoryMock: vi.fn(),
   getCodexSessionHistoryMock: vi.fn(),
@@ -32,6 +36,9 @@ const {
   saveCodexSessionProfileMock: vi.fn(),
   generateCommitMessageMock: vi.fn(),
   gitCommitMock: vi.fn(),
+  findCodexSessionJsonlPathMock: vi.fn(),
+  findSessionJsonlPathMock: vi.fn(),
+  loadCodexSessionNamesMock: vi.fn().mockResolvedValue(new Map()),
 }));
 
 vi.mock("./sessions-index.js", () => ({
@@ -45,6 +52,9 @@ vi.mock("./sessions-index.js", () => ({
   saveCodexSessionProfile: saveCodexSessionProfileMock,
   renameClaudeSession: vi.fn().mockResolvedValue(true),
   renameCodexSession: vi.fn().mockResolvedValue(true),
+  findCodexSessionJsonlPath: findCodexSessionJsonlPathMock,
+  findSessionJsonlPath: findSessionJsonlPathMock,
+  loadCodexSessionNames: loadCodexSessionNamesMock,
 }));
 
 vi.mock("./debug-trace-store.js", () => ({
@@ -179,6 +189,7 @@ vi.mock("./session.js", () => ({
         installToolSuggestion: vi.fn(async () => {}),
         interrupt: vi.fn(),
         getPendingPermission: vi.fn(() => undefined),
+        setConversationId: vi.fn(),
       };
       this.sessions.set(id, {
         id,
@@ -190,6 +201,8 @@ vi.mock("./session.js", () => ({
           "threadId" in codexOptions
             ? (codexOptions as { threadId?: string }).threadId
             : options?.sessionId,
+        antigravityConversationId:
+          provider === "antigravity" ? options?.sessionId : undefined,
         pastMessages,
         codexInitialHistoryPending: false,
         codexOptions,
@@ -208,7 +221,21 @@ vi.mock("./session.js", () => ({
     }
 
     get(id: string) {
-      return this.sessions.get(id);
+      const direct = this.sessions.get(id);
+      if (direct) return direct;
+      for (const session of this.sessions.values()) {
+        if (
+          session.claudeSessionId === id ||
+          session.antigravityConversationId === id
+        ) {
+          return session;
+        }
+      }
+      return undefined;
+    }
+
+    getAll() {
+      return Array.from(this.sessions.values());
     }
 
     queueCodexInput(id: string, input: any) {
@@ -8176,5 +8203,223 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     });
 
     bridge.close();
+  });
+
+  describe("Build 224 Provider Inference and Takeover Follow-up Regression Tests", () => {
+    it("resumes missing-provider Codex thread by detecting codex storage", async () => {
+      findCodexSessionJsonlPathMock.mockResolvedValueOnce("/mock/.codex/sessions/rollout-thread-abc.jsonl");
+      getCodexSessionHistoryMock.mockResolvedValueOnce([
+        {
+          role: "user",
+          content: [{ type: "text", text: "codex past question" }],
+        },
+      ]);
+
+      const bridge = new BridgeWebSocketServer({ server: httpServer });
+      const ws = {
+        readyState: OPEN_STATE,
+        send: vi.fn(),
+      } as any;
+
+      await (bridge as any).handleClientMessage(
+        {
+          type: "resume_session",
+          sessionId: "01a00976-b3f1-7831-8e03-b61c86acfac7",
+          projectPath: "/tmp/project-codex",
+          // provider is omitted/missing
+        },
+        ws,
+      );
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const created = ws.send.mock.calls
+        .map((c: unknown[]) => JSON.parse(c[0] as string))
+        .find((m: any) => m.type === "system" && m.subtype === "session_created");
+
+      expect(created).toBeDefined();
+      expect(created.provider).toBe("codex");
+      expect(created.sessionId).toBe("s-1");
+
+      bridge.close();
+    });
+
+    it("resumes missing-provider Claude session by detecting claude storage", async () => {
+      findCodexSessionJsonlPathMock.mockResolvedValueOnce(null);
+      loadCodexSessionNamesMock.mockResolvedValueOnce(new Map());
+      findSessionJsonlPathMock.mockResolvedValueOnce("/mock/.claude/projects/p1/claude-thread-1.jsonl");
+      getSessionHistoryMock.mockResolvedValueOnce([
+        {
+          role: "user",
+          content: [{ type: "text", text: "claude past question" }],
+        },
+      ]);
+
+      const bridge = new BridgeWebSocketServer({ server: httpServer });
+      const ws = {
+        readyState: OPEN_STATE,
+        send: vi.fn(),
+      } as any;
+
+      await (bridge as any).handleClientMessage(
+        {
+          type: "resume_session",
+          sessionId: "claude-thread-1",
+          projectPath: "/tmp/project-claude",
+          // provider is omitted/missing
+        },
+        ws,
+      );
+
+      await vi.waitFor(() => {
+        const created = ws.send.mock.calls
+          .map((c: unknown[]) => JSON.parse(c[0] as string))
+          .find((m: any) => m.type === "system" && m.subtype === "session_created");
+        expect(created).toBeDefined();
+        expect(created.provider).toBe("claude");
+      });
+
+      bridge.close();
+    });
+
+    it("resumes missing-provider Antigravity session by detecting antigravity store", async () => {
+      findCodexSessionJsonlPathMock.mockResolvedValueOnce(null);
+      loadCodexSessionNamesMock.mockResolvedValueOnce(new Map());
+      findSessionJsonlPathMock.mockResolvedValueOnce(null);
+
+      vi.spyOn(globalAntigravityStore, "getSession").mockReturnValue({
+        antigravityConversationId: "agy-conv-777",
+        workspacePath: "/tmp/project-agy",
+      } as any);
+
+      const bridge = new BridgeWebSocketServer({ server: httpServer });
+      const ws = {
+        readyState: OPEN_STATE,
+        send: vi.fn(),
+      } as any;
+
+      await (bridge as any).handleClientMessage(
+        {
+          type: "resume_session",
+          sessionId: "agy-conv-777",
+          projectPath: "/tmp/project-agy",
+          // provider is omitted/missing
+        },
+        ws,
+      );
+
+      await Promise.resolve();
+
+      const created = ws.send.mock.calls
+        .map((c: unknown[]) => JSON.parse(c[0] as string))
+        .find((m: any) => m.type === "system" && m.subtype === "session_created");
+
+      expect(created).toBeDefined();
+      expect(created.provider).toBe("antigravity");
+      expect(created.sourceSessionId).toBe("agy-conv-777");
+
+      bridge.close();
+    });
+
+    it("fails closed with clear error and does not dispatch to Claude when provider cannot be determined", async () => {
+      findCodexSessionJsonlPathMock.mockResolvedValueOnce(null);
+      loadCodexSessionNamesMock.mockResolvedValueOnce(new Map());
+      findSessionJsonlPathMock.mockResolvedValueOnce(null);
+      vi.spyOn(globalAntigravityStore, "getSession").mockReturnValueOnce(undefined);
+
+      const bridge = new BridgeWebSocketServer({ server: httpServer });
+      const ws = {
+        readyState: OPEN_STATE,
+        send: vi.fn(),
+      } as any;
+
+      await (bridge as any).handleClientMessage(
+        {
+          type: "resume_session",
+          sessionId: "completely-unknown-session-id",
+          projectPath: "/tmp/project-unknown",
+          // provider is omitted/missing
+        },
+        ws,
+      );
+
+      const sends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+
+      const resumeFailed = sends.find(
+        (m: any) => m.type === "system" && m.subtype === "session_resume_failed",
+      );
+      expect(resumeFailed).toBeDefined();
+      expect(resumeFailed.sourceSessionId).toBe("completely-unknown-session-id");
+
+      const errorMsg = sends.find((m: any) => m.type === "error");
+      expect(errorMsg).toBeDefined();
+      expect(errorMsg.message).toContain("Unable to determine provider for session");
+
+      // Verify NO Claude session was created
+      expect((bridge as any).sessionManager.list()).toHaveLength(0);
+
+      bridge.close();
+    });
+
+    it("dispatches continuous commands to Codex session looked up by underlying threadId", async () => {
+      const bridge = new BridgeWebSocketServer({ server: httpServer });
+      const ws = {
+        readyState: OPEN_STATE,
+        send: vi.fn(),
+      } as any;
+
+      // Create a Codex session with threadId
+      const targetThreadId = "01a00976-b3f1-7831-8e03-b61c86acfac7";
+      const sessionId = (bridge as any).sessionManager.create(
+        "/tmp/project-codex",
+        undefined,
+        undefined,
+        undefined,
+        "codex",
+        { threadId: targetThreadId },
+      );
+
+      const session = (bridge as any).sessionManager.get(sessionId);
+      expect(session).toBeDefined();
+      expect(session.claudeSessionId).toBe(targetThreadId);
+
+      // Verify lookup by threadId succeeds via sessionManager.get
+      expect((bridge as any).sessionManager.get(targetThreadId)).toBe(session);
+
+      // 1. Dispatch first instruction using targetThreadId
+      await (bridge as any).handleClientMessage(
+        {
+          type: "input",
+          sessionId: targetThreadId,
+          text: "marker-command-1",
+          clientMessageId: "msg-1",
+        },
+        ws,
+      );
+
+      expect(session.process.sendInput).toHaveBeenCalledWith("marker-command-1");
+
+      // 2. Dispatch second instruction using targetThreadId
+      await (bridge as any).handleClientMessage(
+        {
+          type: "input",
+          sessionId: targetThreadId,
+          text: "marker-command-2",
+          clientMessageId: "msg-2",
+        },
+        ws,
+      );
+
+      expect(session.process.sendInput).toHaveBeenCalledWith("marker-command-2");
+
+      // Verify no "No active session" errors were sent
+      const errors = ws.send.mock.calls
+        .map((c: unknown[]) => JSON.parse(c[0] as string))
+        .filter((m: any) => m.type === "error");
+      expect(errors).toHaveLength(0);
+
+      bridge.close();
+    });
   });
 });

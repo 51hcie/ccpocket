@@ -153,17 +153,19 @@ CodexRecentResumeSettings factualCodexResumeSettings(
   );
 }
 
-enum SessionResumeDisposition { dispatched, alreadyQueued }
+enum SessionResumeDisposition { dispatched, alreadyQueued, unresolvedProvider }
 
 class SessionResumeDispatch {
   final SessionResumeDisposition disposition;
   final String projectPath;
   final String gitBranch;
+  final String? errorMessage;
 
   const SessionResumeDispatch({
     required this.disposition,
-    required this.projectPath,
-    required this.gitBranch,
+    this.projectPath = '',
+    this.gitBranch = '',
+    this.errorMessage,
   });
 }
 
@@ -185,7 +187,14 @@ class SessionResumeCoordinator {
     RecentSession session, {
     String? resumeRequestId,
   }) async {
-    final provider = session.provider ?? Provider.claude.value;
+    final String? provider =
+        session.provider ?? (session.isCodex ? Provider.codex.value : null);
+    if (provider == null || provider.isEmpty) {
+      return const SessionResumeDispatch(
+        disposition: SessionResumeDisposition.unresolvedProvider,
+        errorMessage: '无法识别会话引擎提供方 (provider)，已阻止错误分派',
+      );
+    }
     final projectPath = session.resumeCwd?.isNotEmpty == true
         ? session.resumeCwd!
         : session.projectPath;

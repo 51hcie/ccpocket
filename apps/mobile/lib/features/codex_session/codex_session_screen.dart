@@ -1562,6 +1562,7 @@ class _CodexChatBody extends HookWidget {
                           bridge.resumeSession(
                             sessionId,
                             effectiveProjectPath,
+                            provider: Provider.codex.value,
                           );
                         }
                       }

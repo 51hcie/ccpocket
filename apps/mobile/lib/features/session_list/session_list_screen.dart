@@ -1444,6 +1444,14 @@ class _SessionListScreenState extends State<SessionListScreen>
     final result =
         await SessionResumeCoordinator(bridge: bridge).resume(session);
     if (!mounted) return;
+    if (result.disposition == SessionResumeDisposition.unresolvedProvider) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.errorMessage ?? '无法识别会话引擎提供方 (provider)，已阻止错误分派'),
+        ),
+      );
+      return;
+    }
     if (result.disposition == SessionResumeDisposition.alreadyQueued) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1515,7 +1523,7 @@ class _SessionListScreenState extends State<SessionListScreen>
       forkSession: !isCodex ? edited.claudeForkSession : null,
       persistSession: !isCodex ? edited.claudePersistSession : null,
       profile: isCodex ? edited.codexProfile : null,
-      provider: session.provider,
+      provider: edited.provider.value,
       sandboxMode: isCodex && useCodexCustomPermissions
           ? null
           : edited.sandboxMode?.value,
@@ -1777,7 +1785,9 @@ class _SessionListScreenState extends State<SessionListScreen>
               worktreePath: worktreePath,
               provider: provider == 'antigravity'
                   ? Provider.antigravity
-                  : (provider == 'codex' ? Provider.codex : null),
+                  : (provider == 'codex'
+                      ? Provider.codex
+                      : (provider == 'claude' ? Provider.claude : null)),
               permissionMode: permissionMode,
               sandboxMode: sandboxMode,
               approvalPolicy: approvalPolicy,
@@ -2010,7 +2020,11 @@ class _SessionListScreenState extends State<SessionListScreen>
                 projectPath: projectPath,
                 gitBranch: gitBranch,
                 worktreePath: worktreePath,
-                provider: provider == 'codex' ? Provider.codex : null,
+                provider: provider == 'antigravity'
+                    ? Provider.antigravity
+                    : (provider == 'codex'
+                        ? Provider.codex
+                        : (provider == 'claude' ? Provider.claude : null)),
                 permissionMode: permissionMode,
                 sandboxMode: sandboxMode,
                 approvalPolicy: approvalPolicy,

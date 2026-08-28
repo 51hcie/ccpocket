@@ -2649,7 +2649,7 @@ function getCodexSearchInput(payload: Record<string, unknown>): Record<string, u
  * Find the JSONL file path for a given sessionId by searching sessions-index.json files,
  * then falling back to scanning directories for the JSONL file directly.
  */
-async function findSessionJsonlPath(sessionId: string): Promise<string | null> {
+export async function findSessionJsonlPath(sessionId: string): Promise<string | null> {
   const projectsDir = join(homedir(), ".claude", "projects");
 
   let projectDirs: string[];
@@ -2704,7 +2704,7 @@ async function findSessionJsonlPath(sessionId: string): Promise<string | null> {
   return null;
 }
 
-async function findCodexSessionJsonlPath(threadId: string): Promise<string | null> {
+export async function findCodexSessionJsonlPath(threadId: string): Promise<string | null> {
   const files = await listCodexSessionFiles();
   for (const filePath of files) {
     const fallbackSessionId = basename(filePath, ".jsonl");

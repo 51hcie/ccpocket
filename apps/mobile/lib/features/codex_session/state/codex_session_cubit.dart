@@ -89,7 +89,9 @@ class CodexSessionCubit extends ChatSessionCubit {
 
     _queueStatusSub = bridge.codexTakeoverQueueStatusStream.listen((msg) {
       if (matchesThread(msg.threadId) &&
-          (msg.status == 'resumed' || msg.status == 'running')) {
+          (msg.status == 'resumed' ||
+              msg.status == 'running' ||
+              msg.status == 'completed')) {
         _onSessionResumed();
       }
     });
@@ -158,7 +160,7 @@ class CodexSessionCubit extends ChatSessionCubit {
       emit(state.copyWith(entries: [...state.entries, entry]));
 
       final project = state.projectPath ?? '';
-      bridge.resumeSession(sessionId, project);
+      bridge.resumeSession(sessionId, project, provider: Provider.codex.value);
       return;
     }
 
@@ -174,7 +176,7 @@ class CodexSessionCubit extends ChatSessionCubit {
       sendMessage(command.trim());
     } else {
       final project = state.projectPath ?? '';
-      bridge.resumeSession(sessionId, project);
+      bridge.resumeSession(sessionId, project, provider: Provider.codex.value);
     }
   }
 

@@ -631,7 +631,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
     });
     NotificationService.instance.setActiveSession(
       sessionId: selection.sessionId,
-      provider: selection.provider == Provider.codex ? 'codex' : 'claude',
+      provider: selection.provider?.value ?? 'claude',
     );
     _notifyPresentationChanged();
   }
@@ -1075,7 +1075,7 @@ class _WorkspaceContentHost extends StatelessWidget {
             ?.clearSelectedSession,
         hideSessionBackButton: true,
       ),
-      _ => ClaudeSessionScreen(
+      Provider.claude => ClaudeSessionScreen(
         key: ValueKey('workspace_claude_${selection.sessionId}'),
         sessionId: selection.sessionId,
         provider: Provider.claude,
@@ -1090,6 +1090,29 @@ class _WorkspaceContentHost extends StatelessWidget {
         onBackToSessions: WorkspaceShellScreen.maybeOf(context)
             ?.clearSelectedSession,
         hideSessionBackButton: true,
+      ),
+      null => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.amber),
+              const SizedBox(height: 16),
+              Text(
+                '无法识别会话引擎提供方 (provider)，已阻止错误分派',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.tonal(
+                onPressed: WorkspaceShellScreen.maybeOf(context)
+                    ?.clearSelectedSession,
+                child: const Text('返回会话列表'),
+              ),
+            ],
+          ),
+        ),
       ),
     };
   }

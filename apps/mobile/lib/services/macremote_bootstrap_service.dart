@@ -87,8 +87,8 @@ class BootstrapEndpoint {
 /// Parses a raw bridge URL into a validated [BootstrapEndpoint].
 ///
 /// Supports:
-/// - `ws://[2408:824e:158f:a0b0:1073:8a93:6e80:75b1]:8766`
-/// - `[2408:824e:158f:a0b0:1073:8a93:6e80:75b1]:8766`
+/// - `ws://[2408:824e:1562:9420::6f1]:8766`
+/// - `[2408:824e:1562:9420::6f1]:8766`
 /// - `ws://192.168.1.100:8765`
 /// - `wss://example.com:8765`
 BootstrapEndpoint? parseBootstrapEndpoint(String rawUrl) {

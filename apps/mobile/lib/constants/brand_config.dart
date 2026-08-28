@@ -27,7 +27,7 @@ class BrandConfig {
 
   /// Default bridge WebSocket URL for AnyCoding.
   static const String defaultAnyCodingBridgeUrl =
-      'ws://[2408:824e:158f:a0b0:1073:8a93:6e80:75b1]:8766';
+      'ws://[2408:824e:1562:9420::6f1]:8766';
 
   /// Short open-source attribution note for settings / about pages.
   static String get openSourceAttribution =>

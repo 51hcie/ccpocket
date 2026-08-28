@@ -100,4 +100,78 @@ void main() {
     expect(result.disposition, SessionResumeDisposition.alreadyQueued);
     expect(bridge.sentMessages, isEmpty);
   });
+
+  test('infers codex provider from codexSettings when provider is missing and resumes with provider=codex', () async {
+    final session = RecentSession.fromJson({
+      'sessionId': '01a00976-b3f1-7831-8e03-b61c86acfac7',
+      // provider is omitted/missing
+      'firstPrompt': 'Codex task without provider',
+      'created': '2026-08-25T00:00:00Z',
+      'modified': '2026-08-25T01:00:00Z',
+      'gitBranch': 'main',
+      'projectPath': '/workspace/app',
+      'codexSettings': {
+        'approvalPolicy': 'never',
+        'model': 'gpt-5.4',
+      },
+    });
+
+    expect(session.isCodex, isTrue);
+    expect(session.provider, 'codex');
+
+    final result = await SessionResumeCoordinator(bridge: bridge).resume(session);
+
+    expect(result.disposition, SessionResumeDisposition.dispatched);
+    expect(bridge.sentMessages, hasLength(1));
+    final message = jsonDecode(bridge.sentMessages.single.toJson()) as Map<String, dynamic>;
+    expect(message['type'], 'resume_session');
+    expect(message['sessionId'], '01a00976-b3f1-7831-8e03-b61c86acfac7');
+    expect(message['provider'], 'codex');
+  });
+
+  test('fails closed and does not dispatch when provider is missing and cannot be inferred', () async {
+    final session = RecentSession.fromJson({
+      'sessionId': 'unknown-session-without-provider',
+      // provider is omitted/missing
+      'firstPrompt': 'Mystery session',
+      'created': '2026-08-25T00:00:00Z',
+      'modified': '2026-08-25T01:00:00Z',
+      'gitBranch': 'main',
+      'projectPath': '/workspace/app',
+    });
+
+    expect(session.provider, isNull);
+    expect(session.isCodex, isFalse);
+
+    final result = await SessionResumeCoordinator(bridge: bridge).resume(session);
+
+    expect(result.disposition, SessionResumeDisposition.unresolvedProvider);
+    expect(result.errorMessage, contains('无法识别会话引擎提供方'));
+    // CRITICAL: Fail-closed safeguard: must NOT send resume_session or default to Claude!
+    expect(bridge.sentMessages, isEmpty);
+  });
+
+  test('infers antigravity provider when antigravityConversationId is present and resumes with provider=antigravity', () async {
+    final session = RecentSession.fromJson({
+      'sessionId': 'agy-session-123',
+      // provider is omitted/missing
+      'antigravityConversationId': 'agy-conv-999',
+      'firstPrompt': 'Antigravity session',
+      'created': '2026-08-25T00:00:00Z',
+      'modified': '2026-08-25T01:00:00Z',
+      'gitBranch': 'main',
+      'projectPath': '/workspace/app',
+    });
+
+    expect(session.provider, 'antigravity');
+
+    final result = await SessionResumeCoordinator(bridge: bridge).resume(session);
+
+    expect(result.disposition, SessionResumeDisposition.dispatched);
+    expect(bridge.sentMessages, hasLength(1));
+    final message = jsonDecode(bridge.sentMessages.single.toJson()) as Map<String, dynamic>;
+    expect(message['type'], 'resume_session');
+    expect(message['sessionId'], 'agy-session-123');
+    expect(message['provider'], 'antigravity');
+  });
 }

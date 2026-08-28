@@ -20,6 +20,11 @@ import 'package:ccpocket/services/draft_service.dart';
 import 'package:ccpocket/services/prompt_history_service.dart';
 import 'package:ccpocket/theme/app_theme.dart';
 
+class _ConnectedBridgeService extends BridgeService {
+  @override
+  bool get isConnected => true;
+}
+
 Future<Widget> buildTestCodexScreenHarness({
   required BridgeService bridge,
   required Widget child,
@@ -375,6 +380,93 @@ void main() {
       // 2. takeControl with command -> resume-then-send flow
       cubit.takeControl(command: 'Run migration');
       expect(cubit.hasPendingResumeCommand, isTrue);
+
+      await cubit.close();
+      await streamingCubit.close();
+    });
+
+    test('CodexSessionCubit handles takeover completed and dispatches two consecutive instructions smoothly with provider=codex', () async {
+      final bridge = _ConnectedBridgeService();
+      final streamingCubit = StreamingStateCubit();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final cubit = CodexSessionCubit(
+        sessionId: '01a00976-b3f1-7831-8e03-b61c86acfac7',
+        bridge: bridge,
+        streamingCubit: streamingCubit,
+        initialProjectPath: '/repo',
+        isReadOnly: true,
+      );
+
+      // 1. Initial takeControl sends resume with provider: 'codex'
+      cubit.takeControl();
+      final resumeMsgs = sentClientMessages
+          .where((m) => m.toJson().contains('resume_session'))
+          .map((m) => jsonDecode(m.toJson()) as Map<String, dynamic>)
+          .toList();
+      expect(resumeMsgs, hasLength(1));
+      expect(resumeMsgs.first['provider'], 'codex');
+      expect(resumeMsgs.first['sessionId'], '01a00976-b3f1-7831-8e03-b61c86acfac7');
+
+      // 2. Takeover queue status 'completed' arrives
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: '01a00976-b3f1-7831-8e03-b61c86acfac7',
+          queueId: 'q-1',
+          position: 0,
+          total: 1,
+          status: 'completed',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      // Verify read-only mode is exited
+      expect(cubit.isReadOnlySession, isFalse);
+
+      // Mock session active in bridge
+      bridge.testHandleMessage(
+        const SessionListMessage(
+          sessions: [
+            SessionInfo(
+              id: 's-bridge-1',
+              projectPath: '/repo',
+              provider: 'codex',
+              claudeSessionId: '01a00976-b3f1-7831-8e03-b61c86acfac7',
+              status: 'idle',
+              createdAt: '2026-08-28T00:00:00Z',
+              lastActivityAt: '2026-08-28T00:00:00Z',
+            ),
+          ],
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      // 3. First instruction sent after takeover
+      cubit.sendMessage('First marker instruction');
+      final inputMsgs1 = sentClientMessages
+          .where((m) => m.toJson().contains('input'))
+          .map((m) => jsonDecode(m.toJson()) as Map<String, dynamic>)
+          .toList();
+      expect(inputMsgs1, hasLength(1));
+      expect(inputMsgs1.first['text'], 'First marker instruction');
+      expect(inputMsgs1.first['sessionId'], '01a00976-b3f1-7831-8e03-b61c86acfac7');
+
+      // 4. Second instruction sent immediately afterwards
+      cubit.sendMessage('Second marker instruction');
+      final inputMsgs2 = sentClientMessages
+          .where((m) => m.toJson().contains('input'))
+          .map((m) => jsonDecode(m.toJson()) as Map<String, dynamic>)
+          .toList();
+      expect(inputMsgs2, hasLength(2));
+      expect(inputMsgs2.last['text'], 'Second marker instruction');
+      expect(inputMsgs2.last['sessionId'], '01a00976-b3f1-7831-8e03-b61c86acfac7');
+
+      // Crucial: No extra resume_session messages were sent
+      final finalResumeMsgs = sentClientMessages
+          .where((m) => m.toJson().contains('resume_session'))
+          .toList();
+      expect(finalResumeMsgs, hasLength(1));
 
       await cubit.close();
       await streamingCubit.close();

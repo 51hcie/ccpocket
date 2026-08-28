@@ -89,3 +89,6 @@ tools/ssh-jump-smoke/generated/
 
 # CI / local build artifacts
 build_artifacts/
+
+# Local evidence artifacts
+evidence/

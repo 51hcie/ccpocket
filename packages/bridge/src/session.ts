@@ -828,7 +828,23 @@ export class SessionManager {
   }
 
   get(id: string): SessionInfo | undefined {
-    return this.sessions.get(id);
+    const direct = this.sessions.get(id);
+    if (direct) return direct;
+    let fallbackMatch: SessionInfo | undefined;
+    for (const session of this.sessions.values()) {
+      if (
+        session.claudeSessionId === id ||
+        session.antigravityConversationId === id
+      ) {
+        if (!(session.process as any)?.stopped) {
+          return session;
+        }
+        if (!fallbackMatch) {
+          fallbackMatch = session;
+        }
+      }
+    }
+    return fallbackMatch;
   }
 
   getAll(): SessionInfo[] {
@@ -1826,14 +1842,15 @@ export class SessionManager {
   }
 
   destroy(id: string): boolean {
-    const session = this.sessions.get(id);
+    const session = this.get(id);
     if (!session) return false;
+    const actualId = session.id;
     // Remove first so synchronous status/exit events from stop() cannot try to
     // evict the same session recursively.
-    this.sessions.delete(id);
+    this.sessions.delete(actualId);
     session.process.stop();
     session.process.removeAllListeners();
-    console.log(`[session] Destroyed session ${id}`);
+    console.log(`[session] Destroyed session ${actualId}`);
     return true;
   }
 

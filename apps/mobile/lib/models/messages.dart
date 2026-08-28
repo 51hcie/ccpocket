@@ -3635,11 +3635,60 @@ class RecentSession {
       ? rawPermissionMode!
       : permissionMode;
 
+  bool get isCodex =>
+      provider == Provider.codex.value ||
+      codexApprovalPolicy != null ||
+      codexApprovalsReviewer != null ||
+      codexPermissionsMode != null ||
+      codexSandboxMode != null ||
+      codexModel != null ||
+      codexProfile != null ||
+      codexModelReasoningEffort != null ||
+      codexServiceTier != null ||
+      codexNetworkAccessEnabled != null ||
+      codexWebSearchMode != null ||
+      codexAdditionalWritableRoots.isNotEmpty ||
+      agentNickname != null ||
+      agentRole != null;
+
+  bool get isClaude => provider == Provider.claude.value;
+
+  bool get isAntigravity => provider == Provider.antigravity.value;
+
+  Provider? get providerEnum => switch (provider) {
+        'codex' => Provider.codex,
+        'antigravity' => Provider.antigravity,
+        'claude' => Provider.claude,
+        _ => isCodex ? Provider.codex : null,
+      };
+
   factory RecentSession.fromJson(Map<String, dynamic> json) {
     final codexSettings = json['codexSettings'] as Map<String, dynamic>?;
+    String? resolvedProvider = json['provider'] as String?;
+    if (resolvedProvider == null || resolvedProvider.isEmpty) {
+      if (codexSettings != null ||
+          json['agentNickname'] != null ||
+          json['agentRole'] != null ||
+          json['codexApprovalPolicy'] != null ||
+          json['codexApprovalsReviewer'] != null ||
+          json['codexPermissionsMode'] != null ||
+          json['codexSandboxMode'] != null ||
+          json['codexModel'] != null ||
+          json['codexProfile'] != null ||
+          json['codexModelReasoningEffort'] != null ||
+          json['codexServiceTier'] != null ||
+          json['codexNetworkAccessEnabled'] != null ||
+          json['codexWebSearchMode'] != null ||
+          (json['codexAdditionalWritableRoots'] as List?)?.isNotEmpty == true) {
+        resolvedProvider = Provider.codex.value;
+      } else if (json['antigravityConversationId'] != null ||
+          json['isAntigravity'] == true) {
+        resolvedProvider = Provider.antigravity.value;
+      }
+    }
     return RecentSession(
       sessionId: json['sessionId'] as String,
-      provider: json['provider'] as String?,
+      provider: resolvedProvider,
       rawPermissionMode: json['permissionMode'] as String?,
       name: json['name'] as String?,
       agentNickname: json['agentNickname'] as String?,

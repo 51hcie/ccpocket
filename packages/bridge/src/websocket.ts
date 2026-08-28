@@ -58,6 +58,8 @@ import {
   renameClaudeSession,
   renameCodexSession,
   saveCodexSessionProfile,
+  findCodexSessionJsonlPath,
+  findSessionJsonlPath,
 } from "./sessions-index.js";
 import type { ImageRef, ImageStore } from "./image-store.js";
 import {
@@ -4434,12 +4436,15 @@ export class BridgeWebSocketServer {
       }
 
       case "resolve_session_link": {
-        const provider = msg.provider ?? "claude";
+        let provider = msg.provider;
+        if (!provider) {
+          provider = (await this.detectSessionProvider(msg.sessionId)) ?? undefined;
+        }
         const activeSession = this.sessionManager
           .list()
           .find(
             (session) =>
-              session.provider === provider &&
+              (!provider || session.provider === provider) &&
               (session.id === msg.sessionId ||
                 session.claudeSessionId === msg.sessionId),
           );
@@ -4450,7 +4455,7 @@ export class BridgeWebSocketServer {
             sourceSessionId: msg.sessionId,
             status: "live",
             bridgeSessionId: activeSession.id,
-            provider,
+            provider: activeSession.provider,
           });
           break;
         }
@@ -4463,12 +4468,13 @@ export class BridgeWebSocketServer {
             archivedSessionIds: this.archiveStore.archivedIds(),
           });
           const recentSession = sessions[0];
+          const resolvedProvider = recentSession?.provider ?? provider ?? "claude";
           this.send(ws, {
             type: "session_link_resolution",
             requestId: msg.requestId,
             sourceSessionId: msg.sessionId,
             status: recentSession ? "recent" : "unavailable",
-            provider,
+            provider: resolvedProvider,
             ...(recentSession ? { recentSession } : {}),
           } as Record<string, unknown>);
         } catch (err) {
@@ -4478,7 +4484,7 @@ export class BridgeWebSocketServer {
             requestId: msg.requestId,
             sourceSessionId: msg.sessionId,
             status: "unavailable",
-            provider,
+            provider: provider ?? "claude",
           });
         }
         break;
@@ -4784,17 +4790,36 @@ export class BridgeWebSocketServer {
 
       case "resume_session": {
         const resumeStartedAt = Date.now();
-        console.log(
-          `[ws] resume_session: sessionId=${msg.sessionId} projectPath=${msg.projectPath} provider=${msg.provider ?? "claude"}`,
-        );
         const resumeProjectPath = resolvePlatformPath(
           msg.projectPath,
           this.platform,
         );
-        const provider =
-          (msg.provider as Provider) ??
-          (process.env.BRIDGE_DEFAULT_PROVIDER as Provider) ??
-          "claude";
+
+        let provider = msg.provider as Provider | undefined;
+        if (!provider) {
+          provider = (await this.detectSessionProvider(msg.sessionId, resumeProjectPath)) ?? undefined;
+        }
+
+        if (!provider) {
+          console.error(
+            `[ws] resume_session: Unable to determine provider for session ${msg.sessionId}; rejecting to prevent misrouting`,
+          );
+          this.sendResumeFailed(ws, {
+            provider: "claude",
+            sourceSessionId: msg.sessionId,
+            projectPath: resumeProjectPath,
+            resumeRequestId: msg.resumeRequestId,
+          });
+          this.send(ws, {
+            type: "error",
+            message: `Unable to determine provider for session ${msg.sessionId}; cannot safely resume`,
+          });
+          break;
+        }
+
+        console.log(
+          `[ws] resume_session: sessionId=${msg.sessionId} projectPath=${msg.projectPath} provider=${provider}`,
+        );
         if (!this.isPathAllowed(resumeProjectPath)) {
           this.sendResumeFailed(ws, {
             provider,
@@ -7263,13 +7288,19 @@ export class BridgeWebSocketServer {
       );
 
       createdSession = this.sessionManager.get(sessionId);
-      if (!createdSession || !(createdSession.process instanceof CodexProcess)) {
+      if (
+        !createdSession ||
+        (!(createdSession.process instanceof CodexProcess) &&
+          !(createdSession.process as any)?.sendInput)
+      ) {
         throw new Error(`Failed to create Codex session ${sessionId}`);
       }
       createdSession.codexInitialHistoryPending = true;
 
       // Await real resume-ready Promise: verifies thread/resume RPC success and input loop readiness
-      await createdSession.process.waitForReady(15000);
+      if (typeof (createdSession.process as any)?.waitForReady === "function") {
+        await (createdSession.process as any).waitForReady(15000);
+      }
     } catch (err) {
       // Clean up temporary/failed session immediately: NO zombie session in sessionManager / session_list
       if (sessionId) {
@@ -7477,6 +7508,55 @@ export class BridgeWebSocketServer {
   ): SessionInfo | undefined {
     if (sessionId) return this.sessionManager.get(sessionId);
     return this.getFirstSession();
+  }
+
+  private async detectSessionProvider(
+    sessionId: string,
+    projectPath?: string,
+  ): Promise<Provider | null> {
+    if (!sessionId) return null;
+
+    // 1. Check live active sessions in sessionManager
+    const active = this.sessionManager.get(sessionId);
+    if (active) {
+      return active.provider;
+    }
+
+    // 2. Check Antigravity store
+    try {
+      await globalAntigravityStore.ensureInitialized();
+      if (globalAntigravityStore.getSession(sessionId)) {
+        return "antigravity";
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Check Codex storage (rollout jsonl or session_index)
+    try {
+      const codexPath = await findCodexSessionJsonlPath(sessionId);
+      if (codexPath) {
+        return "codex";
+      }
+      const codexNames = await loadCodexSessionNames();
+      if (codexNames.has(sessionId)) {
+        return "codex";
+      }
+    } catch {
+      // ignore
+    }
+
+    // 4. Check Claude storage (sessions-index.json or jsonl)
+    try {
+      const claudePath = await findSessionJsonlPath(sessionId);
+      if (claudePath) {
+        return "claude";
+      }
+    } catch {
+      // ignore
+    }
+
+    return null;
   }
 
   private getFirstSession() {
