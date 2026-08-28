@@ -88,13 +88,13 @@ const defaultAntigravityModels = <AntigravityModelOption>[
   ),
   AntigravityModelOption(
     id: 'claude-sonnet-4-6',
-    name: 'Claude 3.7 Sonnet',
+    name: 'Claude Sonnet 4.6',
     providerName: 'Anthropic',
     description: 'Anthropic Claude via Antigravity provider',
   ),
   AntigravityModelOption(
     id: 'claude-opus-4-6-thinking',
-    name: 'Claude Opus (Thinking)',
+    name: 'Claude Opus 4.6 (Thinking)',
     providerName: 'Anthropic',
     description: 'Anthropic Claude Opus with thinking',
   ),

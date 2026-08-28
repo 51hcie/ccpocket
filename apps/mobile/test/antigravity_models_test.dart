@@ -59,11 +59,11 @@ void main() {
       // Claude models are under Antigravity provider (not standalone provider)
       final claudeSonnet = findAntigravityModel('claude-sonnet-4-6');
       expect(claudeSonnet.providerName, 'Anthropic');
-      expect(claudeSonnet.name, 'Claude 3.7 Sonnet');
+      expect(claudeSonnet.name, 'Claude Sonnet 4.6');
 
       final claudeOpus = findAntigravityModel('claude-opus-4-6-thinking');
       expect(claudeOpus.providerName, 'Anthropic');
-      expect(claudeOpus.name, 'Claude Opus (Thinking)');
+      expect(claudeOpus.name, 'Claude Opus 4.6 (Thinking)');
 
       // GPT OSS model
       final gptOss = findAntigravityModel('gpt-oss-120b-medium');
