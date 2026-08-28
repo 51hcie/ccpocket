@@ -12,6 +12,7 @@ import '../../../widgets/codex_effort_slider.dart';
 import '../state/chat_session_state.dart';
 import '../state/chat_session_cubit.dart';
 import 'codex_settings_sheet.dart';
+import '../../../models/antigravity_models.dart';
 
 class SessionModeBar extends StatefulWidget {
   final Future<void> Function()? onBeforeRestart;
@@ -124,8 +125,16 @@ class _SessionModeBarState extends State<SessionModeBar> {
               children: [
                 if (chatCubit.provider == Provider.antigravity) ...[
                   InkWell(
+                    key: const ValueKey('antigravity_model_chip'),
                     borderRadius: BorderRadius.circular(8),
-                    onTap: null,
+                    onTap: () {
+                      final currentModel = _currentAntigravityModel(chatCubit);
+                      showAntigravityModelSheet(
+                        context: context,
+                        currentModel: currentModel,
+                        onSelected: (modelId) {},
+                      );
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -134,14 +143,14 @@ class _SessionModeBarState extends State<SessionModeBar> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.auto_awesome,
                             size: 14,
-                            color: const Color(0xFFF06A35),
+                            color: Color(0xFFF06A35),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Gemini 3.7 Flash High',
+                            findAntigravityModel(_currentAntigravityModel(chatCubit)).name,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1358,4 +1367,24 @@ class SandboxModeChip extends StatelessWidget {
       ),
     );
   }
+}
+
+String _currentAntigravityModel(ChatSessionCubit chatCubit) {
+  for (final entry in chatCubit.state.entries.reversed) {
+    if (entry is ServerChatEntry) {
+      if (entry.message is AssistantServerMessage) {
+        final am = entry.message as AssistantServerMessage;
+        if (am.message.model != null && am.message.model!.isNotEmpty) {
+          return am.message.model!;
+        }
+      }
+      if (entry.message is SystemMessage) {
+        final sm = entry.message as SystemMessage;
+        if (sm.model != null && sm.model!.isNotEmpty) {
+          return sm.model!;
+        }
+      }
+    }
+  }
+  return defaultAntigravityModel;
 }

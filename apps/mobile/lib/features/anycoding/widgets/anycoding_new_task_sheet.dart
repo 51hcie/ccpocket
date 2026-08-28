@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../constants/brand_config.dart';
 import '../../../models/messages.dart';
+import '../../../models/antigravity_models.dart';
 import '../../../services/bridge_service.dart';
 import '../../../widgets/directory_browser_sheet.dart' show showDirectoryBrowserSheet;
 import '../../../widgets/new_session_sheet.dart';
@@ -66,6 +67,7 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
   bool _useWorktree = false;
   final _worktreeBranchController = TextEditingController();
   String? _selectedCodexModel;
+  String _selectedAntigravityModel = defaultAntigravityModel;
   ReasoningEffort? _selectedReasoningEffort;
   CodexPermissionsMode _codexPermissionsMode = CodexPermissionsMode.defaultPermissions;
   late final dynamic _historySub;
@@ -112,6 +114,11 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
     _pathController.text = initialPath;
 
     _selectedCodexModel = init?.model ?? 'gpt-5.4';
+    if (init?.provider == Provider.antigravity &&
+        init?.model != null &&
+        init!.model!.isNotEmpty) {
+      _selectedAntigravityModel = init.model!;
+    }
     _selectedReasoningEffort = init?.modelReasoningEffort ?? ReasoningEffort.medium;
     _codexPermissionsMode = init?.codexPermissionsMode ?? CodexPermissionsMode.defaultPermissions;
 
@@ -201,7 +208,11 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
       projectPath: effectivePath,
       provider: _selectedProvider,
       initialPrompt: promptText.isNotEmpty ? promptText : null,
-      model: _selectedProvider == Provider.codex ? _selectedCodexModel : null,
+      model: _selectedProvider == Provider.codex
+          ? _selectedCodexModel
+          : (_selectedProvider == Provider.antigravity
+              ? _selectedAntigravityModel
+              : null),
       modelReasoningEffort: _selectedProvider == Provider.codex ? _selectedReasoningEffort : null,
       codexPermissionsMode: _codexPermissionsMode,
       useWorktree: _useWorktree,
@@ -710,6 +721,29 @@ class _AnyCodingNewTaskSheetState extends State<AnyCodingNewTaskSheet> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  if (isAntigravity) ...[
+                                    ListTile(
+                                      key: const ValueKey('anycoding_antigravity_model_tile'),
+                                      contentPadding: EdgeInsets.zero,
+                                      dense: true,
+                                      title: const Text('Antigravity 模型', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                      subtitle: Text(
+                                        '${findAntigravityModel(_selectedAntigravityModel).name} (${findAntigravityModel(_selectedAntigravityModel).providerName})',
+                                        style: const TextStyle(fontSize: 11),
+                                      ),
+                                      trailing: const Icon(Icons.chevron_right, size: 18),
+                                      onTap: () {
+                                        showAntigravityModelSheet(
+                                          context: context,
+                                          currentModel: _selectedAntigravityModel,
+                                          onSelected: (modelId) {
+                                            setState(() => _selectedAntigravityModel = modelId);
+                                          },
+                                        );
+                                      },
+                                    ),
+                                    const Divider(height: 12),
+                                  ],
                                   // Worktree toggle
                                   SwitchListTile.adaptive(
                                     contentPadding: EdgeInsets.zero,

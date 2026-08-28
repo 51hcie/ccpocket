@@ -21,6 +21,25 @@ export type AntigravityTerminalStatus =
   | "failed"
   | "unknown";
 
+export const ANTIGRAVITY_DEFAULT_MODEL = "gemini-3.7-flash-medium";
+
+export const ANTIGRAVITY_SUPPORTED_MODELS = [
+  "gemini-3.7-flash-high",
+  "gemini-3.7-flash-medium",
+  "gemini-3.7-flash-low",
+  "gemini-3.6-flash-high",
+  "gemini-3.6-flash-medium",
+  "gemini-3.6-flash-low",
+  "gemini-3.5-flash-high",
+  "gemini-3.5-flash-medium",
+  "gemini-3.5-flash-low",
+  "gemini-3.1-pro-high",
+  "gemini-3.1-pro-low",
+  "claude-sonnet-4-6",
+  "claude-opus-4-6-thinking",
+  "gpt-oss-120b-medium",
+] as const;
+
 export interface AntigravityStartOptions {
   sessionId?: string;
   conversationId?: string;
@@ -41,7 +60,7 @@ export class AntigravityProcess extends EventEmitter {
   private agyBinPath: string;
   private workspacePath: string;
   private currentMode: AntigravityExecutionMode = "plan";
-  private currentModel: string = "gemini-3.7-flash-high";
+  private currentModel: string = ANTIGRAVITY_DEFAULT_MODEL;
   private conversationId: string | null = null;
   private turnId: string | null = null;
   private internalStatus: AntigravityTerminalStatus = "queued";
@@ -53,6 +72,8 @@ export class AntigravityProcess extends EventEmitter {
   private stdoutBuf = "";
   private currentAssistantMessageId: string | null = null;
   private isExplicitInterrupt = false;
+  private turnStartTime: number | null = null;
+  private pendingPromptOnSpawn: string | null = null;
 
   constructor(workspacePath: string, agyBin?: string) {
     super();
@@ -108,8 +129,8 @@ export class AntigravityProcess extends EventEmitter {
   }
 
   /**
-   * Spawns a turn of agy.
-   * Delivers prompt strictly via --print to avoid duplicate prompt submission.
+   * Spawns or initializes a persistent agy session.
+   * Prompts are delivered over stdin using stream-json format.
    */
   async start(options: AntigravityStartOptions): Promise<void> {
     this.workspacePath = options.workspacePath || this.workspacePath;
@@ -119,10 +140,7 @@ export class AntigravityProcess extends EventEmitter {
       model =
         process.env.BRIDGE_AGY_MODEL ??
         process.env.MACREMOTE_AGY_MODEL ??
-        "gemini-3.7-flash-high";
-    }
-    if (model.toLowerCase().includes("3.7") && model.toLowerCase().includes("flash")) {
-      model = "gemini-3.7-flash-high";
+        ANTIGRAVITY_DEFAULT_MODEL;
     }
     this.currentModel = model;
     if (options.conversationId) {
@@ -130,7 +148,7 @@ export class AntigravityProcess extends EventEmitter {
     }
 
     if (options.prompt && options.prompt.trim().length > 0) {
-      await this.spawnTurn(options.prompt);
+      await this.startTurn(options.prompt);
     } else {
       this.internalStatus = "queued";
       this.bridgeStatus = "idle";
@@ -142,23 +160,60 @@ export class AntigravityProcess extends EventEmitter {
     if (this.isRunning()) {
       throw new Error("Cannot send input while turn is still running");
     }
-    await this.spawnTurn(text);
+    await this.startTurn(text);
   }
 
-  private async spawnTurn(prompt: string): Promise<void> {
+  private async startTurn(prompt: string): Promise<void> {
     this.isExplicitInterrupt = false;
     this.hasStructuredResult = false;
     this.structuredResultStatus = null;
     this.failureCode = null;
     this.failureMessage = null;
-    this.stdoutBuf = "";
     this.currentAssistantMessageId = null;
     this.turnId = randomUUID();
+    this.turnStartTime = Date.now();
+
+    this.internalStatus = "running";
+    this.bridgeStatus = "running";
+    this.emit("status", "running");
+
+    // If persistent child is alive, ready and stdin is writable, reuse existing child process
+    if (
+      this.child &&
+      !this.child.killed &&
+      this.child.stdin &&
+      this.child.stdin.writable
+    ) {
+      try {
+        const payload =
+          JSON.stringify({
+            event: "user",
+            message: { content: prompt },
+          }) + "\n";
+        this.child.stdin.write(payload);
+        return;
+      } catch (err) {
+        try {
+          this.child.kill();
+        } catch {}
+        this.child = null;
+      }
+    }
+
+    // Otherwise, spawn persistent stream-json process
+    await this.spawnProcess(prompt);
+  }
+
+  private async spawnProcess(initialPrompt?: string): Promise<void> {
+    this.pendingPromptOnSpawn = initialPrompt ?? null;
+    this.stdoutBuf = "";
 
     const args = [
       "--add-dir",
       this.workspacePath,
       "--dangerously-skip-permissions",
+      "--input-format",
+      "stream-json",
       "--output-format",
       "stream-json",
       "--mode",
@@ -167,25 +222,19 @@ export class AntigravityProcess extends EventEmitter {
         : "plan",
       "--model",
       this.currentModel,
-      "--print",
-      prompt,
     ];
 
     if (this.conversationId) {
       args.push("--conversation", this.conversationId);
     }
 
-    this.internalStatus = "running";
-    this.bridgeStatus = "running";
-    this.emit("status", "running");
-
     try {
       this.child = spawn(this.agyBinPath, args, {
         cwd: this.workspacePath,
-        stdio: ["ignore", "pipe", "pipe"],
+        stdio: ["pipe", "pipe", "pipe"],
         env: {
           ...process.env,
-          PATH: `${resolve(this.workspacePath, "tools/bin")}:${process.env.PATH}`,
+          PATH: `${resolve(this.workspacePath, "tools/bin")}:/Users/lw/Windows_Projects/Macremote/tools/bin:/Users/lw/Windows_Projects/Macremote_spike/tools/bin:${process.env.PATH}`,
         },
       });
     } catch (err: unknown) {
@@ -194,6 +243,7 @@ export class AntigravityProcess extends EventEmitter {
       this.bridgeStatus = "idle";
       this.failureCode = "SPAWN_ERROR";
       this.failureMessage = msg;
+      this.child = null;
       this.emit("status", "idle");
       this.emit("message", {
         type: "result",
@@ -225,17 +275,26 @@ export class AntigravityProcess extends EventEmitter {
       this.bridgeStatus = "idle";
       this.failureCode = "PROCESS_ERROR";
       this.failureMessage = err.message;
+      this.child = null;
       this.emit("status", "idle");
       this.emit("exit", 1);
     });
 
     this.child.on("exit", (code, signal) => {
+      this.child = null;
+
       if (this.stdoutBuf.trim()) {
         this.processStreamLine(this.stdoutBuf);
         this.stdoutBuf = "";
       }
 
-      if (this.isExplicitInterrupt || signal === "SIGTERM" || signal === "SIGINT" || code === 143 || code === 130) {
+      if (
+        this.isExplicitInterrupt ||
+        signal === "SIGTERM" ||
+        signal === "SIGINT" ||
+        code === 143 ||
+        code === 130
+      ) {
         this.internalStatus = "interrupted";
         this.bridgeStatus = "idle";
         if (!this.hasStructuredResult) {
@@ -245,7 +304,11 @@ export class AntigravityProcess extends EventEmitter {
             sessionId: this.conversationId,
           } as ServerMessage);
         }
-      } else if (this.hasStructuredResult && (this.structuredResultStatus === "SUCCESS" || this.structuredResultStatus === "completed")) {
+      } else if (
+        this.hasStructuredResult &&
+        (this.structuredResultStatus === "SUCCESS" ||
+          this.structuredResultStatus === "completed")
+      ) {
         this.internalStatus = "completed";
         this.bridgeStatus = "idle";
       } else if (this.hasStructuredResult) {
@@ -274,7 +337,11 @@ export class AntigravityProcess extends EventEmitter {
       return;
     }
 
-    if (evt.event === "init" && typeof evt.init === "object" && evt.init !== null) {
+    if (
+      evt.event === "init" &&
+      typeof evt.init === "object" &&
+      evt.init !== null
+    ) {
       const initObj = evt.init as Record<string, unknown>;
       if (typeof evt.conversation_id === "string") {
         this.conversationId = evt.conversation_id;
@@ -287,10 +354,31 @@ export class AntigravityProcess extends EventEmitter {
         model: (initObj.model as string) || this.currentModel,
         projectPath: this.workspacePath,
       } as ServerMessage);
+
+      // If there is an initial prompt queued on process spawn, dispatch it now
+      if (
+        this.pendingPromptOnSpawn &&
+        this.child &&
+        this.child.stdin &&
+        this.child.stdin.writable
+      ) {
+        const promptToSend = this.pendingPromptOnSpawn;
+        this.pendingPromptOnSpawn = null;
+        const msg =
+          JSON.stringify({
+            event: "user",
+            message: { content: promptToSend },
+          }) + "\n";
+        this.child.stdin.write(msg);
+      }
       return;
     }
 
-    if (evt.event === "step_update" && typeof evt.step_update === "object" && evt.step_update !== null) {
+    if (
+      evt.event === "step_update" &&
+      typeof evt.step_update === "object" &&
+      evt.step_update !== null
+    ) {
       const su = evt.step_update as Record<string, unknown>;
       if (typeof su.conversation_id === "string" && !this.conversationId) {
         this.conversationId = su.conversation_id;
@@ -300,7 +388,10 @@ export class AntigravityProcess extends EventEmitter {
 
       if (stepType === "agent_response" && typeof su.text_delta === "string") {
         if (!this.currentAssistantMessageId) {
-          this.currentAssistantMessageId = (su.message_id as string) || (su.step_id as string) || randomUUID();
+          this.currentAssistantMessageId =
+            (su.message_id as string) ||
+            (su.step_id as string) ||
+            randomUUID();
         }
         const textContent: AssistantTextContent = {
           type: "text",
@@ -323,7 +414,12 @@ export class AntigravityProcess extends EventEmitter {
         const toolName = (su.tool_name as string) || "tool";
         const toolInfo = (su.tool_info as Record<string, unknown>) || {};
         const params = (toolInfo.parameters as Record<string, unknown>) || {};
-        const toolId = (su.step_id as string) || (su.tool_call_id as string) || (su.call_id as string) || (toolInfo.id as string) || randomUUID();
+        const toolId =
+          (su.step_id as string) ||
+          (su.tool_call_id as string) ||
+          (su.call_id as string) ||
+          (toolInfo.id as string) ||
+          randomUUID();
 
         const toolContent: AssistantToolUseContent = {
           type: "tool_use",
@@ -345,7 +441,11 @@ export class AntigravityProcess extends EventEmitter {
       }
     }
 
-    if (evt.event === "result" && typeof evt.result === "object" && evt.result !== null) {
+    if (
+      evt.event === "result" &&
+      typeof evt.result === "object" &&
+      evt.result !== null
+    ) {
       const res = evt.result as Record<string, unknown>;
       this.hasStructuredResult = true;
 
@@ -359,24 +459,33 @@ export class AntigravityProcess extends EventEmitter {
         rawError.includes("context canceled") ||
         rawError.includes("interrupt");
 
-      const isSuccess = !isCanceled && (rawStatus === "SUCCESS" || rawStatus === "COMPLETED");
+      const isSuccess =
+        !isCanceled && (rawStatus === "SUCCESS" || rawStatus === "COMPLETED");
 
       if (isCanceled) {
         this.internalStatus = "interrupted";
         this.structuredResultStatus = "INTERRUPTED";
+        this.bridgeStatus = "idle";
+        this.emit("status", "idle");
       } else if (isSuccess) {
         this.internalStatus = "completed";
         this.structuredResultStatus = "SUCCESS";
+        this.bridgeStatus = "idle";
+        this.emit("status", "idle");
       } else {
         this.internalStatus = "failed";
         this.structuredResultStatus = rawStatus || "ERROR";
         this.failureCode = (res.error_code as string) || "TASK_ERROR";
         this.failureMessage = rawError || "Task execution failed";
+        this.bridgeStatus = "idle";
+        this.emit("status", "idle");
       }
 
-      const responseText = typeof res.response === "string" ? res.response.trim() : "";
+      const responseText =
+        typeof res.response === "string" ? res.response.trim() : "";
       if (!this.currentAssistantMessageId && responseText) {
-        this.currentAssistantMessageId = (res.message_id as string) || randomUUID();
+        this.currentAssistantMessageId =
+          (res.message_id as string) || randomUUID();
         const textContent: AssistantTextContent = {
           type: "text",
           text: responseText,
@@ -393,21 +502,34 @@ export class AntigravityProcess extends EventEmitter {
         } as ServerMessage);
       }
 
+      // Calculate current turn wall-clock duration in ms
+      const turnDurationMs =
+        this.turnStartTime != null
+          ? Math.max(0, Date.now() - this.turnStartTime)
+          : typeof res.duration_seconds === "number"
+            ? Math.round(res.duration_seconds * 1000)
+            : undefined;
+
       this.emit("message", {
         type: "result",
         subtype: isSuccess ? "success" : isCanceled ? "interrupted" : "error",
         result: responseText,
-        duration: typeof res.duration_seconds === "number" ? Math.round(res.duration_seconds * 1000) : undefined,
+        duration: turnDurationMs,
         sessionId: this.conversationId,
-        error: isSuccess ? undefined : (res.error ? String(res.error) : undefined),
+        error: isSuccess ? undefined : res.error ? String(res.error) : undefined,
       } as ServerMessage);
 
       this.currentAssistantMessageId = null;
+      this.turnStartTime = null;
     }
   }
 
   get isWaitingForInput(): boolean {
-    return this.internalStatus === "completed" || this.internalStatus === "queued" || this.internalStatus === "interrupted";
+    return (
+      this.internalStatus === "completed" ||
+      this.internalStatus === "queued" ||
+      this.internalStatus === "interrupted"
+    );
   }
 
   stop(): void {
@@ -421,10 +543,15 @@ export class AntigravityProcess extends EventEmitter {
     this.isExplicitInterrupt = true;
     this.internalStatus = "interrupting";
     try {
-      this.child.kill("SIGTERM");
+      this.child.kill("SIGINT");
       return true;
     } catch {
-      return false;
+      try {
+        this.child.kill("SIGTERM");
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 }

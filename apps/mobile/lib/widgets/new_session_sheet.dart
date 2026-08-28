@@ -17,6 +17,7 @@ import '../theme/provider_style.dart';
 import 'directory_browser_sheet.dart';
 import 'workspace_pane_chrome.dart';
 import 'codex_effort_slider.dart';
+import '../models/antigravity_models.dart';
 
 /// Result returned when the user submits the new session sheet.
 class NewSessionParams {
@@ -551,6 +552,9 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   bool _claudeForkSession = false;
   bool _claudePersistSession = true;
 
+  // Antigravity-specific options
+  String _selectedAntigravityModel = defaultAntigravityModel;
+
   // Model lists from Bridge (with fallbacks)
   late final List<String> _claudeModelList;
   late final Map<String, List<ClaudeEffort>> _claudeModelEfforts;
@@ -691,6 +695,11 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
         .clamp(0, effectiveTabs.length - 1);
     _pageController = PageController(initialPage: initialPage);
     _provider = initialProvider;
+    if (widget.initialParams?.provider == Provider.antigravity &&
+        widget.initialParams?.model != null &&
+        widget.initialParams!.model!.isNotEmpty) {
+      _selectedAntigravityModel = widget.initialParams!.model!;
+    }
     // Use the latest cached recent sessions from BridgeService if available,
     // because the broadcast stream may have already fired before this listener
     // was registered.
@@ -1164,7 +1173,11 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
       existingWorktreePath: useExisting
           ? _selectedWorktree?.worktreePath
           : null,
-      model: isCodex ? (_selectedModel ?? _codexModelList.firstOrNull) : null,
+      model: isCodex
+          ? (_selectedModel ?? _codexModelList.firstOrNull)
+          : (_provider == Provider.antigravity
+              ? _selectedAntigravityModel
+              : null),
       sandboxMode: _sandboxMode,
       modelReasoningEffort: isCodex ? _modelReasoningEffort : null,
       codexSpeed: isCodex ? _codexSpeed : CodexSpeed.standard,
@@ -1308,6 +1321,10 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
             planMode: _planMode,
             onPlanModeChanged: (value) {
               setState(() => _planMode = value);
+            },
+            selectedAntigravityModel: _selectedAntigravityModel,
+            onAntigravityModelChanged: (modelId) {
+              setState(() => _selectedAntigravityModel = modelId);
             },
             useWorktree: _useWorktree,
             onWorktreeToggle: _onWorktreeToggle,
@@ -2203,6 +2220,8 @@ class _OptionsSection extends StatelessWidget {
   final ValueChanged<String?> onCodexProfileChanged;
   final bool planMode;
   final ValueChanged<bool> onPlanModeChanged;
+  final String selectedAntigravityModel;
+  final ValueChanged<String> onAntigravityModelChanged;
   final bool useWorktree;
   final ValueChanged<bool> onWorktreeToggle;
   final _WorktreeMode worktreeMode;
@@ -2272,6 +2291,8 @@ class _OptionsSection extends StatelessWidget {
     required this.onCodexProfileChanged,
     required this.planMode,
     required this.onPlanModeChanged,
+    required this.selectedAntigravityModel,
+    required this.onAntigravityModelChanged,
     required this.useWorktree,
     required this.onWorktreeToggle,
     required this.worktreeMode,
@@ -2592,9 +2613,15 @@ class _OptionsSection extends StatelessWidget {
               key: const ValueKey('dialog_antigravity_model'),
               label: 'Model',
               icon: Icons.auto_awesome,
-              title: 'Gemini 3.7 Flash High',
-              subtitle: 'Active Antigravity engine',
-              onTap: () {},
+              title: findAntigravityModel(selectedAntigravityModel).name,
+              subtitle: '${findAntigravityModel(selectedAntigravityModel).providerName} · $selectedAntigravityModel',
+              onTap: () {
+                showAntigravityModelSheet(
+                  context: context,
+                  currentModel: selectedAntigravityModel,
+                  onSelected: onAntigravityModelChanged,
+                );
+              },
             ),
             const SizedBox(height: 8),
           ] else if (provider == Provider.codex) ...[

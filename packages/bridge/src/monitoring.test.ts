@@ -66,7 +66,7 @@ describe("MonitoringService", () => {
 
     const agy = monitoringService.collectAntigravityMetrics();
     expect(agy.available).toBe(true);
-    expect(agy.model).toBe("gemini-3.7-flash-high");
+    expect(agy.model).toBe("gemini-3.7-flash-medium");
     expect(agy.quota).toBe("当前版本暂不可获取");
     expect(agy.note).toContain("不提供实时配额查询");
     expect(agy.source).toBe("Antigravity CLI (Local)");

@@ -361,7 +361,7 @@ export class MonitoringService {
 
     return {
       available: true,
-      model: "gemini-3.7-flash-high",
+      model: "gemini-3.7-flash-medium",
       status,
       quota: "当前版本暂不可获取",
       note: "Antigravity CLI 本地接口当前不提供实时配额查询，按实际执行计费",

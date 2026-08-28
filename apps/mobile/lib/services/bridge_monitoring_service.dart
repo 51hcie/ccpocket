@@ -292,7 +292,7 @@ class AntigravityMetricsModel {
   factory AntigravityMetricsModel.fromJson(Map<String, dynamic> json) {
     return AntigravityMetricsModel(
       available: json['available'] as bool? ?? true,
-      model: json['model'] as String? ?? 'gemini-3.7-flash-high',
+      model: json['model'] as String? ?? 'gemini-3.7-flash-medium',
       status: json['status'] as String? ?? 'Ready',
       quota: json['quota'] as String? ?? '当前版本暂不可获取',
       note:
