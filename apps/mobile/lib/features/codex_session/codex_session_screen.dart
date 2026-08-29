@@ -828,20 +828,39 @@ class _CodexChatBody extends HookWidget {
       final subMsg = bridge.messages.listen((msg) {
         if (msg is SessionListMessage) {
           queryQueue();
-        } else if (msg is ErrorMessage &&
-            (matchesThread(msg.sessionId ?? '') ||
-                msg.sessionId == sessionId) &&
-            (msg.errorCode == 'active_writer_conflict' ||
-                msg.message.contains('active writer conflict') ||
-                msg.message.contains('already open in another client') ||
-                msg.message.contains('is running with an active writer') ||
-                msg.message.contains('already has an active writer') ||
-                msg.message.contains('active_writer_conflict') ||
-                msg.message.contains('active writer'))) {
-          if (queueStatus.value == null ||
-              queueStatus.value!.status == 'queued') {
-            isConflict.value = true;
-            conflictMessage.value = msg.message;
+        } else if (msg is HistoryMessage) {
+          final conflictMsg =
+              msg.messages.where(isActiveWriterConflictMessage).lastOrNull;
+          if (conflictMsg != null) {
+            if (queueStatus.value == null ||
+                queueStatus.value!.status == 'queued') {
+              isConflict.value = true;
+              conflictMessage.value = switch (conflictMsg) {
+                ErrorMessage(:final message) => message,
+                ResultMessage(:final error, :final result) => error ?? result,
+                _ => null,
+              };
+            }
+          }
+        } else if ((msg is ErrorMessage || msg is ResultMessage) &&
+            isActiveWriterConflictMessage(msg)) {
+          final msgSessionId = switch (msg) {
+            ErrorMessage(:final sessionId) => sessionId,
+            ResultMessage(:final sessionId) => sessionId,
+            _ => null,
+          };
+          if (msgSessionId == null ||
+              msgSessionId == sessionId ||
+              matchesThread(msgSessionId)) {
+            if (queueStatus.value == null ||
+                queueStatus.value!.status == 'queued') {
+              isConflict.value = true;
+              conflictMessage.value = switch (msg) {
+                ErrorMessage(:final message) => message,
+                ResultMessage(:final error, :final result) => error ?? result,
+                _ => null,
+              };
+            }
           }
         }
       });
@@ -2289,13 +2308,7 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
       iconData = Icons.sync;
     } else {
       bannerTitle = 'Codex 活跃写入者冲突';
-      final friendlyDesc = (message != null &&
-              (message!.contains('already open in another client') ||
-                  message!.contains('active_writer_conflict') ||
-                  message!.contains('active writer conflict') ||
-                  message!.contains('already has an active writer') ||
-                  message!.contains('is running with an active writer') ||
-                  message!.contains('active writer')))
+      final friendlyDesc = (message != null && isActiveWriterConflictText(message))
           ? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。'
           : (message ?? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。');
       bannerDesc = isQueued

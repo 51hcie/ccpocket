@@ -377,19 +377,9 @@ class _ChatMessageListState extends State<ChatMessageList> {
     final chatState = context.watch<ChatSessionCubit>().state;
     final hiddenToolUseIds = chatState.hiddenToolUseIds;
     final allEntries = chatState.entries.where((entry) {
-      if (entry is ServerChatEntry) {
-        final msg = entry.message;
-        if (msg is ErrorMessage) {
-          if (msg.errorCode == 'active_writer_conflict' ||
-              msg.message.contains('already open in another client') ||
-              msg.message.contains('active writer conflict') ||
-              msg.message.contains('is running with an active writer') ||
-              msg.message.contains('already has an active writer') ||
-              msg.message.contains('active_writer_conflict') ||
-              msg.message.contains('active writer')) {
-            return false;
-          }
-        }
+      if (entry is ServerChatEntry &&
+          isActiveWriterConflictMessage(entry.message)) {
+        return false;
       }
       return true;
     }).toList();

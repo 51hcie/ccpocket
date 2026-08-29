@@ -1242,5 +1242,159 @@ void main() {
         isTrue,
       );
     });
+
+    testWidgets('CodexSessionScreen suppresses ResultMessage active_writer_conflict chip from history while enabling takeover and input', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final bridge = BridgeService();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final threadId = '01a00976-b3f1-7831-8e03-b61c86acfac7';
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: CodexSessionScreen(
+          sessionId: threadId,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      // Simulate history replay containing ResultMessage active-writer conflict
+      bridge.testHandleMessage(
+        HistoryMessage(
+          messages: [
+            const UserInputMessage(text: 'Initial user command'),
+            ResultMessage(
+              subtype: 'error',
+              error: 'This Codex thread is already open in another client. Close it there and try again.',
+              sessionId: threadId,
+            ),
+            const StatusMessage(status: ProcessStatus.idle),
+          ],
+        ),
+        sessionId: threadId,
+      );
+      await pumpN(tester);
+
+      // 1. Conflict banner is rendered
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      expect(find.text('Codex 活跃写入者冲突'), findsOneWidget);
+
+      // 2. ResultMessage error is suppressed from chat list
+      expect(find.textContaining('already open in another client'), findsNothing);
+      expect(find.textContaining('This Codex thread is already open in another client'), findsNothing);
+
+      // 3. Status is idle and input field is active
+      final inputFinder = find.byType(TextField);
+      expect(inputFinder, findsOneWidget);
+      final textField = tester.widget<TextField>(inputFinder);
+      expect(textField.enabled, isTrue);
+
+      // 4. Entering text and queuing takeover works
+      await tester.enterText(inputFinder, 'Queue from suppressed result error');
+      await pumpN(tester);
+
+      final queueBtn = find.byKey(const ValueKey('codex_conflict_queue_button'));
+      expect(queueBtn, findsOneWidget);
+      await tester.tap(queueBtn);
+      await pumpN(tester);
+
+      expect(
+        sentClientMessages.any((m) =>
+            m.toJson().contains('enqueue_codex_takeover') &&
+            m.toJson().contains('Queue from suppressed result error')),
+        isTrue,
+      );
+    });
+
+    testWidgets('CodexSessionScreen renders ordinary ResultMessage error chip in chat list', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final bridge = BridgeService();
+      final threadId = 'thread-normal-result-err';
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: CodexSessionScreen(
+          sessionId: threadId,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      // Simulate history replay containing normal ResultMessage error
+      bridge.testHandleMessage(
+        HistoryMessage(
+          messages: [
+            const UserInputMessage(text: 'Run test suite'),
+            const ResultMessage(
+              subtype: 'error',
+              error: 'Compilation failed: SyntaxError at line 42',
+              sessionId: 'thread-normal-result-err',
+            ),
+            const StatusMessage(status: ProcessStatus.idle),
+          ],
+        ),
+        sessionId: threadId,
+      );
+      await pumpN(tester);
+
+      // Normal error ResultMessage should be rendered
+      expect(find.textContaining('Compilation failed: SyntaxError at line 42'), findsOneWidget);
+      // Conflict banner should NOT be shown
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsNothing);
+    });
+
+    testWidgets('CodexSessionScreen renders ordinary ErrorMessage card (e.g. app-server down)', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final bridge = BridgeService();
+      final threadId = 'thread-app-server-down';
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: CodexSessionScreen(
+          sessionId: threadId,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      // Simulate bridge emitting real app server down error
+      bridge.testHandleMessage(
+        const ErrorMessage(
+          message: 'Codex app-server process exited unexpectedly with code 1',
+          errorCode: 'app_server_down',
+          sessionId: 'thread-app-server-down',
+        ),
+        sessionId: threadId,
+      );
+      await pumpN(tester);
+
+      // Error message card should be rendered
+      expect(find.textContaining('Codex app-server process exited unexpectedly with code 1'), findsOneWidget);
+      // Conflict banner should NOT be shown
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsNothing);
+    });
   });
 }

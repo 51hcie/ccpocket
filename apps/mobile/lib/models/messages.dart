@@ -1695,6 +1695,33 @@ class ErrorMessage implements ServerMessage {
   });
 }
 
+/// Checks whether an error code or message text indicates an active-writer conflict.
+bool isActiveWriterConflictText(String? text, {String? errorCode}) {
+  if (errorCode == 'active_writer_conflict') return true;
+  if (text == null || text.isEmpty) return false;
+  final lower = text.toLowerCase();
+  return lower.contains('active writer') ||
+      lower.contains('active_writer') ||
+      lower.contains('already open in another client') ||
+      lower.contains('is running with an active writer') ||
+      lower.contains('already has an active writer');
+}
+
+/// Checks whether a [ServerMessage] represents an active-writer conflict.
+bool isActiveWriterConflictMessage(ServerMessage? message) {
+  if (message == null) return false;
+  return switch (message) {
+    CodexTakeoverConflictMessage() => true,
+    ErrorMessage(:final errorCode, :final message) =>
+      isActiveWriterConflictText(message, errorCode: errorCode),
+    ResultMessage(:final subtype, :final error, :final result) =>
+      subtype != 'success' &&
+          (isActiveWriterConflictText(error) ||
+              isActiveWriterConflictText(result)),
+    _ => false,
+  };
+}
+
 enum SessionLinkResolutionStatus {
   live,
   recent,

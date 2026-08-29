@@ -1821,4 +1821,102 @@ void main() {
       expect(message.errorCode, 'bridge_update_required');
     });
   });
+
+  group('Active-writer conflict suppression', () {
+    test('ErrorMessage with active writer conflict is suppressed from entriesToAdd', () {
+      final update = handler.handle(
+        const ErrorMessage(
+          message: 'This Codex thread is already open in another client. Close it there and try again.',
+          errorCode: 'active_writer_conflict',
+        ),
+        isBackground: false,
+      );
+      expect(update.entriesToAdd, isEmpty);
+    });
+
+    test('ErrorMessage with app_server_down is NOT suppressed', () {
+      final update = handler.handle(
+        const ErrorMessage(
+          message: 'App-server process exited unexpectedly',
+          errorCode: 'app_server_down',
+        ),
+        isBackground: false,
+      );
+      expect(update.entriesToAdd, hasLength(1));
+      final entry = update.entriesToAdd.single as ServerChatEntry;
+      expect((entry.message as ErrorMessage).errorCode, 'app_server_down');
+    });
+
+    test('ResultMessage with active writer conflict in handleResult is suppressed from entriesToAdd', () {
+      final update = handler.handle(
+        const ResultMessage(
+          subtype: 'error',
+          error: 'This Codex thread is already open in another client. Close it there and try again.',
+        ),
+        isBackground: true,
+      );
+      expect(update.entriesToAdd, isEmpty);
+      // Background complete notification should not be sent for conflict
+      expect(
+        update.sideEffects,
+        isNot(contains(ChatSideEffect.notifySessionComplete)),
+      );
+    });
+
+    test('ResultMessage with normal error in handleResult is NOT suppressed', () {
+      final update = handler.handle(
+        const ResultMessage(
+          subtype: 'error',
+          error: 'Command failed with exit code 1',
+        ),
+        isBackground: true,
+      );
+      expect(update.entriesToAdd, hasLength(1));
+      final entry = update.entriesToAdd.single as ServerChatEntry;
+      expect((entry.message as ResultMessage).error, 'Command failed with exit code 1');
+      expect(
+        update.sideEffects,
+        contains(ChatSideEffect.notifySessionComplete),
+      );
+    });
+
+    test('HistoryMessage suppresses active-writer ErrorMessage and ResultMessage but retains normal errors', () {
+      final update = handler.handle(
+        const HistoryMessage(
+          messages: [
+            ErrorMessage(
+              message: 'This Codex thread is already open in another client. Close it there and try again.',
+              errorCode: 'active_writer_conflict',
+            ),
+            ResultMessage(
+              subtype: 'error',
+              error: 'thread 01a00976-b3f1-7831-8e03-b61c86acfac7 already has an active writer',
+            ),
+            ResultMessage(
+              subtype: 'error',
+              error: 'Compilation failed: SyntaxError',
+            ),
+            ErrorMessage(
+              message: 'Database connection failed',
+              errorCode: 'db_error',
+            ),
+            StatusMessage(status: ProcessStatus.idle),
+          ],
+        ),
+        isBackground: false,
+      );
+
+      // Only the 2 normal error entries should be preserved
+      final serverEntries = update.entriesToAdd.whereType<ServerChatEntry>().toList();
+      expect(serverEntries, hasLength(2));
+
+      final firstMsg = serverEntries[0].message;
+      expect(firstMsg, isA<ResultMessage>());
+      expect((firstMsg as ResultMessage).error, 'Compilation failed: SyntaxError');
+
+      final secondMsg = serverEntries[1].message;
+      expect(secondMsg, isA<ErrorMessage>());
+      expect((secondMsg as ErrorMessage).message, 'Database connection failed');
+    });
+  });
 }

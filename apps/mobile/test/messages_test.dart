@@ -1272,4 +1272,117 @@ void main() {
       expect(status.branch, 'main');
     });
   });
+
+  group('Active-writer conflict detection functions', () {
+    test('isActiveWriterConflictText accurately classifies error codes and texts', () {
+      expect(
+        isActiveWriterConflictText(null, errorCode: 'active_writer_conflict'),
+        isTrue,
+      );
+      expect(
+        isActiveWriterConflictText(
+          'This Codex thread is already open in another client. Close it there and try again.',
+        ),
+        isTrue,
+      );
+      expect(
+        isActiveWriterConflictText(
+          'thread 01a00976-b3f1-7831-8e03-b61c86acfac7 already has an active writer',
+        ),
+        isTrue,
+      );
+      expect(
+        isActiveWriterConflictText('Thread is running with an active writer'),
+        isTrue,
+      );
+      expect(isActiveWriterConflictText('active_writer_conflict'), isTrue);
+      expect(isActiveWriterConflictText('active writer conflict'), isTrue);
+
+      // Normal non-conflict errors return false
+      expect(
+        isActiveWriterConflictText('App-server process exited unexpectedly'),
+        isFalse,
+      );
+      expect(
+        isActiveWriterConflictText('Command failed with exit code 1'),
+        isFalse,
+      );
+      expect(isActiveWriterConflictText(''), isFalse);
+      expect(isActiveWriterConflictText(null), isFalse);
+    });
+
+    test('isActiveWriterConflictMessage classifies ServerMessage objects', () {
+      expect(
+        isActiveWriterConflictMessage(
+          const CodexTakeoverConflictMessage(
+            threadId: 't1',
+            projectPath: '/p',
+            message: 'conflict',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        isActiveWriterConflictMessage(
+          const ErrorMessage(
+            message: 'This Codex thread is already open in another client. Close it there and try again.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        isActiveWriterConflictMessage(
+          const ResultMessage(
+            subtype: 'error',
+            error: 'This Codex thread is already open in another client. Close it there and try again.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        isActiveWriterConflictMessage(
+          const ResultMessage(
+            subtype: 'error',
+            result: 'thread 01a00976-b3f1-7831-8e03-b61c86acfac7 already has an active writer',
+          ),
+        ),
+        isTrue,
+      );
+
+      // Success ResultMessage is not a conflict even if text is present
+      expect(
+        isActiveWriterConflictMessage(
+          const ResultMessage(
+            subtype: 'success',
+            result: 'completed',
+          ),
+        ),
+        isFalse,
+      );
+
+      // Normal error ResultMessage is not an active-writer conflict
+      expect(
+        isActiveWriterConflictMessage(
+          const ResultMessage(
+            subtype: 'error',
+            error: 'Command failed with exit code 1',
+          ),
+        ),
+        isFalse,
+      );
+
+      // Normal ErrorMessage is not an active-writer conflict
+      expect(
+        isActiveWriterConflictMessage(
+          const ErrorMessage(
+            message: 'App-server process exited unexpectedly',
+            errorCode: 'app_server_down',
+          ),
+        ),
+        isFalse,
+      );
+
+      expect(isActiveWriterConflictMessage(null), isFalse);
+    });
+  });
 }

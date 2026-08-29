@@ -200,18 +200,29 @@ class CodexSessionCubit extends ChatSessionCubit {
     });
 
     _errorSub = bridge.messages.listen((msg) {
-      if (msg is ErrorMessage &&
+      if (msg is HistoryMessage) {
+        final conflictMsg =
+            msg.messages.where(isActiveWriterConflictMessage).lastOrNull;
+        if (conflictMsg != null) {
+          if (state.sessionUnavailable) {
+            emit(state.copyWith(sessionUnavailable: false));
+          }
+          if (state.status == ProcessStatus.starting) {
+            emit(state.copyWith(status: ProcessStatus.idle));
+          }
+        }
+      }
+      final msgSessionId = switch (msg) {
+        ErrorMessage(:final sessionId) => sessionId,
+        ResultMessage(:final sessionId) => sessionId,
+        _ => null,
+      };
+      if ((msg is ErrorMessage || msg is ResultMessage) &&
           _matchesIdentity(
-            threadId: msg.sessionId,
-            bridgeSessionId: msg.sessionId,
+            threadId: msgSessionId,
+            bridgeSessionId: msgSessionId,
           ) &&
-          (msg.errorCode == 'active_writer_conflict' ||
-              msg.message.contains('active writer conflict') ||
-              msg.message.contains('already open in another client') ||
-              msg.message.contains('is running with an active writer') ||
-              msg.message.contains('already has an active writer') ||
-              msg.message.contains('active_writer_conflict') ||
-              msg.message.contains('active writer'))) {
+          isActiveWriterConflictMessage(msg)) {
         if (state.sessionUnavailable) {
           emit(state.copyWith(sessionUnavailable: false));
         }

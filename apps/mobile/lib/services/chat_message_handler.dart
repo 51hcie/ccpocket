@@ -336,13 +336,7 @@ class ChatMessageHandler {
         }
         // Suppress active-writer conflict cards during polling/takeover queueing;
         // active writer conflict is exclusively presented via the takeover conflict banner and queue stream.
-        if (errorCode == 'active_writer_conflict' ||
-            message.contains('active writer conflict') ||
-            message.contains('already open in another client') ||
-            message.contains('is running with an active writer') ||
-            message.contains('already has an active writer') ||
-            message.contains('active_writer_conflict') ||
-            message.contains('active writer')) {
+        if (isActiveWriterConflictText(message, errorCode: errorCode)) {
           logger.info(
             '[handler] suppressed active_writer_conflict card (handled by takeover banner)',
           );
@@ -644,7 +638,9 @@ class ChatMessageHandler {
             (m.subtype != 'supported_commands' &&
                 m.subtype != 'session_created' &&
                 m.subtype != 'codex_settings')) {
-          entries.add(ServerChatEntry(m, timestamp: lastKnownTs));
+          if (!isActiveWriterConflictMessage(m)) {
+            entries.add(ServerChatEntry(m, timestamp: lastKnownTs));
+          }
         }
         // Restore slash commands from history (init, supported_commands, or
         // session_created with cached commands)
@@ -930,9 +926,15 @@ class ChatMessageHandler {
     required bool isCodex,
   }) {
     logger.info('[handler] result: subtype=$subtype cost=$cost');
+    final isConflict = isActiveWriterConflictMessage(msg);
+    if (isConflict) {
+      logger.info(
+        '[handler] suppressed active_writer_conflict result card (handled by takeover banner)',
+      );
+    }
     final effects = <ChatSideEffect>{ChatSideEffect.lightHaptic};
     final isStopped = subtype == 'stopped';
-    if (isBackground && !isStopped) {
+    if (isBackground && !isStopped && !isConflict) {
       effects.add(ChatSideEffect.notifySessionComplete);
     }
     if (isStopped) {
@@ -940,7 +942,7 @@ class ChatMessageHandler {
       effects.add(ChatSideEffect.clearPlanFeedback);
     }
     return ChatStateUpdate(
-      entriesToAdd: [ServerChatEntry(msg)],
+      entriesToAdd: isConflict ? const [] : [ServerChatEntry(msg)],
       status: isStopped ? ProcessStatus.idle : null,
       costDelta: cost,
       resetPending: isStopped,
