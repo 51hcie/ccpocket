@@ -385,6 +385,48 @@ void main() {
       await streamingCubit.close();
     });
 
+    test('Bridge restart regression: completed with no active sessions stays read-only and only resumes on sendMessage', () async {
+      final bridge = BridgeService();
+      final streamingCubit = StreamingStateCubit();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final cubit = CodexSessionCubit(
+        sessionId: 'restart-test-1',
+        bridge: bridge,
+        streamingCubit: streamingCubit,
+        initialProjectPath: '/repo',
+        isReadOnly: true,
+      );
+
+      // First sendMessage triggers resume
+      cubit.sendMessage('First command');
+      // Simulate completed status with no active sessions in bridge
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'restart-test-1',
+          queueId: 'q-none',
+          position: 0,
+          total: 0,
+          status: 'completed',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      // Cubit should still be read-only
+      expect(cubit.isReadOnlySession, isTrue);
+
+      // Sending another message should only send resume, not input
+      cubit.sendMessage('Second command');
+      final resumeMsgs = sentClientMessages.where((m) => m.toJson().contains('resume_session')).toList();
+      final inputMsgs = sentClientMessages.where((m) => m.toJson().contains('"type":"input"')).toList();
+      expect(resumeMsgs.length, equals(2)); // one for each sendMessage call
+      expect(inputMsgs, isEmpty);
+
+      await cubit.close();
+      await streamingCubit.close();
+    });
+
     test('CodexSessionCubit handles takeover completed and dispatches two consecutive instructions smoothly with provider=codex', () async {
       final bridge = _ConnectedBridgeService();
       final streamingCubit = StreamingStateCubit();
@@ -409,22 +451,7 @@ void main() {
       expect(resumeMsgs.first['provider'], 'codex');
       expect(resumeMsgs.first['sessionId'], '01a00976-b3f1-7831-8e03-b61c86acfac7');
 
-      // 2. Takeover queue status 'completed' arrives
-      bridge.testHandleMessage(
-        const CodexTakeoverQueueStatusMessage(
-          threadId: '01a00976-b3f1-7831-8e03-b61c86acfac7',
-          queueId: 'q-1',
-          position: 0,
-          total: 1,
-          status: 'completed',
-        ),
-      );
-      await Future<void>.delayed(Duration.zero);
-
-      // Verify read-only mode is exited
-      expect(cubit.isReadOnlySession, isFalse);
-
-      // Mock session active in bridge
+      // 2. Mock session active in bridge first, then takeover queue status 'completed' arrives
       bridge.testHandleMessage(
         const SessionListMessage(
           sessions: [
@@ -440,7 +467,20 @@ void main() {
           ],
         ),
       );
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: '01a00976-b3f1-7831-8e03-b61c86acfac7',
+          queueId: 'q-1',
+          position: 0,
+          total: 1,
+          status: 'completed',
+          sessionId: 's-bridge-1',
+        ),
+      );
       await Future<void>.delayed(Duration.zero);
+
+      // Verify read-only mode is exited
+      expect(cubit.isReadOnlySession, isFalse);
 
       // 3. First instruction sent after takeover
       cubit.sendMessage('First marker instruction');
@@ -467,6 +507,267 @@ void main() {
           .where((m) => m.toJson().contains('resume_session'))
           .toList();
       expect(finalResumeMsgs, hasLength(1));
+
+      await cubit.close();
+      await streamingCubit.close();
+    });
+
+    test('CodexSessionCubit matches different bridgeSessionId and threadId during resume and queue updates', () async {
+      final bridge = _ConnectedBridgeService();
+      final streamingCubit = StreamingStateCubit();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      // Cubit opened with source Codex threadId
+      final cubit = CodexSessionCubit(
+        sessionId: 'thread-alpha-123',
+        bridge: bridge,
+        streamingCubit: streamingCubit,
+        initialProjectPath: '/repo',
+        isReadOnly: true,
+      );
+
+      expect(cubit.isReadOnlySession, isTrue);
+
+      // 1. Session created on Bridge with distinct bridge sessionId 's-bridge-beta-456'
+      bridge.testHandleMessage(
+        const SystemMessage(
+          subtype: 'session_created',
+          sourceSessionId: 'thread-alpha-123',
+          sessionId: 's-bridge-beta-456',
+        ),
+      );
+      bridge.testHandleMessage(
+        const SessionListMessage(
+          sessions: [
+            SessionInfo(
+              id: 's-bridge-beta-456',
+              projectPath: '/repo',
+              provider: 'codex',
+              claudeSessionId: 'thread-alpha-123',
+              status: 'idle',
+              createdAt: '2026-08-28T00:00:00Z',
+              lastActivityAt: '2026-08-28T00:00:00Z',
+            ),
+          ],
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.isReadOnlySession, isFalse);
+
+      // 2. Queue status with queueId 'q-999', threadId 'thread-alpha-123', sessionId 's-bridge-beta-456'
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-alpha-123',
+          queueId: 'q-999',
+          sessionId: 's-bridge-beta-456',
+          position: 0,
+          total: 0,
+          status: 'running',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.isReadOnlySession, isFalse);
+
+      // 3. Completed status arrives while session is active -> stays writable
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-alpha-123',
+          queueId: 'q-999',
+          sessionId: 's-bridge-beta-456',
+          position: 0,
+          total: 0,
+          status: 'completed',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.isReadOnlySession, isFalse);
+
+      // 4. Session ends/closes on Bridge -> completed event leaves it read-only
+      bridge.testHandleMessage(const SessionListMessage(sessions: []));
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-alpha-123',
+          queueId: 'q-999',
+          sessionId: 's-bridge-beta-456',
+          position: 0,
+          total: 0,
+          status: 'completed',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.isReadOnlySession, isTrue);
+
+      await cubit.close();
+      await streamingCubit.close();
+    });
+
+    test('CodexSessionCubit handles consecutive commands during resume-then-send and dispatches exactly once', () async {
+      final bridge = _ConnectedBridgeService();
+      final streamingCubit = StreamingStateCubit();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final cubit = CodexSessionCubit(
+        sessionId: 'thread-consecutive-send',
+        bridge: bridge,
+        streamingCubit: streamingCubit,
+        initialProjectPath: '/repo',
+        isReadOnly: true,
+      );
+
+      // 1. Send first message -> triggers resume
+      cubit.sendMessage('First draft message');
+      expect(cubit.hasPendingResumeCommand, isTrue);
+
+      // 2. Send second message before resume arrives -> updates pending command without duplicate resume
+      cubit.sendMessage('Second refined message');
+      expect(cubit.hasPendingResumeCommand, isTrue);
+
+      final resumeMsgs = sentClientMessages
+          .where((m) => m.toJson().contains('resume_session'))
+          .toList();
+      expect(resumeMsgs, hasLength(1));
+
+      // 3. Multiple resume/created events arrive (session_created + status: resumed + status: running)
+      bridge.testHandleMessage(
+        const SystemMessage(
+          subtype: 'session_created',
+          sourceSessionId: 'thread-consecutive-send',
+          sessionId: 's-consecutive-1',
+        ),
+      );
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-consecutive-send',
+          queueId: 'q-cons-1',
+          sessionId: 's-consecutive-1',
+          position: 0,
+          total: 0,
+          status: 'resumed',
+        ),
+      );
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-consecutive-send',
+          queueId: 'q-cons-1',
+          sessionId: 's-consecutive-1',
+          position: 0,
+          total: 0,
+          status: 'running',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      // Pending command dispatched EXACTLY ONCE
+      final inputMsgs = sentClientMessages
+          .where((m) => m.toJson().contains('"type":"input"'))
+          .map((m) => jsonDecode(m.toJson()) as Map<String, dynamic>)
+          .toList();
+      expect(inputMsgs, hasLength(1));
+      expect(inputMsgs.first['text'], equals('Second refined message'));
+      expect(cubit.hasPendingResumeCommand, isFalse);
+      expect(cubit.isReadOnlySession, isFalse);
+
+      await cubit.close();
+      await streamingCubit.close();
+    });
+
+    test('CodexSessionCubit handles takeover queueing from conflict through resumed to completed without duplicate input', () async {
+      final bridge = _ConnectedBridgeService();
+      final streamingCubit = StreamingStateCubit();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final cubit = CodexSessionCubit(
+        sessionId: 'thread-queue-conflict',
+        bridge: bridge,
+        streamingCubit: streamingCubit,
+        initialProjectPath: '/repo',
+        isReadOnly: true,
+      );
+
+      // 1. User sends message -> resume triggered
+      cubit.sendMessage('Fix concurrent lock');
+      expect(cubit.hasPendingResumeCommand, isTrue);
+
+      // 2. Active writer conflict message received
+      bridge.testHandleMessage(
+        const CodexTakeoverConflictMessage(
+          threadId: 'thread-queue-conflict',
+          projectPath: '/repo',
+          message: 'Thread is running in another client',
+          canQueue: true,
+          queueLength: 1,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      // Command should be handed over to bridge takeover queue and cleared locally
+      final enqueueMsgs = sentClientMessages
+          .where((m) => m.toJson().contains('enqueue_codex_takeover'))
+          .map((m) => jsonDecode(m.toJson()) as Map<String, dynamic>)
+          .toList();
+      expect(enqueueMsgs, hasLength(1));
+      expect(enqueueMsgs.first['queuedCommand'], equals('Fix concurrent lock'));
+      expect(cubit.hasPendingResumeCommand, isFalse);
+
+      // 3. Takeover queue status messages: queued -> running -> completed
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-queue-conflict',
+          queueId: 'q-lock-55',
+          position: 1,
+          total: 1,
+          status: 'queued',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.isReadOnlySession, isTrue);
+
+      bridge.testHandleMessage(
+        const SessionListMessage(
+          sessions: [
+            SessionInfo(
+              id: 's-lock-session',
+              projectPath: '/repo',
+              provider: 'codex',
+              claudeSessionId: 'thread-queue-conflict',
+              status: 'running',
+              createdAt: '2026-08-28T00:00:00Z',
+              lastActivityAt: '2026-08-28T00:00:00Z',
+            ),
+          ],
+        ),
+      );
+      bridge.testHandleMessage(
+        const CodexTakeoverQueueStatusMessage(
+          threadId: 'thread-queue-conflict',
+          queueId: 'q-lock-55',
+          sessionId: 's-lock-session',
+          position: 0,
+          total: 0,
+          status: 'running',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.isReadOnlySession, isFalse);
+
+      // Client must NOT send duplicate input because command was queued in Bridge
+      final inputMsgsDuringQueue = sentClientMessages
+          .where((m) => m.toJson().contains('"type":"input"'))
+          .toList();
+      expect(inputMsgsDuringQueue, isEmpty);
+
+      // 4. Subsequent instruction from user is sent directly
+      cubit.sendMessage('Followup command after queue');
+      final inputMsgsAfter = sentClientMessages
+          .where((m) => m.toJson().contains('"type":"input"'))
+          .map((m) => jsonDecode(m.toJson()) as Map<String, dynamic>)
+          .toList();
+      expect(inputMsgsAfter, hasLength(1));
+      expect(inputMsgsAfter.first['text'], equals('Followup command after queue'));
 
       await cubit.close();
       await streamingCubit.close();

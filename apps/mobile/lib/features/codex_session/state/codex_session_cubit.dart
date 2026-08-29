@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -53,20 +54,85 @@ class CodexSessionCubit extends ChatSessionCubit {
   bool get isReadOnlySession => _isReadOnly;
   bool get hasPendingResumeCommand => _pendingResumeCommand != null;
 
-  void _initTakeoverListeners() {
-    bool matchesThread(String threadId) {
-      if (threadId == sessionId) return true;
-      for (final s in bridge.sessions) {
-        if ((s.id == sessionId || s.claudeSessionId == sessionId) &&
+  /// Matches incoming message identities (source Codex [threadId] and/or runtime
+  /// [bridgeSessionId]) against this cubit's [sessionId] and known Bridge sessions.
+  ///
+  /// Note: [queueId] identifies a takeover task and is distinct from [threadId]
+  /// and [bridgeSessionId].
+  bool _matchesIdentity({String? threadId, String? bridgeSessionId}) {
+    if (threadId != null && threadId.isNotEmpty && threadId == sessionId) {
+      return true;
+    }
+    if (bridgeSessionId != null &&
+        bridgeSessionId.isNotEmpty &&
+        bridgeSessionId == sessionId) {
+      return true;
+    }
+
+    for (final s in bridge.sessions) {
+      final sMatchesCubit =
+          s.id == sessionId || s.claudeSessionId == sessionId;
+      if (sMatchesCubit) {
+        if (threadId != null &&
+            threadId.isNotEmpty &&
             (s.id == threadId || s.claudeSessionId == threadId)) {
           return true;
         }
+        if (bridgeSessionId != null &&
+            bridgeSessionId.isNotEmpty &&
+            (s.id == bridgeSessionId ||
+                s.claudeSessionId == bridgeSessionId)) {
+          return true;
+        }
       }
-      return false;
     }
 
+    for (final r in bridge.recentSessions) {
+      if (r.sessionId == sessionId) {
+        if (threadId != null &&
+            threadId.isNotEmpty &&
+            r.sessionId == threadId) {
+          return true;
+        }
+        if (bridgeSessionId != null &&
+            bridgeSessionId.isNotEmpty &&
+            r.sessionId == bridgeSessionId) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Checks if an active session exists in [bridge.sessions] corresponding to
+  /// this cubit or the given target identities.
+  bool _hasActiveSession({
+    String? targetThreadId,
+    String? targetBridgeSessionId,
+  }) {
+    return bridge.sessions.any((s) {
+      if (s.id == sessionId || s.claudeSessionId == sessionId) {
+        return true;
+      }
+      if (targetThreadId != null &&
+          targetThreadId.isNotEmpty &&
+          (s.id == targetThreadId || s.claudeSessionId == targetThreadId)) {
+        return true;
+      }
+      if (targetBridgeSessionId != null &&
+          targetBridgeSessionId.isNotEmpty &&
+          (s.id == targetBridgeSessionId ||
+              s.claudeSessionId == targetBridgeSessionId)) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  void _initTakeoverListeners() {
     _readOnlySub = bridge.codexReadOnlyInfoStream.listen((msg) {
-      if (matchesThread(msg.threadId)) {
+      if (_matchesIdentity(threadId: msg.threadId)) {
         _isReadOnly = msg.isReadOnly;
         if (state.sessionUnavailable) {
           emit(state.copyWith(sessionUnavailable: false));
@@ -80,24 +146,44 @@ class CodexSessionCubit extends ChatSessionCubit {
             :final subtype,
             :final sourceSessionId,
             sessionId: final createdSessionId,
-          ) when subtype == 'session_created' &&
-              (matchesThread(sourceSessionId ?? '') ||
-                  matchesThread(createdSessionId ?? ''))) {
+          )
+          when subtype == 'session_created' &&
+              _matchesIdentity(
+                threadId: sourceSessionId,
+                bridgeSessionId: createdSessionId,
+              )) {
         _onSessionResumed();
       }
     });
 
     _queueStatusSub = bridge.codexTakeoverQueueStatusStream.listen((msg) {
-      if (matchesThread(msg.threadId) &&
-          (msg.status == 'resumed' ||
-              msg.status == 'running' ||
-              msg.status == 'completed')) {
+      if (!_matchesIdentity(
+        threadId: msg.threadId,
+        bridgeSessionId: msg.sessionId,
+      )) {
+        return;
+      }
+
+      if (msg.status == 'resumed' || msg.status == 'running') {
         _onSessionResumed();
+      } else if (msg.status == 'completed') {
+        final hasActive = _hasActiveSession(
+          targetThreadId: msg.threadId,
+          targetBridgeSessionId: msg.sessionId,
+        );
+        if (hasActive) {
+          _onSessionResumed();
+        } else {
+          // If no active session exists (e.g. bridge restart or closed session),
+          // keep read-only so next sendMessage triggers resume.
+          _pendingResumeCommand = null;
+          _isReadOnly = true;
+        }
       }
     });
 
     _conflictSub = bridge.codexTakeoverConflictStream.listen((msg) {
-      if (matchesThread(msg.threadId)) {
+      if (_matchesIdentity(threadId: msg.threadId)) {
         if (state.sessionUnavailable) {
           emit(state.copyWith(sessionUnavailable: false));
         }
@@ -128,7 +214,9 @@ class CodexSessionCubit extends ChatSessionCubit {
       _pendingResumeCommand = null;
       bridge.enqueueCodexTakeover(
         sessionId,
-        msg.projectPath.isNotEmpty ? msg.projectPath : (state.projectPath ?? ''),
+        msg.projectPath.isNotEmpty
+            ? msg.projectPath
+            : (state.projectPath ?? ''),
         queuedCommand: pending.text,
       );
     }
@@ -140,10 +228,9 @@ class CodexSessionCubit extends ChatSessionCubit {
     List<({Uint8List bytes, String mimeType})>? images,
     Iterable<String>? mentionablePaths,
   }) {
-    final isActive = bridge.sessions.any(
-      (s) => s.id == sessionId || s.claudeSessionId == sessionId,
-    );
+    final isActive = _hasActiveSession();
     if (!isActive && _isReadOnly) {
+      final wasResuming = _pendingResumeCommand != null;
       _pendingResumeCommand = (
         text: text,
         images: images,
@@ -159,8 +246,14 @@ class CodexSessionCubit extends ChatSessionCubit {
       );
       emit(state.copyWith(entries: [...state.entries, entry]));
 
-      final project = state.projectPath ?? '';
-      bridge.resumeSession(sessionId, project, provider: Provider.codex.value);
+      if (!wasResuming) {
+        final project = state.projectPath ?? '';
+        bridge.resumeSession(
+          sessionId,
+          project,
+          provider: Provider.codex.value,
+        );
+      }
       return;
     }
 
