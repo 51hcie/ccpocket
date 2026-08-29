@@ -1700,8 +1700,8 @@ bool isActiveWriterConflictText(String? text, {String? errorCode}) {
   if (errorCode == 'active_writer_conflict') return true;
   if (text == null || text.isEmpty) return false;
   final lower = text.toLowerCase();
-  return lower.contains('active writer') ||
-      lower.contains('active_writer') ||
+  return lower.contains('active_writer_conflict') ||
+      lower.contains('active writer conflict') ||
       lower.contains('already open in another client') ||
       lower.contains('is running with an active writer') ||
       lower.contains('already has an active writer');

@@ -1307,6 +1307,10 @@ void main() {
         isActiveWriterConflictText('Command failed with exit code 1'),
         isFalse,
       );
+      expect(
+        isActiveWriterConflictText('No active writer remains for this thread'),
+        isFalse,
+      );
       expect(isActiveWriterConflictText(''), isFalse);
       expect(isActiveWriterConflictText(null), isFalse);
     });
