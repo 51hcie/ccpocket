@@ -93,6 +93,10 @@ export async function startServer() {
   );
   const codexTakeoverQueueStore = new CodexTakeoverQueueStore();
   const mdns = MDNS_ENABLED ? new MdnsAdvertiser() : undefined;
+  // The queue store can initialize before the rest of startup reaches the
+  // WebSocket server construction. Declare this before registering its async
+  // callback so the callback never reads wsServer from its temporal dead zone.
+  let wsServer: BridgeWebSocketServer | null = null;
 
   // Check and self-heal Codex code-mode host
   try {
@@ -169,7 +173,6 @@ export async function startServer() {
   });
 
   const startedAt = Date.now();
-  let wsServer: BridgeWebSocketServer | null = null;
   const updateService = new UpdateService();
   const monitoringService = new MonitoringService(
     startedAt,
