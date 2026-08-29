@@ -130,12 +130,17 @@ class CodexSessionCubit extends ChatSessionCubit {
     });
   }
 
+  StreamSubscription<ServerMessage>? _errorSub;
+
   void _initTakeoverListeners() {
     _readOnlySub = bridge.codexReadOnlyInfoStream.listen((msg) {
       if (_matchesIdentity(threadId: msg.threadId)) {
         _isReadOnly = msg.isReadOnly;
         if (state.sessionUnavailable) {
           emit(state.copyWith(sessionUnavailable: false));
+        }
+        if (state.status == ProcessStatus.starting) {
+          emit(state.copyWith(status: ProcessStatus.idle));
         }
       }
     });
@@ -187,7 +192,32 @@ class CodexSessionCubit extends ChatSessionCubit {
         if (state.sessionUnavailable) {
           emit(state.copyWith(sessionUnavailable: false));
         }
+        if (state.status == ProcessStatus.starting) {
+          emit(state.copyWith(status: ProcessStatus.idle));
+        }
         _onConflictEncountered(msg);
+      }
+    });
+
+    _errorSub = bridge.messages.listen((msg) {
+      if (msg is ErrorMessage &&
+          _matchesIdentity(
+            threadId: msg.sessionId,
+            bridgeSessionId: msg.sessionId,
+          ) &&
+          (msg.errorCode == 'active_writer_conflict' ||
+              msg.message.contains('active writer conflict') ||
+              msg.message.contains('already open in another client') ||
+              msg.message.contains('is running with an active writer') ||
+              msg.message.contains('already has an active writer') ||
+              msg.message.contains('active_writer_conflict') ||
+              msg.message.contains('active writer'))) {
+        if (state.sessionUnavailable) {
+          emit(state.copyWith(sessionUnavailable: false));
+        }
+        if (state.status == ProcessStatus.starting) {
+          emit(state.copyWith(status: ProcessStatus.idle));
+        }
       }
     });
   }
@@ -279,6 +309,7 @@ class CodexSessionCubit extends ChatSessionCubit {
     _conflictSub?.cancel();
     _queueStatusSub?.cancel();
     _readOnlySub?.cancel();
+    _errorSub?.cancel();
     return super.close();
   }
 }

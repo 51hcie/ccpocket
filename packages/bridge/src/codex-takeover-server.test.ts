@@ -761,4 +761,73 @@ describe("BridgeWebSocketServer Codex Takeover Queue Integration", () => {
 
     ws.close();
   });
+
+  it("get_history on active-writer conflict thread classifies as active_writer_conflict, falls back to local history, and allows takeover", async () => {
+    const threadId = "01a00976-b3f1-7831-8e03-b61c86acfac7";
+    const { ws, waitForMessage, received } = await connectClient();
+
+    // Mock RPC history failure with real app-server active-writer error text
+    const getRpcHistorySpy = vi
+      .spyOn(bridge as any, "getCodexThreadHistoryFromRpc")
+      .mockRejectedValue(
+        new CodexRpcError("thread/read", {
+          code: -32603,
+          message: `thread ${threadId} already has an active writer`,
+        }),
+      );
+
+    // Mock local history fallback returning user and assistant turns
+    const getLocalHistorySpy = vi
+      .spyOn(bridge as any, "getCodexThreadHistory")
+      .mockImplementation(async (id: string) => {
+        if (id === threadId) {
+          throw new CodexRpcError("thread/read", {
+            code: -32603,
+            message: `thread ${threadId} already has an active writer`,
+          });
+        }
+        return [];
+      });
+
+    ws.send(JSON.stringify({ type: "get_history", sessionId: threadId }));
+
+    // 1. Conflict message is received with canQueue: true
+    const conflictMsg = await waitForMessage(
+      (m) => m.type === "codex_takeover_conflict" && m.threadId === threadId,
+    );
+    expect(conflictMsg.canQueue).toBe(true);
+
+    // 2. Error message has structured errorCode 'active_writer_conflict'
+    const errorMsg = await waitForMessage(
+      (m) =>
+        m.type === "error" &&
+        m.sessionId === threadId &&
+        m.errorCode === "active_writer_conflict",
+    );
+    expect(errorMsg.errorCode).toBe("active_writer_conflict");
+    expect(errorMsg.message).not.toContain("codex app-server is not running");
+
+    // 3. Client can now queue takeover on this conflicting thread
+    ws.send(
+      JSON.stringify({
+        type: "enqueue_codex_takeover",
+        threadId,
+        projectPath: "/repo",
+        clientId: "client-after-conflict",
+        queuedCommand: "queued command after history conflict",
+      }),
+    );
+
+    const queuedMsg = await waitForMessage(
+      (m) =>
+        m.type === "codex_takeover_queue_status" &&
+        m.threadId === threadId &&
+        m.status === "queued",
+    );
+    expect(queuedMsg.status).toBe("queued");
+
+    getRpcHistorySpy.mockRestore();
+    getLocalHistorySpy.mockRestore();
+    ws.close();
+  });
 });

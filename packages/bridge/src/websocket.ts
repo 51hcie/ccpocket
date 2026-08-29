@@ -1809,11 +1809,29 @@ export class BridgeWebSocketServer {
       }
       return true;
     } catch (err) {
+      const isConflict = isCodexThreadWriterConflict(err);
+      if (isConflict) {
+        this.send(ws, {
+          type: "codex_takeover_conflict",
+          threadId: sessionId,
+          projectPath: session.projectPath,
+          message:
+            "This Codex thread is already open in another client. Close it there and try again.",
+          canQueue: true,
+          queueLength: this.codexTakeoverQueueStore.getPendingForThread(
+            sessionId,
+          ).length,
+        });
+      }
       this.send(ws, {
         type: "error",
-        message: `Failed to read Codex thread history: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        message: isConflict
+          ? "This Codex thread is already open in another client. Close it there and try again."
+          : `Failed to read Codex thread history: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+        errorCode: isConflict ? "active_writer_conflict" : undefined,
+        sessionId,
       });
       return true;
     }
@@ -1843,11 +1861,30 @@ export class BridgeWebSocketServer {
       this.sendCachedCommands(ws, sessionId, session);
       return true;
     } catch (err) {
+      const isConflict = isCodexThreadWriterConflict(err);
+      if (isConflict) {
+        this.send(ws, {
+          type: "codex_takeover_conflict",
+          threadId: sessionId,
+          projectPath: session.projectPath,
+          message:
+            "This Codex thread is already open in another client. Close it there and try again.",
+          canQueue: true,
+          queueLength: this.codexTakeoverQueueStore.getPendingForThread(
+            sessionId,
+          ).length,
+        });
+      }
+
       this.send(ws, {
         type: "error",
-        message: `Failed to read Codex thread history: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        message: isConflict
+          ? "This Codex thread is already open in another client. Close it there and try again."
+          : `Failed to read Codex thread history: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+        errorCode: isConflict ? "active_writer_conflict" : undefined,
+        sessionId: isConflict ? sessionId : undefined,
       });
       return true;
     }
@@ -2126,7 +2163,9 @@ export class BridgeWebSocketServer {
     projectPath?: string,
     preferredProcess?: CodexProcess,
   ): Promise<SessionHistoryMessage[]> {
-    const activeProcess = preferredProcess ?? this.getActiveCodexProcess();
+    const activeProcess =
+      (preferredProcess && preferredProcess.isRunning ? preferredProcess : null) ??
+      this.getActiveCodexProcess();
     const process =
       activeProcess ?? (await this.createStandaloneCodexProcess(projectPath));
     const isStandalone = process !== activeProcess;
@@ -4328,7 +4367,27 @@ export class BridgeWebSocketServer {
               });
               handledHistorical = true;
             }
-          } catch {
+          } catch (err) {
+            if (isCodexThreadWriterConflict(err)) {
+              this.send(ws, {
+                type: "codex_takeover_conflict",
+                threadId: msg.sessionId,
+                projectPath: "",
+                message:
+                  "This Codex thread is already open in another client. Close it there and try again.",
+                canQueue: true,
+                queueLength: this.codexTakeoverQueueStore.getPendingForThread(
+                  msg.sessionId,
+                ).length,
+              });
+              this.send(ws, {
+                type: "error",
+                message:
+                  "This Codex thread is already open in another client. Close it there and try again.",
+                errorCode: "active_writer_conflict",
+                sessionId: msg.sessionId,
+              });
+            }
             // fallback to local session history
           }
 

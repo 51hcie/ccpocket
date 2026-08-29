@@ -384,6 +384,8 @@ class _ChatMessageListState extends State<ChatMessageList> {
               msg.message.contains('already open in another client') ||
               msg.message.contains('active writer conflict') ||
               msg.message.contains('is running with an active writer') ||
+              msg.message.contains('already has an active writer') ||
+              msg.message.contains('active_writer_conflict') ||
               msg.message.contains('active writer')) {
             return false;
           }

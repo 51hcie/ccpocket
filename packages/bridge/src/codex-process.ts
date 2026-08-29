@@ -212,24 +212,37 @@ export class CodexRpcError extends Error {
 
 export function isCodexThreadWriterConflict(error: unknown): boolean {
   if (!error) return false;
-  if (
-    error instanceof CodexRpcError &&
-    error.code === -32600 &&
-    /\b(active|live local)\s+writer\b/i.test(error.message)
-  ) {
-    return true;
-  }
   if (typeof error === "object" && error !== null) {
-    const err = error as { code?: number; message?: string; name?: string };
+    const err = error as {
+      code?: number;
+      message?: string;
+      name?: string;
+      errorCode?: string;
+    };
+    if (err.errorCode === "active_writer_conflict") {
+      return true;
+    }
     if (
-      err.code === -32600 &&
       typeof err.message === "string" &&
-      /\b(active|live local)\s+writer\b/i.test(err.message)
+      isCodexThreadWriterConflictMessage(err.message)
     ) {
       return true;
     }
   }
+  if (typeof error === "string" && isCodexThreadWriterConflictMessage(error)) {
+    return true;
+  }
   return false;
+}
+
+function isCodexThreadWriterConflictMessage(message: string): boolean {
+  return (
+    /\b(?:active|live(?:\s+local)?)\s+writer\b/i.test(message) ||
+    /\balready\s+has\s+an\s+active\s+writer\b/i.test(message) ||
+    /\balready\s+open\s+in\s+another\s+client\b/i.test(message) ||
+    /\bactive_writer_conflict\b/i.test(message) ||
+    /\bactive\s+writer\s+conflict\b/i.test(message)
+  );
 }
 
 export function codexErrorMessage(error: unknown): string {

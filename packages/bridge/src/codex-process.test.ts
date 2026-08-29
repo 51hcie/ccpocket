@@ -41,6 +41,7 @@ import {
   codexErrorMessage,
   CodexProcess,
   CodexRpcError,
+  isCodexThreadWriterConflict,
   parseCodexGoal,
 } from "./codex-process.js";
 import { stopManagedCodexAppServers } from "./codex-transport.js";
@@ -238,6 +239,88 @@ describe("CodexProcess (app-server)", () => {
         }),
       ),
     ).toBe("invalid thread id");
+  });
+
+  describe("isCodexThreadWriterConflict classification", () => {
+    it("identifies active-writer conflict across error codes and message formats", () => {
+      // 1. Standard -32600 RPC error with active writer
+      expect(
+        isCodexThreadWriterConflict(
+          new CodexRpcError("thread/resume", {
+            code: -32600,
+            message: "thread already has an active writer",
+          }),
+        ),
+      ).toBe(true);
+
+      // 2. Non -32600 (e.g. -32603 or -32000) RPC error with specific thread id
+      expect(
+        isCodexThreadWriterConflict(
+          new CodexRpcError("thread/resume", {
+            code: -32603,
+            message:
+              "thread 01a00976-b3f1-7831-8e03-b61c86acfac7 already has an active writer",
+          }),
+        ),
+      ).toBe(true);
+
+      // 3. Plain Error instance with active writer message
+      expect(
+        isCodexThreadWriterConflict(
+          new Error("thread already has an active writer"),
+        ),
+      ).toBe(true);
+
+      // 4. Live local writer in another client / process
+      expect(
+        isCodexThreadWriterConflict(
+          new Error(
+            "thread is running with a live local writer in another process",
+          ),
+        ),
+      ).toBe(true);
+
+      // 5. Friendly conflict message
+      expect(
+        isCodexThreadWriterConflict(
+          new Error(
+            "This Codex thread is already open in another client. Close it there and try again.",
+          ),
+        ),
+      ).toBe(true);
+
+      // 6. Object with errorCode 'active_writer_conflict'
+      expect(
+        isCodexThreadWriterConflict({
+          errorCode: "active_writer_conflict",
+          message: "Conflict occurred",
+        }),
+      ).toBe(true);
+
+      // 7. String matching conflict pattern
+      expect(isCodexThreadWriterConflict("active writer conflict")).toBe(true);
+    });
+
+    it("does NOT classify genuine app-server not running as active writer conflict", () => {
+      expect(
+        isCodexThreadWriterConflict(
+          new Error("codex app-server is not running"),
+        ),
+      ).toBe(false);
+      expect(
+        isCodexThreadWriterConflict(
+          new Error("Failed to read Codex thread history: codex app-server is not running"),
+        ),
+      ).toBe(false);
+      expect(
+        isCodexThreadWriterConflict(
+          new CodexRpcError("thread/read", {
+            code: -32601,
+            message: "Method not found",
+          }),
+        ),
+      ).toBe(false);
+    });
   });
 
   it("finalizes streamed agent text before turn completion", () => {

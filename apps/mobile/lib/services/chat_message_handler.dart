@@ -340,6 +340,8 @@ class ChatMessageHandler {
             message.contains('active writer conflict') ||
             message.contains('already open in another client') ||
             message.contains('is running with an active writer') ||
+            message.contains('already has an active writer') ||
+            message.contains('active_writer_conflict') ||
             message.contains('active writer')) {
           logger.info(
             '[handler] suppressed active_writer_conflict card (handled by takeover banner)',

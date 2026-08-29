@@ -835,6 +835,8 @@ class _CodexChatBody extends HookWidget {
                 msg.message.contains('active writer conflict') ||
                 msg.message.contains('already open in another client') ||
                 msg.message.contains('is running with an active writer') ||
+                msg.message.contains('already has an active writer') ||
+                msg.message.contains('active_writer_conflict') ||
                 msg.message.contains('active writer'))) {
           if (queueStatus.value == null ||
               queueStatus.value!.status == 'queued') {
@@ -2290,7 +2292,10 @@ class _CodexTakeoverConflictBanner extends StatelessWidget {
       final friendlyDesc = (message != null &&
               (message!.contains('already open in another client') ||
                   message!.contains('active_writer_conflict') ||
-                  message!.contains('active writer conflict')))
+                  message!.contains('active writer conflict') ||
+                  message!.contains('already has an active writer') ||
+                  message!.contains('is running with an active writer') ||
+                  message!.contains('active writer')))
           ? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。'
           : (message ?? '该任务正由其他客户端或写入者控制。当前以只读监控模式展示。');
       bannerDesc = isQueued

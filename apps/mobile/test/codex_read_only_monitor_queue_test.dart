@@ -1124,5 +1124,123 @@ void main() {
       // But NO error message card containing 'already open in another client' should exist in the chat message list
       expect(find.textContaining('This Codex thread is already open in another client'), findsNothing);
     });
+
+    testWidgets('CodexSessionScreen handles real RPC error text "thread already has an active writer" and enables takeover/input', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final bridge = BridgeService();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final threadId = '01a00976-b3f1-7831-8e03-b61c86acfac7';
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: CodexSessionScreen(
+          sessionId: threadId,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      // Simulate bridge emitting real RPC active writer conflict error
+      bridge.testHandleMessage(
+        ErrorMessage(
+          message: 'thread $threadId already has an active writer',
+          errorCode: 'active_writer_conflict',
+          sessionId: threadId,
+        ),
+        sessionId: threadId,
+      );
+      await pumpN(tester);
+
+      // 1. Conflict banner is rendered
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      expect(find.text('Codex 活跃写入者冲突'), findsOneWidget);
+
+      // 2. Error message card is suppressed from message list
+      expect(find.textContaining('already has an active writer'), findsNothing);
+      expect(find.text('会话不可用'), findsNothing);
+
+      // 3. Status is transitioned to idle so input composer is active
+      final inputFinder = find.byType(TextField);
+      expect(inputFinder, findsOneWidget);
+      final textField = tester.widget<TextField>(inputFinder);
+      expect(textField.enabled, isTrue);
+
+      // 4. Entering command and tapping queue takeover dispatches enqueue message
+      await tester.enterText(inputFinder, 'Takeover command from user');
+      await pumpN(tester);
+
+      final queueBtn = find.byKey(const ValueKey('codex_conflict_queue_button'));
+      expect(queueBtn, findsOneWidget);
+      await tester.tap(queueBtn);
+      await pumpN(tester);
+
+      // Enqueue message dispatched
+      expect(
+        sentClientMessages.any((m) =>
+            m.toJson().contains('enqueue_codex_takeover') &&
+            m.toJson().contains('Takeover command from user')),
+        isTrue,
+      );
+    });
+
+    testWidgets('History read failure with active_writer_conflict preserves read-only page and enables takeover', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final bridge = BridgeService();
+      final sentClientMessages = <ClientMessage>[];
+      bridge.onOutgoingMessage = (msg) => sentClientMessages.add(msg);
+
+      final threadId = '01a00976-b3f1-7831-8e03-b61c86acfac7';
+      final harness = await buildTestCodexScreenHarness(
+        bridge: bridge,
+        child: CodexSessionScreen(
+          sessionId: threadId,
+          projectPath: '/workspace',
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await pumpN(tester);
+
+      // Bridge emits takeover conflict event
+      bridge.testHandleMessage(
+        CodexTakeoverConflictMessage(
+          threadId: threadId,
+          projectPath: '/workspace',
+          message: 'thread $threadId already has an active writer',
+          canQueue: true,
+          queueLength: 0,
+        ),
+      );
+      await pumpN(tester);
+
+      expect(find.byKey(const ValueKey('codex_takeover_conflict_banner')), findsOneWidget);
+      expect(find.text('会话不可用'), findsNothing);
+
+      // Can tap takeover directly
+      final queueBtn = find.byKey(const ValueKey('codex_conflict_queue_button'));
+      expect(queueBtn, findsOneWidget);
+      await tester.tap(queueBtn);
+      await pumpN(tester);
+
+      expect(
+        sentClientMessages.any((m) => m.toJson().contains('enqueue_codex_takeover')),
+        isTrue,
+      );
+    });
   });
 }
