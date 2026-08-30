@@ -27,19 +27,23 @@ class BrandConfig {
 
   /// Default bridge WebSocket URL for AnyCoding.
   static const String defaultAnyCodingBridgeUrl =
-      'ws://[2408:824e:1562:9420::6f1]:8766';
+      'ws://[2408:824e:1580:9c80::6f1]:8766';
+
+  /// Previously shipped preset endpoints that may be migrated on upgrade.
+  /// User-provided LAN/public endpoints are never included here.
+  static const Set<String> retiredAnyCodingBridgeUrls = {
+    'ws://[2408:824e:1562:9420::6f1]:8766',
+  };
 
   /// Short open-source attribution note for settings / about pages.
-  static String get openSourceAttribution =>
-      isAnyCoding
-          ? '基于 MIT 开源项目 CC Pocket 二次开发'
-          : 'MIT Licensed Open Source Project';
+  static String get openSourceAttribution => isAnyCoding
+      ? '基于 MIT 开源项目 CC Pocket 二次开发'
+      : 'MIT Licensed Open Source Project';
 
   /// Product description for About page.
-  static String get aboutDescription =>
-      isAnyCoding
-          ? 'AnyCoding 是用安卓手机远程指挥 Mac 上 Codex 与 Antigravity 的 AI 任务控制台。'
-          : 'Claude Code and Codex mobile companion client.';
+  static String get aboutDescription => isAnyCoding
+      ? 'AnyCoding 是用安卓手机远程指挥 Mac 上 Codex 与 Antigravity 的 AI 任务控制台。'
+      : 'Claude Code and Codex mobile companion client.';
 
   /// Whether store review prompt should be visible.
   static bool get showStoreReview => !isAnyCoding;

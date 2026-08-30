@@ -76,9 +76,7 @@ void main() {
     });
 
     test('parses bare bracketed IPv6 host:port without scheme', () {
-      final endpoint = parseBootstrapEndpoint(
-        '[$targetIpv6Host]:$targetPort',
-      );
+      final endpoint = parseBootstrapEndpoint('[$targetIpv6Host]:$targetPort');
       expect(endpoint, isNotNull);
       expect(endpoint!.host, targetIpv6Host);
       expect(endpoint.port, targetPort);
@@ -87,9 +85,7 @@ void main() {
     });
 
     test('parses secure wss:// URL', () {
-      final endpoint = parseBootstrapEndpoint(
-        'wss://bridge.example.com:8765',
-      );
+      final endpoint = parseBootstrapEndpoint('wss://bridge.example.com:8765');
       expect(endpoint, isNotNull);
       expect(endpoint!.host, 'bridge.example.com');
       expect(endpoint.port, 8765);
@@ -163,49 +159,50 @@ void main() {
   });
 
   group('bootstrapMacremoteBridge', () {
-    test('seeds bridge_url preference and favorite Machine on fresh install', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final secureStorage = _FakeSecureStorage();
-      final manager = MachineManagerService(prefs, secureStorage);
+    test(
+      'seeds bridge_url preference and favorite Machine on fresh install',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final secureStorage = _FakeSecureStorage();
+        final manager = MachineManagerService(prefs, secureStorage);
 
-      const config = MacremoteBootstrapConfig(
-        bridgeUrl: targetIpv6Url,
-        bridgeName: targetName,
-        autoConnect: true,
-      );
+        const config = MacremoteBootstrapConfig(
+          bridgeUrl: targetIpv6Url,
+          bridgeName: targetName,
+          autoConnect: true,
+        );
 
-      final result = await bootstrapMacremoteBridge(
-        prefs: prefs,
-        machineManager: manager,
-        config: config,
-        uuid: const Uuid(),
-      );
+        final result = await bootstrapMacremoteBridge(
+          prefs: prefs,
+          machineManager: manager,
+          config: config,
+          uuid: const Uuid(),
+        );
 
-      expect(result, isTrue);
-      expect(prefs.getString('bridge_url'), targetIpv6Url);
+        expect(result, isTrue);
+        expect(prefs.getString('bridge_url'), targetIpv6Url);
 
-      final machines = manager.currentMachines;
-      expect(machines, hasLength(1));
-      final seeded = machines.single;
-      expect(seeded.name, targetName);
-      expect(seeded.host, targetIpv6Host);
-      expect(seeded.port, targetPort);
-      expect(seeded.useSsl, isFalse);
-      expect(seeded.connectionMode, BridgeConnectionMode.standardOnly);
-      expect(seeded.hasResolvedTransport, isTrue);
-      expect(seeded.isFavorite, isTrue);
-      expect(seeded.hasApiKey, isFalse);
-      expect(seeded.wsUrl, targetIpv6Url);
-      expect(seeded.httpUrl, 'http://[$targetIpv6Host]:$targetPort');
+        final machines = manager.currentMachines;
+        expect(machines, hasLength(1));
+        final seeded = machines.single;
+        expect(seeded.name, targetName);
+        expect(seeded.host, targetIpv6Host);
+        expect(seeded.port, targetPort);
+        expect(seeded.useSsl, isFalse);
+        expect(seeded.connectionMode, BridgeConnectionMode.standardOnly);
+        expect(seeded.hasResolvedTransport, isTrue);
+        expect(seeded.isFavorite, isTrue);
+        expect(seeded.hasApiKey, isFalse);
+        expect(seeded.wsUrl, targetIpv6Url);
+        expect(seeded.httpUrl, 'http://[$targetIpv6Host]:$targetPort');
 
-      manager.dispose();
-    });
+        manager.dispose();
+      },
+    );
 
     test('does not overwrite existing user bridge_url and machines', () async {
       const userCustomUrl = 'ws://192.168.1.100:8765';
-      SharedPreferences.setMockInitialValues({
-        'bridge_url': userCustomUrl,
-      });
+      SharedPreferences.setMockInitialValues({'bridge_url': userCustomUrl});
       final prefs = await SharedPreferences.getInstance();
       final secureStorage = _FakeSecureStorage();
       final manager = MachineManagerService(prefs, secureStorage);
@@ -232,41 +229,44 @@ void main() {
       manager.dispose();
     });
 
-    test('is idempotent on repeated launches and does not create duplicates', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final secureStorage = _FakeSecureStorage();
-      final manager = MachineManagerService(prefs, secureStorage);
+    test(
+      'is idempotent on repeated launches and does not create duplicates',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final secureStorage = _FakeSecureStorage();
+        final manager = MachineManagerService(prefs, secureStorage);
 
-      const config = MacremoteBootstrapConfig(
-        bridgeUrl: targetIpv6Url,
-        bridgeName: targetName,
-        autoConnect: true,
-      );
+        const config = MacremoteBootstrapConfig(
+          bridgeUrl: targetIpv6Url,
+          bridgeName: targetName,
+          autoConnect: true,
+        );
 
-      // Launch 1 (fresh install)
-      final res1 = await bootstrapMacremoteBridge(
-        prefs: prefs,
-        machineManager: manager,
-        config: config,
-      );
-      expect(res1, isTrue);
-      expect(prefs.getString('bridge_url'), targetIpv6Url);
-      expect(manager.currentMachines, hasLength(1));
-      final originalMachineId = manager.currentMachines.single.id;
+        // Launch 1 (fresh install)
+        final res1 = await bootstrapMacremoteBridge(
+          prefs: prefs,
+          machineManager: manager,
+          config: config,
+        );
+        expect(res1, isTrue);
+        expect(prefs.getString('bridge_url'), targetIpv6Url);
+        expect(manager.currentMachines, hasLength(1));
+        final originalMachineId = manager.currentMachines.single.id;
 
-      // Launch 2 (subsequent app start)
-      final res2 = await bootstrapMacremoteBridge(
-        prefs: prefs,
-        machineManager: manager,
-        config: config,
-      );
-      expect(res2, isTrue);
-      expect(prefs.getString('bridge_url'), targetIpv6Url);
-      expect(manager.currentMachines, hasLength(1));
-      expect(manager.currentMachines.single.id, originalMachineId);
+        // Launch 2 (subsequent app start)
+        final res2 = await bootstrapMacremoteBridge(
+          prefs: prefs,
+          machineManager: manager,
+          config: config,
+        );
+        expect(res2, isTrue);
+        expect(prefs.getString('bridge_url'), targetIpv6Url);
+        expect(manager.currentMachines, hasLength(1));
+        expect(manager.currentMachines.single.id, originalMachineId);
 
-      manager.dispose();
-    });
+        manager.dispose();
+      },
+    );
 
     test('migrates unusable loopback 127.0.0.1 endpoint and machine in AnyCoding builds', () async {
       SharedPreferences.setMockInitialValues({
@@ -319,11 +319,58 @@ void main() {
       manager.dispose();
     });
 
+    test(
+      'migrates the previously shipped AnyCoding IPv6 preset on upgrade',
+      () async {
+        const retiredUrl = 'ws://[2408:824e:1562:9420::6f1]:8766';
+        const retiredHost = '2408:824e:1562:9420::6f1';
+        SharedPreferences.setMockInitialValues({'bridge_url': retiredUrl});
+        final prefs = await SharedPreferences.getInstance();
+        final secureStorage = _FakeSecureStorage();
+        final manager = MachineManagerService(prefs, secureStorage);
+        await manager.init();
+
+        await manager.addMachine(
+          const Machine(
+            id: 'retired-anycoding-preset',
+            name: 'AnyCoding Mac',
+            host: retiredHost,
+            port: targetPort,
+            useSsl: false,
+            isFavorite: true,
+          ),
+        );
+
+        const config = MacremoteBootstrapConfig(
+          bridgeUrl: targetIpv6Url,
+          bridgeName: 'AnyCoding Mac',
+          autoConnect: true,
+        );
+
+        final result = await bootstrapMacremoteBridge(
+          prefs: prefs,
+          machineManager: manager,
+          config: config,
+          isAnyCodingBrand: true,
+        );
+
+        expect(result, isTrue);
+        expect(prefs.getString('bridge_url'), targetIpv6Url);
+        expect(manager.currentMachines, hasLength(1));
+        final migrated = manager.currentMachines.single;
+        expect(migrated.id, 'retired-anycoding-preset');
+        expect(migrated.host, targetIpv6Host);
+        expect(migrated.port, targetPort);
+        expect(migrated.wsUrl, targetIpv6Url);
+        expect(migrated.isFavorite, isTrue);
+
+        manager.dispose();
+      },
+    );
+
     test('preserves genuine custom LAN endpoint in AnyCoding builds', () async {
       const customLanUrl = 'ws://192.168.1.188:8765';
-      SharedPreferences.setMockInitialValues({
-        'bridge_url': customLanUrl,
-      });
+      SharedPreferences.setMockInitialValues({'bridge_url': customLanUrl});
       final prefs = await SharedPreferences.getInstance();
       final secureStorage = _FakeSecureStorage();
       final manager = MachineManagerService(prefs, secureStorage);
@@ -362,54 +409,55 @@ void main() {
       manager.dispose();
     });
 
-    test('deletes loopback machine when preset machine already exists', () async {
-      SharedPreferences.setMockInitialValues({
-        'bridge_url': targetIpv6Url,
-      });
-      final prefs = await SharedPreferences.getInstance();
-      final secureStorage = _FakeSecureStorage();
-      final manager = MachineManagerService(prefs, secureStorage);
-      await manager.init();
+    test(
+      'deletes loopback machine when preset machine already exists',
+      () async {
+        SharedPreferences.setMockInitialValues({'bridge_url': targetIpv6Url});
+        final prefs = await SharedPreferences.getInstance();
+        final secureStorage = _FakeSecureStorage();
+        final manager = MachineManagerService(prefs, secureStorage);
+        await manager.init();
 
-      await manager.addMachine(
-        const Machine(
-          id: 'preset-machine-1',
-          name: 'AnyCoding Mac',
-          host: targetIpv6Host,
-          port: targetPort,
-          useSsl: false,
-          isFavorite: true,
-        ),
-      );
-      await manager.addMachine(
-        const Machine(
-          id: 'legacy-loopback-2',
-          name: 'Localhost',
-          host: 'localhost',
-          port: 8765,
-          useSsl: false,
-        ),
-      );
+        await manager.addMachine(
+          const Machine(
+            id: 'preset-machine-1',
+            name: 'AnyCoding Mac',
+            host: targetIpv6Host,
+            port: targetPort,
+            useSsl: false,
+            isFavorite: true,
+          ),
+        );
+        await manager.addMachine(
+          const Machine(
+            id: 'legacy-loopback-2',
+            name: 'Localhost',
+            host: 'localhost',
+            port: 8765,
+            useSsl: false,
+          ),
+        );
 
-      const config = MacremoteBootstrapConfig(
-        bridgeUrl: targetIpv6Url,
-        bridgeName: 'AnyCoding Mac',
-        autoConnect: true,
-      );
+        const config = MacremoteBootstrapConfig(
+          bridgeUrl: targetIpv6Url,
+          bridgeName: 'AnyCoding Mac',
+          autoConnect: true,
+        );
 
-      final result = await bootstrapMacremoteBridge(
-        prefs: prefs,
-        machineManager: manager,
-        config: config,
-        isAnyCodingBrand: true,
-      );
+        final result = await bootstrapMacremoteBridge(
+          prefs: prefs,
+          machineManager: manager,
+          config: config,
+          isAnyCodingBrand: true,
+        );
 
-      expect(result, isTrue);
-      expect(manager.currentMachines, hasLength(1));
-      expect(manager.currentMachines.single.id, 'preset-machine-1');
+        expect(result, isTrue);
+        expect(manager.currentMachines, hasLength(1));
+        expect(manager.currentMachines.single.id, 'preset-machine-1');
 
-      manager.dispose();
-    });
+        manager.dispose();
+      },
+    );
 
     test('restoreMacremotePresetConnection restores preset endpoint and favorite machine', () async {
       SharedPreferences.setMockInitialValues({

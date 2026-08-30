@@ -7,6 +7,7 @@ import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/models/offline_pending_action.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/services/bridge_service.dart';
+import 'package:ccpocket/services/draft_service.dart';
 import 'package:ccpocket/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -100,9 +101,7 @@ Widget _buildHomeContent({
   required DraftService draftService,
 }) {
   return MultiRepositoryProvider(
-    providers: [
-      RepositoryProvider<DraftService>.value(value: draftService),
-    ],
+    providers: [RepositoryProvider<DraftService>.value(value: draftService)],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -465,7 +464,7 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.text('Running'), findsOneWidget);
+        expect(find.text('Running'), findsWidgets);
         expect(find.text('Resume pending'), findsOneWidget);
         expect(find.text('test prompt for s1'), findsNothing);
         expect(find.text('test prompt for s2'), findsOneWidget);

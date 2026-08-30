@@ -87,8 +87,8 @@ class BootstrapEndpoint {
 /// Parses a raw bridge URL into a validated [BootstrapEndpoint].
 ///
 /// Supports:
-/// - `ws://[2408:824e:1562:9420::6f1]:8766`
-/// - `[2408:824e:1562:9420::6f1]:8766`
+/// - `ws://[2408:824e:1580:9c80::6f1]:8766`
+/// - `[2408:824e:1580:9c80::6f1]:8766`
 /// - `ws://192.168.1.100:8765`
 /// - `wss://example.com:8765`
 BootstrapEndpoint? parseBootstrapEndpoint(String rawUrl) {
@@ -159,6 +159,16 @@ BootstrapEndpoint? parseBootstrapEndpoint(String rawUrl) {
 /// Key in [SharedPreferences] where the default bridge URL is stored.
 const String kPrefKeyBridgeUrl = 'bridge_url';
 
+bool _isRetiredAnyCodingPreset(BootstrapEndpoint endpoint) {
+  return BrandConfig.retiredAnyCodingBridgeUrls.any((url) {
+    final retired = parseBootstrapEndpoint(url);
+    return retired != null &&
+        retired.host == endpoint.host &&
+        retired.port == endpoint.port &&
+        retired.useSsl == endpoint.useSsl;
+  });
+}
+
 /// Bootstraps preset Macremote bridge configuration into [SharedPreferences]
 /// and [MachineManagerService] on fresh install or upgrades from legacy loopback endpoints.
 ///
@@ -205,11 +215,13 @@ Future<bool> bootstrapMacremoteBridge({
     final existingParsed = parseBootstrapEndpoint(existingUrl);
     final isLegacyLoopback =
         existingParsed != null && isLoopbackOrLocalhost(existingParsed.host);
-    if (isLegacyLoopback) {
+    final isRetiredPreset =
+        existingParsed != null && _isRetiredAnyCodingPreset(existingParsed);
+    if (isLegacyLoopback || isRetiredPreset) {
       await prefs.setString(kPrefKeyBridgeUrl, parsed.wsUrl);
       didMigrateUrl = true;
       logger.info(
-        '[MacremoteBootstrap] Migrated legacy loopback $kPrefKeyBridgeUrl ($existingUrl) to preset: ${parsed.wsUrl}',
+        '[MacremoteBootstrap] Migrated legacy endpoint $kPrefKeyBridgeUrl ($existingUrl) to preset: ${parsed.wsUrl}',
       );
     }
   }
@@ -225,7 +237,12 @@ Future<bool> bootstrapMacremoteBridge({
   if (isAnyCoding) {
     final machines = List<Machine>.from(machineManager.currentMachines);
     for (final m in machines) {
-      if (isLoopbackOrLocalhost(m.host)) {
+      final machineEndpoint = parseBootstrapEndpoint(m.wsUrl);
+      final shouldMigrateMachine =
+          isLoopbackOrLocalhost(m.host) ||
+          (machineEndpoint != null &&
+              _isRetiredAnyCodingPreset(machineEndpoint));
+      if (shouldMigrateMachine) {
         if (existingPresetMachine != null) {
           // Preset machine already exists, delete unusable loopback machine
           await machineManager.deleteMachine(m.id);
@@ -243,7 +260,8 @@ Future<bool> bootstrapMacremoteBridge({
                 : BridgeConnectionMode.standardOnly,
             hasResolvedTransport: true,
             isFavorite: true,
-            name: (m.name == null ||
+            name:
+                (m.name == null ||
                     m.name == 'Local Bridge' ||
                     m.name == 'Macremote' ||
                     m.name == 'AnyCoding Mac')
@@ -253,7 +271,7 @@ Future<bool> bootstrapMacremoteBridge({
           await machineManager.updateMachine(migratedMachine);
           existingPresetMachine = migratedMachine;
           logger.info(
-            '[MacremoteBootstrap] Migrated legacy loopback machine ${m.id} to preset: ${migratedMachine.displayName} (${parsed.wsUrl})',
+            '[MacremoteBootstrap] Migrated legacy machine ${m.id} to preset: ${migratedMachine.displayName} (${parsed.wsUrl})',
           );
         }
       }
@@ -265,7 +283,9 @@ Future<bool> bootstrapMacremoteBridge({
     final effectiveUuid = uuid ?? const Uuid();
     final machine = Machine(
       id: effectiveUuid.v4(),
-      name: effectiveConfig.bridgeName ?? (isAnyCoding ? 'AnyCoding Mac' : 'Macremote'),
+      name:
+          effectiveConfig.bridgeName ??
+          (isAnyCoding ? 'AnyCoding Mac' : 'Macremote'),
       host: parsed.host,
       port: parsed.port,
       useSsl: parsed.useSsl,
@@ -293,7 +313,8 @@ Future<String?> restoreMacremotePresetConnection({
 }) async {
   final effectiveConfig = config ?? MacremoteBootstrapConfig.fromEnvironment();
   var bridgeUrl = effectiveConfig.bridgeUrl;
-  if ((bridgeUrl == null || bridgeUrl.trim().isEmpty) && BrandConfig.isAnyCoding) {
+  if ((bridgeUrl == null || bridgeUrl.trim().isEmpty) &&
+      BrandConfig.isAnyCoding) {
     bridgeUrl = BrandConfig.defaultAnyCodingBridgeUrl;
   }
   if (bridgeUrl == null || bridgeUrl.trim().isEmpty) {
@@ -314,7 +335,8 @@ Future<String?> restoreMacremotePresetConnection({
     const uuid = Uuid();
     machine = Machine(
       id: uuid.v4(),
-      name: effectiveConfig.bridgeName ??
+      name:
+          effectiveConfig.bridgeName ??
           (BrandConfig.isAnyCoding ? 'AnyCoding Mac' : 'Macremote'),
       host: parsed.host,
       port: parsed.port,
@@ -333,4 +355,3 @@ Future<String?> restoreMacremotePresetConnection({
   );
   return parsed.wsUrl;
 }
-
