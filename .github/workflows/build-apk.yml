@@ -82,7 +82,10 @@ jobs:
           echo "Using aapt: $AAPT"
           "$AAPT" dump badging apps/mobile/build/app/outputs/flutter-apk/app-debug.apk | grep "^package: "
           bash scripts/publish-android-release.test.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
-          bash scripts/publish-android-release.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk 224 "1.115.9"
+          # The publisher extracts and validates versionCode/versionName from the
+          # signed APK itself. Avoid a second hard-coded version source that must
+          # be manually updated for every build.
+          bash scripts/publish-android-release.sh apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
       - name: Prepare AnyCoding APK
         working-directory: apps/mobile
         run: cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/anycoding.apk
