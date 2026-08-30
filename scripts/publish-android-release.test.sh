@@ -121,6 +121,27 @@ if [ "$MANIFEST_SHA" != "$ACTUAL_SHA" ]; then
 fi
 echo "[+] Test 4 passed: manifest SHA matches actual binary SHA ($ACTUAL_SHA)"
 
+echo "=== Test 5: Reject empty apksigner certificate output ==="
+FAKE_TOOLS="$TEST_TEMP_DIR/fake-tools"
+mkdir -p "$FAKE_TOOLS"
+cat > "$FAKE_TOOLS/apksigner" <<'EOF'
+#!/usr/bin/env bash
+echo "Signer verification unavailable" >&2
+exit 1
+EOF
+chmod +x "$FAKE_TOOLS/apksigner"
+set +e
+PATH="$FAKE_TOOLS:$PATH" BRIDGE_RELEASE_DIR="$TEST_TEMP_DIR/release5" \
+  bash "$SCRIPT_DIR/publish-android-release.sh" "$TEST_APK" > "$TEST_TEMP_DIR/test5.log" 2>&1
+EXIT_CODE=$?
+set -e
+if [ "$EXIT_CODE" -eq 0 ] || ! grep -q "did not return a certificate fingerprint" "$TEST_TEMP_DIR/test5.log"; then
+  echo "[-] Failed: empty apksigner output was not rejected" >&2
+  cat "$TEST_TEMP_DIR/test5.log" >&2
+  exit 1
+fi
+echo "[+] Test 5 passed: empty certificate output rejected with code $EXIT_CODE"
+
 echo ""
 echo "=========================================="
 echo "ALL PUBLISH SCRIPT INTEGRITY TESTS PASSED!"

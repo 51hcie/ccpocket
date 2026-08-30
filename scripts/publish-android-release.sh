@@ -13,6 +13,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 RELEASE_DIR="${BRIDGE_RELEASE_DIR:-$HOME/.anycoding/releases}"
 EXPECTED_CERT_SHA256="59186b6981215494ee6e21e8a988dc7a434eb7ffa40bfc226e9dbdbc585cb2d2"
+RELEASE_CHANGELOG="${RELEASE_CHANGELOG:-AnyCoding Build 228: detailed Antigravity token usage, including input, output, cache reads, reasoning tokens, messages, and per-model rankings.}"
 
 APK_INPUT="${1:-}"
 SUPPLIED_VERSION_CODE="${2:-${EXPECTED_VERSION_CODE:-}}"
@@ -84,7 +85,13 @@ if [ -n "$APKSIGNER" ] && [ -x "$APKSIGNER" ]; then
   echo "  Extracted Certificate SHA-256: $CERT_SHA256"
   echo "  Expected Certificate SHA-256:  $EXPECTED_CERT_SHA256"
   
-  if [ -n "$CERT_SHA256" ] && [ "$CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+  if [ -z "$CERT_SHA256" ]; then
+    echo "[-] ERROR: apksigner did not return a certificate fingerprint. Refusing to publish." >&2
+    echo "$CERT_OUTPUT" >&2
+    exit 4
+  fi
+
+  if [ "$CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
     echo "[-] ERROR: Refusing to publish: APK signing certificate SHA-256 mismatch!" >&2
     echo "    Got:      $CERT_SHA256" >&2
     echo "    Expected: $EXPECTED_CERT_SHA256" >&2
@@ -120,7 +127,7 @@ cat > "$MANIFEST_PATH" << JSONEOF
   "buildTime": "$BUILD_TIME",
   "downloadPath": "/api/update/download",
   "certificateSha256": "$EXPECTED_CERT_SHA256",
-  "changelog": "AnyCoding V2.0 usability update: unified typography scale, remote Bridge-served in-app updater, and truthful monitoring console."
+  "changelog": "$RELEASE_CHANGELOG"
 }
 JSONEOF
 
