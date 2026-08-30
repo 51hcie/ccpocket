@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 
 import 'android_bridge_update_service.dart';
@@ -279,6 +280,10 @@ class AntigravityMetricsModel {
   final String quota;
   final String note;
   final String source;
+  final String? refreshedAt;
+  final List<AntigravityAccountQuotaModel> accounts;
+  final AntigravityUsageModel? usage;
+  final String? error;
 
   const AntigravityMetricsModel({
     required this.available,
@@ -287,6 +292,10 @@ class AntigravityMetricsModel {
     required this.quota,
     required this.note,
     required this.source,
+    this.refreshedAt,
+    this.accounts = const [],
+    this.usage,
+    this.error,
   });
 
   factory AntigravityMetricsModel.fromJson(Map<String, dynamic> json) {
@@ -294,11 +303,121 @@ class AntigravityMetricsModel {
       available: json['available'] as bool? ?? true,
       model: json['model'] as String? ?? 'gemini-3.7-flash-medium',
       status: json['status'] as String? ?? 'Ready',
-      quota: json['quota'] as String? ?? '当前版本暂不可获取',
-      note:
-          json['note'] as String? ??
-          'Antigravity CLI 本地接口当前不提供实时配额查询，按实际执行计费',
-      source: json['source'] as String? ?? 'Antigravity CLI (Local)',
+      quota: json['quota'] as String? ?? '额度数据暂不可用',
+      note: json['note'] as String? ?? 'TokenBar 本地数据源未响应，AGY 执行能力与额度展示分别判断',
+      source: json['source'] as String? ?? 'TokenBar Local API',
+      refreshedAt: json['refreshedAt'] as String?,
+      accounts: (json['accounts'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(AntigravityAccountQuotaModel.fromJson)
+          .toList(growable: false),
+      usage: json['usage'] is Map<String, dynamic>
+          ? AntigravityUsageModel.fromJson(
+              json['usage'] as Map<String, dynamic>,
+            )
+          : null,
+      error: json['error'] as String?,
+    );
+  }
+}
+
+class AntigravityQuotaBucketModel {
+  final String id;
+  final String label;
+  final String window;
+  final double remainingPercent;
+  final String resetsAt;
+
+  const AntigravityQuotaBucketModel({
+    required this.id,
+    required this.label,
+    required this.window,
+    required this.remainingPercent,
+    required this.resetsAt,
+  });
+
+  factory AntigravityQuotaBucketModel.fromJson(Map<String, dynamic> json) {
+    return AntigravityQuotaBucketModel(
+      id: json['id'] as String? ?? 'unknown',
+      label: json['label'] as String? ?? '剩余额度',
+      window: json['window'] as String? ?? 'unknown',
+      remainingPercent: (json['remainingPercent'] as num?)?.toDouble() ?? 0,
+      resetsAt: json['resetsAt'] as String? ?? '',
+    );
+  }
+}
+
+class AntigravityQuotaGroupModel {
+  final String name;
+  final String description;
+  final List<AntigravityQuotaBucketModel> buckets;
+
+  const AntigravityQuotaGroupModel({
+    required this.name,
+    required this.description,
+    required this.buckets,
+  });
+
+  factory AntigravityQuotaGroupModel.fromJson(Map<String, dynamic> json) {
+    return AntigravityQuotaGroupModel(
+      name: json['name'] as String? ?? '模型额度',
+      description: json['description'] as String? ?? '',
+      buckets: (json['buckets'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(AntigravityQuotaBucketModel.fromJson)
+          .toList(growable: false),
+    );
+  }
+}
+
+class AntigravityAccountQuotaModel {
+  final String account;
+  final String? updatedAt;
+  final List<AntigravityQuotaGroupModel> groups;
+
+  const AntigravityAccountQuotaModel({
+    required this.account,
+    this.updatedAt,
+    required this.groups,
+  });
+
+  factory AntigravityAccountQuotaModel.fromJson(Map<String, dynamic> json) {
+    return AntigravityAccountQuotaModel(
+      account: json['account'] as String? ?? 'agy_***',
+      updatedAt: json['updatedAt'] as String?,
+      groups: (json['groups'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(AntigravityQuotaGroupModel.fromJson)
+          .toList(growable: false),
+    );
+  }
+}
+
+class AntigravityUsageModel {
+  final int todayTokens;
+  final int allTokens;
+  final int todayMessages;
+  final int allMessages;
+  final double todayCost;
+  final double allCost;
+
+  const AntigravityUsageModel({
+    required this.todayTokens,
+    required this.allTokens,
+    required this.todayMessages,
+    required this.allMessages,
+    required this.todayCost,
+    required this.allCost,
+  });
+
+  factory AntigravityUsageModel.fromJson(Map<String, dynamic> json) {
+    return AntigravityUsageModel(
+      todayTokens: (json['todayTokens'] as num?)?.toInt() ?? 0,
+      allTokens: (json['allTokens'] as num?)?.toInt() ?? 0,
+      todayMessages: (json['todayMessages'] as num?)?.toInt() ?? 0,
+      allMessages: (json['allMessages'] as num?)?.toInt() ?? 0,
+      todayCost: (json['todayCost'] as num?)?.toDouble() ?? 0,
+      allCost: (json['allCost'] as num?)?.toDouble() ?? 0,
     );
   }
 }
@@ -320,7 +439,8 @@ class MonitoringDataModel {
 
   factory MonitoringDataModel.fromJson(Map<String, dynamic> json) {
     return MonitoringDataModel(
-      timestamp: json['timestamp'] as String? ?? DateTime.now().toIso8601String(),
+      timestamp:
+          json['timestamp'] as String? ?? DateTime.now().toIso8601String(),
       system: SystemMetricsModel.fromJson(
         json['system'] as Map<String, dynamic>? ?? {},
       ),
@@ -341,17 +461,16 @@ class BridgeMonitoringService {
   final http.Client _client;
 
   BridgeMonitoringService({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   /// Fetch monitoring payload from Bridge HTTP endpoint.
   Future<MonitoringDataModel> fetchMonitoringData(String bridgeUrl) async {
     final baseUrl = AndroidBridgeUpdateService.deriveHttpBaseUrl(bridgeUrl);
     final uri = Uri.parse('$baseUrl/api/monitor');
 
-    final response = await _client.get(
-      uri,
-      headers: {'Accept': 'application/json'},
-    ).timeout(const Duration(seconds: 8));
+    final response = await _client
+        .get(uri, headers: {'Accept': 'application/json'})
+        .timeout(const Duration(seconds: 8));
 
     if (response.statusCode != 200) {
       throw HttpException(

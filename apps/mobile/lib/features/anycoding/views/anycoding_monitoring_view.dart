@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../../../constants/brand_config.dart';
 import '../../../services/bridge_monitoring_service.dart';
 import '../../../services/bridge_service.dart';
@@ -9,839 +11,774 @@ Future<void> showAnyCodingMonitoringSheet({
   required BuildContext context,
   required BridgeService bridge,
   BridgeMonitoringService? monitoringService,
-}) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) => AnyCodingMonitoringSheet(
-      bridge: bridge,
-      monitoringService: monitoringService,
-    ),
-  );
-}
+}) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  backgroundColor: Colors.transparent,
+  builder: (_) => AnyCodingMonitoringSheet(
+    bridge: bridge,
+    monitoringService: monitoringService,
+  ),
+);
 
 class AnyCodingMonitoringSheet extends StatefulWidget {
   final BridgeService bridge;
   final BridgeMonitoringService? monitoringService;
-
   const AnyCodingMonitoringSheet({
     super.key,
     required this.bridge,
     this.monitoringService,
   });
-
   @override
-  State<AnyCodingMonitoringSheet> createState() =>
-      _AnyCodingMonitoringSheetState();
+  State<AnyCodingMonitoringSheet> createState() => _MonitoringState();
 }
 
-class _AnyCodingMonitoringSheetState extends State<AnyCodingMonitoringSheet> {
-  late final BridgeMonitoringService _service;
-  MonitoringDataModel? _data;
-  bool _isLoading = true;
-  String? _errorMessage;
-  Timer? _refreshTimer;
+class _MonitoringState extends State<AnyCodingMonitoringSheet> {
+  late final BridgeMonitoringService service;
+  MonitoringDataModel? data;
+  bool loading = true;
+  String? error;
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
-    _service = widget.monitoringService ?? BridgeMonitoringService();
-    _loadData();
-    // Bounded auto-refresh interval (every 8 seconds when active)
-    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      if (mounted && !_isLoading) {
-        _loadData(isBackground: true);
-      }
-    });
+    service = widget.monitoringService ?? BridgeMonitoringService();
+    load();
+    timer = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => load(background: true),
+    );
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    timer?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadData({bool isBackground = false}) async {
-    if (!isBackground) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+  Future<void> load({bool background = false}) async {
+    if (!background && mounted) {
+      setState(() => loading = true);
     }
-
     try {
-      final bridgeUrl = widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
-      final result = await _service.fetchMonitoringData(bridgeUrl);
+      final result = await service.fetchMonitoringData(
+        widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl,
+      );
       if (mounted) {
         setState(() {
-          _data = result;
-          _isLoading = false;
-          _errorMessage = null;
+          data = result;
+          loading = false;
+          error = null;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isLoading = false;
-          if (_data == null) {
-            _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          loading = false;
+          if (data == null) {
+            error = e.toString().replaceFirst('Exception: ', '');
           }
         });
       }
     }
   }
 
-  String _formatBytes(int bytes) {
-    if (bytes <= 0) return '0 B';
-    const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    var i = 0;
-    double count = bytes.toDouble();
-    while (count >= 1024 && i < suffixes.length - 1) {
-      count /= 1024;
-      i++;
-    }
-    return '${count.toStringAsFixed(1)} ${suffixes[i]}';
+  String uptime(int s) {
+    final d = s ~/ 86400, h = (s % 86400) ~/ 3600, m = (s % 3600) ~/ 60;
+    return d > 0
+        ? '$d 天 $h 小时'
+        : h > 0
+        ? '$h 小时 $m 分'
+        : '$m 分钟';
   }
 
-  String _formatUptime(int seconds) {
-    if (seconds <= 0) return '0s';
-    final d = seconds ~/ 86400;
-    final h = (seconds % 86400) ~/ 3600;
-    final m = (seconds % 3600) ~/ 60;
-    if (d > 0) return '${d}d ${h}h ${m}m';
-    if (h > 0) return '${h}h ${m}m';
-    return '${m}m ${seconds % 60}s';
+  String bytes(int n) {
+    if (n <= 0) return '0 B';
+    const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var v = n.toDouble(), i = 0;
+    while (v >= 1024 && i < u.length - 1) {
+      v /= 1024;
+      i++;
+    }
+    return '${v.toStringAsFixed(1)} ${u[i]}';
   }
+
+  String time(String? raw) {
+    final d = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+    return d == null
+        ? '未知'
+        : '${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  }
+
+  String compact(int n) => n >= 1000000
+      ? '${(n / 1000000).toStringAsFixed(1)}M'
+      : n >= 1000
+      ? '${(n / 1000).toStringAsFixed(1)}K'
+      : '$n';
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
-    final bgColor = isDark
-        ? BrandConfig.anyCodingSurfaceDark
-        : cs.surfaceContainerLowest;
-    final cardBgColor = isDark
-        ? BrandConfig.anyCodingCardDark
-        : cs.surface;
-    final borderColor = isDark
-        ? BrandConfig.anyCodingBorderDark
-        : cs.outlineVariant.withValues(alpha: 0.35);
-
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.90,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(top: BorderSide(color: borderColor)),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Top Drag Handle & Title Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: BrandConfig.codexAccent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.monitor_heart_rounded,
-                      color: isDark
-                          ? BrandConfig.codexAccent
-                          : const Color(0xFF0D9488),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mac 监控控制台',
-                          style: AppTypography.titleLarge(context),
-                        ),
-                        Text(
-                          _data?.system.hostname ?? '实时系统与引擎负载',
-                          style: AppTypography.caption(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh_rounded, size: 20),
-                    onPressed: () => _loadData(),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: borderColor),
-
-            // Scrollable Content Cards
-            Expanded(
-              child: _isLoading && _data == null
-                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
-                  : _errorMessage != null && _data == null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.cloud_off_rounded, size: 40, color: cs.error),
-                                const SizedBox(height: 12),
-                                Text(
-                                  '无法连接到 Bridge 监控服务',
-                                  style: AppTypography.titleMedium(context, color: cs.error),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  _errorMessage!,
-                                  style: AppTypography.bodySmall(context),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 16),
-                                FilledButton.icon(
-                                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                                  label: const Text('重新连接'),
-                                  onPressed: () => _loadData(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : ListView(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          children: [
-                            if (_data != null) ...[
-                              // 1. Mac System Status Card
-                              _buildSystemCard(
-                                context,
-                                _data!.system,
-                                cardBgColor,
-                                borderColor,
-                              ),
-                              const SizedBox(height: 14),
-
-                              // 2. Bridge & Task Status Card
-                              _buildBridgeCard(
-                                context,
-                                _data!.bridge,
-                                cardBgColor,
-                                borderColor,
-                              ),
-                              const SizedBox(height: 14),
-
-                              // 3. Codex Engine Quota & Usage Card
-                              _buildCodexCard(
-                                context,
-                                _data!.codex,
-                                cardBgColor,
-                                borderColor,
-                              ),
-                              const SizedBox(height: 14),
-
-                              // 4. Antigravity Engine Status Card
-                              _buildAntigravityCard(
-                                context,
-                                _data!.antigravity,
-                                cardBgColor,
-                                borderColor,
-                              ),
-                              const SizedBox(height: 14),
-
-                              // Freshness Footer
-                              Center(
-                                child: Text(
-                                  '数据更新于: ${_data!.timestamp.replaceFirst("T", " ").split(".")[0]} · 真实采样',
-                                  style: AppTypography.caption(context),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                            ],
-                          ],
-                        ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProvenanceTag(BuildContext context, String source) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        '来源: $source',
-        style: AppTypography.caption(context),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  Widget _buildSystemCard(
-    BuildContext context,
-    SystemMetricsModel system,
-    Color cardBgColor,
-    Color borderColor,
-  ) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.laptop_mac_rounded, size: 20, color: cs.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mac 主机系统',
-                  style: AppTypography.titleMedium(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: _buildProvenanceTag(context, system.source),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: '操作系统',
-                  value: system.os,
-                ),
-              ),
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: '系统运行时间',
-                  value: _formatUptime(system.systemUptime),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // CPU & Memory Gauges
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'CPU 负载 (${system.cpu.cores} 核)',
-                            style: AppTypography.caption(context),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${system.cpu.loadPercent.toStringAsFixed(1)}%',
-                          style: AppTypography.mono(context, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    LinearProgressIndicator(
-                      value: (system.cpu.loadPercent / 100).clamp(0.0, 1.0),
-                      color: system.cpu.loadPercent > 80 ? cs.error : cs.primary,
-                      backgroundColor: cs.outlineVariant.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '内存占用',
-                            style: AppTypography.caption(context),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${system.memory.usedPercent.toStringAsFixed(1)}%',
-                          style: AppTypography.mono(context, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    LinearProgressIndicator(
-                      value: (system.memory.usedPercent / 100).clamp(0.0, 1.0),
-                      color: system.memory.usedPercent > 85 ? cs.error : const Color(0xFF0D9488),
-                      backgroundColor: cs.outlineVariant.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Disk
-          if (system.disk.available) ...[
+    Widget content;
+    if (loading && data == null) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (data == null) {
+      content = errorView(context);
+    } else {
+      content = RefreshIndicator(
+        onRefresh: load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+          children: [
+            hero(context, data!),
+            const SizedBox(height: 14),
+            resources(context, data!.system),
+            const SizedBox(height: 14),
+            bridgePanel(context, data!.bridge),
+            const SizedBox(height: 22),
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    '系统主磁盘 (${_formatBytes(system.disk.usedBytes)} / ${_formatBytes(system.disk.totalBytes)})',
-                    style: AppTypography.caption(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    'AI 额度与用量',
+                    style: AppTypography.titleLarge(context),
                   ),
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  '剩余 ${_formatBytes(system.disk.freeBytes)}',
-                  style: AppTypography.mono(context, fontSize: 11),
-                ),
+                Text('本机真实数据源', style: AppTypography.caption(context)),
               ],
             ),
-            const SizedBox(height: 4),
-            LinearProgressIndicator(
-              value: (system.disk.usedPercent / 100).clamp(0.0, 1.0),
-              color: system.disk.usedPercent > 90 ? cs.error : const Color(0xFF3B82F6),
-              backgroundColor: cs.outlineVariant.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ] else ...[
-            Text('磁盘指标: 暂时不可获取', style: AppTypography.caption(context)),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBridgeCard(
-    BuildContext context,
-    BridgeMetricsModel bridge,
-    Color cardBgColor,
-    Color borderColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.router_rounded, size: 20, color: Color(0xFF10B981)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Bridge 运行时与任务队列',
-                  style: AppTypography.titleMedium(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: _buildProvenanceTag(context, bridge.source),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: 'Bridge 连续运行',
-                  value: _formatUptime(bridge.uptime),
-                ),
-              ),
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: '当前活跃客户端',
-                  value: '${bridge.connectedClients} 台设备',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Task Counters Grid
-          Row(
-            children: [
-              Expanded(
-                child: _buildTaskBadge(
-                  context,
-                  label: '正在运行',
-                  count: bridge.taskCounts.running,
-                  color: const Color(0xFF0D9488),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTaskBadge(
-                  context,
-                  label: '排队待执行',
-                  count: bridge.taskCounts.queued,
-                  color: const Color(0xFFF59E0B),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTaskBadge(
-                  context,
-                  label: '已完成任务',
-                  count: bridge.taskCounts.completed,
-                  color: const Color(0xFF10B981),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTaskBadge(
-                  context,
-                  label: '失败/中断',
-                  count: bridge.taskCounts.failed,
-                  color: const Color(0xFFEF4444),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCodexCard(
-    BuildContext context,
-    CodexMetricsModel codex,
-    Color cardBgColor,
-    Color borderColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.bolt, size: 20, color: BrandConfig.codexAccent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Codex 引擎配额',
-                  style: AppTypography.titleMedium(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: _buildProvenanceTag(context, codex.source),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: '授权账户 (已脱敏)',
-                  value: codex.account,
-                ),
-              ),
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: '套餐方案',
-                  value: codex.plan,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (codex.fiveHourWindow != null) ...[
-            _buildWindowUsageRow(
-              context,
-              label: '5 小时速率限制窗口',
-              usedPercent: codex.fiveHourWindow!.usedPercent,
-              resetsAt: codex.fiveHourWindow!.resetsAt,
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (codex.sevenDayWindow != null) ...[
-            _buildWindowUsageRow(
-              context,
-              label: '7 天用量限制窗口',
-              usedPercent: codex.sevenDayWindow!.usedPercent,
-              resetsAt: codex.sevenDayWindow!.resetsAt,
-            ),
-          ] else if (codex.fiveHourWindow == null && codex.sevenDayWindow == null) ...[
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF64748B)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '近期会话尚未返回显式速率窗口事件，随任务发起自动读取',
-                      style: AppTypography.caption(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAntigravityCard(
-    BuildContext context,
-    AntigravityMetricsModel agy,
-    Color cardBgColor,
-    Color borderColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 20, color: BrandConfig.antigravityAccent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Antigravity 引擎',
-                  style: AppTypography.titleMedium(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: _buildProvenanceTag(context, agy.source),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: '调度默认模型',
-                  value: agy.model,
-                ),
-              ),
-              Expanded(
-                child: _buildMetricTile(
-                  context,
-                  label: 'CLI 状态',
-                  value: agy.status,
-                  valueColor: agy.status == 'Ready' ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('实时配额: ', style: AppTypography.labelSmall(context)),
-                    Expanded(
-                      child: Text(
-                        agy.quota,
-                        style: AppTypography.mono(context, fontSize: 11, fontWeight: FontWeight.w600),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  agy.note,
-                  style: AppTypography.caption(context),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWindowUsageRow(
-    BuildContext context, {
-    required String label,
-    required double usedPercent,
-    required String resetsAt,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
+            const SizedBox(height: 10),
+            codexPanel(context, data!.codex),
+            const SizedBox(height: 12),
+            agyPanel(context, data!.antigravity),
+            const SizedBox(height: 14),
+            Center(
               child: Text(
-                label,
-                style: AppTypography.caption(context),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                '监控刷新 ${time(data!.timestamp)}',
+                style: AppTypography.caption(
+                  context,
+                  color: cs.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '${usedPercent.toStringAsFixed(1)}% 已用',
-              style: AppTypography.mono(context, fontSize: 11),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(
-          value: (usedPercent / 100).clamp(0.0, 1.0),
-          color: usedPercent > 80 ? cs.error : const Color(0xFFF97316),
-          backgroundColor: cs.outlineVariant.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(3),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricTile(
-    BuildContext context, {
-    required String label,
-    required String value,
-    Color? valueColor,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTypography.caption(context),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: AppTypography.titleSmall(context, color: valueColor),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTaskBadge(
-    BuildContext context, {
-    required String label,
-    required int count,
-    required Color color,
-  }) {
+      );
+    }
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * .94,
       ),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF070C12) : const Color(0xFFF3F6FA),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            header(context),
+            Expanded(child: content),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget header(BuildContext c) => Padding(
+    padding: const EdgeInsets.fromLTRB(18, 10, 8, 8),
+    child: Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF11BFA5), Color(0xFF3B82F6)],
+            ),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: const Icon(Icons.monitor_heart_rounded, color: Colors.white),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Mac 监控台', style: AppTypography.titleLarge(c)),
+              Text('主机、任务与 AI 额度', style: AppTypography.caption(c)),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: loading ? null : load,
+          icon: const Icon(Icons.refresh_rounded),
+        ),
+        IconButton(
+          onPressed: () => Navigator.pop(c),
+          icon: const Icon(Icons.close_rounded),
+        ),
+      ],
+    ),
+  );
+  Widget errorView(BuildContext c) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            count.toString(),
-            style: AppTypography.titleMedium(context, color: color),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 46,
+            color: Color(0xFFEF4444),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 12),
+          Text('无法连接监控服务', style: AppTypography.titleMedium(c)),
+          const SizedBox(height: 6),
+          Text(error ?? '未知错误', textAlign: TextAlign.center),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: load,
+            icon: const Icon(Icons.refresh),
+            label: const Text('重新连接'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget hero(BuildContext c, MonitoringDataModel d) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF0A2B2B), Color(0xFF102A45)],
+      ),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .08),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.laptop_mac_rounded, color: Color(0xFF5EEAD4)),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                d.system.hostname,
+                style: AppTypography.titleMedium(c, color: Colors.white),
+              ),
+              Text(
+                d.system.os,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption(c, color: const Color(0xFFB6C6D6)),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '已运行 ${uptime(d.system.systemUptime)} · Bridge ${d.bridge.port}',
+                style: AppTypography.caption(c, color: const Color(0xFF7DD3FC)),
+              ),
+            ],
+          ),
+        ),
+        status(c, d.bridge.available ? '在线' : '离线', d.bridge.available),
+      ],
+    ),
+  );
+  Widget resources(BuildContext c, SystemMetricsModel s) => Row(
+    children: [
+      Expanded(
+        child: resource(
+          c,
+          'CPU',
+          s.cpu.loadPercent,
+          '${s.cpu.cores} 核',
+          Icons.memory,
+          const Color(0xFF2DD4BF),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: resource(
+          c,
+          '内存',
+          s.memory.usedPercent,
+          bytes(s.memory.usedBytes),
+          Icons.data_usage_rounded,
+          const Color(0xFF60A5FA),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: resource(
+          c,
+          '磁盘',
+          s.disk.usedPercent,
+          '${bytes(s.disk.freeBytes)} 可用',
+          Icons.storage_rounded,
+          const Color(0xFFA78BFA),
+        ),
+      ),
+    ],
+  );
+  Widget resource(
+    BuildContext c,
+    String label,
+    double pct,
+    String detail,
+    IconData icon,
+    Color color,
+  ) {
+    final cs = Theme.of(c).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: .35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 19),
+          const SizedBox(height: 9),
           Text(
-            label,
-            style: AppTypography.caption(context),
+            '${pct.toStringAsFixed(0)}%',
+            style: AppTypography.titleLarge(c),
+          ),
+          Text(label, style: AppTypography.labelSmall(c)),
+          const SizedBox(height: 7),
+          LinearProgressIndicator(
+            value: (pct / 100).clamp(0, 1),
+            color: color,
+            backgroundColor: color.withValues(alpha: .12),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            detail,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
+            style: AppTypography.caption(c),
           ),
         ],
       ),
     );
   }
+
+  Widget bridgePanel(BuildContext c, BridgeMetricsModel b) {
+    final items = [
+      ('运行', b.taskCounts.running, const Color(0xFF2DD4BF)),
+      ('排队', b.taskCounts.queued, const Color(0xFFFBBF24)),
+      ('完成', b.taskCounts.completed, const Color(0xFF60A5FA)),
+      ('失败', b.taskCounts.failed, const Color(0xFFF87171)),
+    ];
+    return panel(
+      c,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          panelHeader(
+            c,
+            Icons.hub_rounded,
+            'Bridge 与任务',
+            b.source,
+            const Color(0xFF2DD4BF),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: metric(c, '连续运行', uptime(b.uptime))),
+              Expanded(child: metric(c, '连接设备', '${b.connectedClients} 台')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 3.2,
+            children: items
+                .map(
+                  (x) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: x.$3.withValues(alpha: .1),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: x.$3,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(x.$1, style: AppTypography.caption(c)),
+                        ),
+                        Text(
+                          '${x.$2}',
+                          style: AppTypography.titleMedium(c, color: x.$3),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget codexPanel(BuildContext c, CodexMetricsModel x) => panel(
+    c,
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        panelHeader(
+          c,
+          Icons.bolt_rounded,
+          'Codex',
+          x.source,
+          BrandConfig.codexAccent,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: metric(c, '账户', x.account)),
+            Expanded(child: metric(c, '套餐', x.plan)),
+          ],
+        ),
+        if (x.fiveHourWindow != null) ...[
+          const SizedBox(height: 14),
+          used(
+            c,
+            '5 小时窗口',
+            x.fiveHourWindow!.usedPercent,
+            x.fiveHourWindow!.resetsAt,
+          ),
+        ],
+        if (x.sevenDayWindow != null) ...[
+          const SizedBox(height: 12),
+          used(
+            c,
+            '7 天窗口',
+            x.sevenDayWindow!.usedPercent,
+            x.sevenDayWindow!.resetsAt,
+          ),
+        ],
+      ],
+    ),
+  );
+  Widget agyPanel(BuildContext c, AntigravityMetricsModel a) => panel(
+    c,
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        panelHeader(
+          c,
+          Icons.auto_awesome_rounded,
+          'Antigravity',
+          a.source,
+          BrandConfig.antigravityAccent,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(child: metric(c, '默认模型', a.model)),
+            status(
+              c,
+              a.status == 'Ready' ? 'CLI 就绪' : a.status,
+              a.status == 'Ready',
+            ),
+          ],
+        ),
+        if (a.usage != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: BrandConfig.antigravityAccent.withValues(alpha: .08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: metric(c, '今日 Tokens', compact(a.usage!.todayTokens)),
+                ),
+                Expanded(
+                  child: metric(c, '累计 Tokens', compact(a.usage!.allTokens)),
+                ),
+                Expanded(child: metric(c, '今日消息', '${a.usage!.todayMessages}')),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+        if (a.accounts.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withValues(alpha: .1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              a.error == null ? a.note : '${a.note}\n${a.error}',
+              style: AppTypography.bodySmall(c),
+            ),
+          )
+        else
+          ...a.accounts.map(
+            (x) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: account(c, x),
+            ),
+          ),
+        Row(
+          children: [
+            const Icon(
+              Icons.verified_user_outlined,
+              size: 14,
+              color: Color(0xFF94A3B8),
+            ),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                '${a.quota} · 刷新 ${time(a.refreshedAt)}',
+                style: AppTypography.caption(c),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+  Widget account(BuildContext c, AntigravityAccountQuotaModel a) {
+    final cs = Theme.of(c).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh.withValues(alpha: .55),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.account_circle_outlined,
+                size: 18,
+                color: Color(0xFF94A3B8),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(a.account, style: AppTypography.titleSmall(c)),
+              ),
+              Text('更新 ${time(a.updatedAt)}', style: AppTypography.caption(c)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...a.groups.map(
+            (g) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: group(c, g),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget group(BuildContext c, AntigravityQuotaGroupModel g) {
+    AntigravityQuotaBucketModel? weekly, short;
+    for (final b in g.buckets) {
+      if (b.window == 'weekly') weekly = b;
+      if (b.window == '5h') short = b;
+    }
+    final color = g.name.toLowerCase().contains('gemini')
+        ? const Color(0xFF60A5FA)
+        : const Color(0xFFA78BFA);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(g.name, style: AppTypography.labelSmall(c)),
+        const SizedBox(height: 7),
+        if (weekly != null)
+          remaining(c, '本周剩余', weekly.remainingPercent, weekly.resetsAt, color),
+        if (short != null) ...[
+          const SizedBox(height: 7),
+          Row(
+            children: [
+              Text('5 小时剩余', style: AppTypography.caption(c)),
+              const Spacer(),
+              Text(
+                '${short.remainingPercent.toStringAsFixed(0)}% · ${time(short.resetsAt)} 重置',
+                style: AppTypography.caption(c, color: color),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget remaining(
+    BuildContext c,
+    String label,
+    double pct,
+    String reset,
+    Color color,
+  ) => Column(
+    children: [
+      Row(
+        children: [
+          Text(label, style: AppTypography.caption(c)),
+          const Spacer(),
+          Text(
+            '${pct.toStringAsFixed(1)}%',
+            style: AppTypography.titleSmall(c, color: color),
+          ),
+        ],
+      ),
+      const SizedBox(height: 5),
+      LinearProgressIndicator(
+        value: (pct / 100).clamp(0, 1),
+        color: color,
+        backgroundColor: color.withValues(alpha: .12),
+        minHeight: 7,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      const SizedBox(height: 4),
+      Align(
+        alignment: Alignment.centerRight,
+        child: Text('${time(reset)} 重置', style: AppTypography.caption(c)),
+      ),
+    ],
+  );
+  Widget used(BuildContext c, String label, double pct, String reset) {
+    final color = pct >= 85 ? const Color(0xFFF87171) : const Color(0xFFF59E0B);
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text(label, style: AppTypography.caption(c)),
+            const Spacer(),
+            Text(
+              '${pct.toStringAsFixed(1)}% 已用',
+              style: AppTypography.titleSmall(c, color: color),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        LinearProgressIndicator(
+          value: (pct / 100).clamp(0, 1),
+          color: color,
+          backgroundColor: color.withValues(alpha: .12),
+          minHeight: 7,
+          borderRadius: BorderRadius.circular(5),
+        ),
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text('${time(reset)} 重置', style: AppTypography.caption(c)),
+        ),
+      ],
+    );
+  }
+
+  Widget panel(BuildContext c, Widget child) {
+    final cs = Theme.of(c).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: .35)),
+      ),
+      child: child,
+    );
+  }
+
+  Widget panelHeader(
+    BuildContext c,
+    IconData icon,
+    String title,
+    String source,
+    Color color,
+  ) => Row(
+    children: [
+      Icon(icon, color: color, size: 20),
+      const SizedBox(width: 8),
+      Expanded(child: Text(title, style: AppTypography.titleMedium(c))),
+      Flexible(
+        child: Text(
+          source,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.caption(c),
+        ),
+      ),
+    ],
+  );
+  Widget metric(BuildContext c, String label, String value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: AppTypography.caption(c)),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.titleSmall(c),
+      ),
+    ],
+  );
+  Widget status(BuildContext c, String text, bool ok) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: (ok ? const Color(0xFF10B981) : const Color(0xFFEF4444))
+          .withValues(alpha: .14),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: ok ? const Color(0xFF34D399) : const Color(0xFFF87171),
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          text,
+          style: AppTypography.labelSmall(
+            c,
+            color: ok ? const Color(0xFF34D399) : const Color(0xFFF87171),
+          ),
+        ),
+      ],
+    ),
+  );
 }

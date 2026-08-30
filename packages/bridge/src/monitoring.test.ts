@@ -61,15 +61,50 @@ describe("MonitoringService", () => {
     expect(codex.source).toBe("Codex App Server / Local Sessions");
   });
 
-  it("collects antigravity metrics with truthful fallback and no fabricated quota", () => {
-    const monitoringService = new MonitoringService(Date.now(), 8766, () => null);
+  it("collects antigravity account quotas from TokenBar and masks identities", async () => {
+    const monitoringService = new MonitoringService(Date.now(), 8766, () => null, {
+      fetcher: async () => new Response(JSON.stringify({
+        refreshed_at: "2026-08-30T01:00:00Z",
+        agy_today: { totalInput: 1000, totalOutput: 200, totalMessages: 3, totalCost: 0.25 },
+        agy_all: { totalInput: 40000, totalOutput: 2000, totalMessages: 91, totalCost: 8.5 },
+        cockpit_quota: [{
+          email: "person@example.com",
+          updatedAt: 1788051600000,
+          groups: [{
+            displayName: "Gemini Models",
+            description: "Gemini model pool",
+            buckets: [{
+              bucketId: "gemini-weekly",
+              displayName: "Weekly Limit Remaining",
+              remainingFraction: 0.8797,
+              resetTime: "2026-09-01T00:00:00Z",
+              window: "weekly",
+            }],
+          }],
+        }],
+      }), { status: 200 }),
+    });
 
-    const agy = monitoringService.collectAntigravityMetrics();
-    expect(agy.available).toBe(true);
+    const agy = await monitoringService.collectAntigravityMetrics();
     expect(agy.model).toBe("gemini-3.7-flash-medium");
-    expect(agy.quota).toBe("当前版本暂不可获取");
-    expect(agy.note).toContain("不提供实时配额查询");
-    expect(agy.source).toBe("Antigravity CLI (Local)");
+    expect(agy.quota).toBe("1 个账号额度已同步");
+    expect(agy.accounts[0].account).toBe("per***n@example.com");
+    expect(agy.accounts[0].account).not.toContain("person@");
+    expect(agy.accounts[0].groups[0].buckets[0].remainingPercent).toBe(88);
+    expect(agy.usage?.todayTokens).toBe(1200);
+    expect(agy.source).toBe("TokenBar Local API");
+  });
+
+  it("degrades truthfully when TokenBar is unavailable", async () => {
+    const monitoringService = new MonitoringService(Date.now(), 8766, () => null, {
+      fetcher: async () => { throw new Error("offline"); },
+    });
+
+    const agy = await monitoringService.collectAntigravityMetrics();
+    expect(agy.quota).toBe("额度数据暂不可用");
+    expect(agy.accounts).toEqual([]);
+    expect(agy.error).toContain("offline");
+    expect(agy.source).toBe("TokenBar Local API");
   });
 
   it("serves GET /api/monitor over HTTP with complete structure", async () => {
@@ -110,8 +145,6 @@ describe("MonitoringService", () => {
     expect(response.body.system.hostname).toBeDefined();
     expect(response.body.bridge.port).toBe(8766);
     expect(response.body.codex.source).toBeDefined();
-    expect(["正常 (可用)", "当前版本暂不可获取"]).toContain(
-      response.body.antigravity.quota,
-    );
+    expect(typeof response.body.antigravity.quota).toBe("string");
   }, 15000);
 });

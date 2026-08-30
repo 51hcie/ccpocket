@@ -79,6 +79,31 @@ export interface AntigravityProviderMetrics {
   quota: string;
   note: string;
   source: string;
+  refreshedAt: string | null;
+  accounts: Array<{
+    account: string;
+    updatedAt: string | null;
+    groups: Array<{
+      name: string;
+      description: string;
+      buckets: Array<{
+        id: string;
+        label: string;
+        window: string;
+        remainingPercent: number;
+        resetsAt: string;
+      }>;
+    }>;
+  }>;
+  usage: {
+    todayTokens: number;
+    allTokens: number;
+    todayMessages: number;
+    allMessages: number;
+    todayCost: number;
+    allCost: number;
+  } | null;
+  error?: string;
 }
 
 export interface MonitoringPayload {
@@ -93,15 +118,20 @@ export class MonitoringService {
   private startedAt: number;
   private port: number;
   private wsServerGetter: () => BridgeWebSocketServer | null;
+  private tokenBarUrl: string;
+  private fetcher: typeof fetch;
 
   constructor(
     startedAt: number,
     port: number,
     wsServerGetter: () => BridgeWebSocketServer | null,
+    options: { tokenBarUrl?: string; fetcher?: typeof fetch } = {},
   ) {
     this.startedAt = startedAt;
     this.port = port;
     this.wsServerGetter = wsServerGetter;
+    this.tokenBarUrl = options.tokenBarUrl ?? process.env.TOKENBAR_API_URL ?? "http://127.0.0.1:7654/api/data";
+    this.fetcher = options.fetcher ?? fetch;
   }
 
   private getOsDescription(): string {
@@ -344,7 +374,19 @@ export class MonitoringService {
     }
   }
 
-  collectAntigravityMetrics(): AntigravityProviderMetrics {
+  private maskAccount(value: unknown): string {
+    if (typeof value !== "string" || !value.includes("@")) return "agy_***";
+    const [name, domain] = value.split("@", 2);
+    const prefix = name.slice(0, Math.min(3, name.length));
+    const suffix = name.length > 3 ? name.slice(-1) : "";
+    return `${prefix}***${suffix}@${domain}`;
+  }
+
+  private asFiniteNumber(value: unknown): number {
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  }
+
+  async collectAntigravityMetrics(): Promise<AntigravityProviderMetrics> {
     const candidates = [
       process.env.AGY_BIN_PATH,
       "/Users/lw/Windows_Projects/Macremote/tools/bin/agy",
@@ -359,23 +401,89 @@ export class MonitoringService {
       }
     }
 
-    return {
-      available: true,
+    const fallback: AntigravityProviderMetrics = {
+      available: status === "Ready",
       model: "gemini-3.7-flash-medium",
       status,
-      quota: "当前版本暂不可获取",
-      note: "Antigravity CLI 本地接口当前不提供实时配额查询，按实际执行计费",
-      source: "Antigravity CLI (Local)",
+      quota: "额度数据暂不可用",
+      note: "TokenBar 本地数据源未响应，AGY 执行能力与额度展示分别判断",
+      source: "TokenBar Local API",
+      refreshedAt: null,
+      accounts: [],
+      usage: null,
     };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    try {
+      const response = await this.fetcher(this.tokenBarUrl, {
+        signal: controller.signal,
+        headers: { accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`TokenBar HTTP ${response.status}`);
+      const data = await response.json() as any;
+      const accounts = Array.isArray(data.cockpit_quota)
+        ? data.cockpit_quota.map((item: any) => ({
+            account: this.maskAccount(item?.email),
+            updatedAt: typeof item?.updatedAt === "number"
+              ? new Date(item.updatedAt).toISOString()
+              : null,
+            groups: Array.isArray(item?.groups)
+              ? item.groups.map((group: any) => ({
+                  name: typeof group?.displayName === "string" ? group.displayName : "模型额度",
+                  description: typeof group?.description === "string" ? group.description : "",
+                  buckets: Array.isArray(group?.buckets)
+                    ? group.buckets.map((bucket: any) => ({
+                        id: typeof bucket?.bucketId === "string" ? bucket.bucketId : "unknown",
+                        label: typeof bucket?.displayName === "string" ? bucket.displayName : "剩余额度",
+                        window: typeof bucket?.window === "string" ? bucket.window : "unknown",
+                        remainingPercent: Math.round(
+                          Math.max(0, Math.min(1, this.asFiniteNumber(bucket?.remainingFraction))) * 1000,
+                        ) / 10,
+                        resetsAt: typeof bucket?.resetTime === "string" ? bucket.resetTime : "",
+                      }))
+                    : [],
+                }))
+              : [],
+          }))
+        : [];
+      const today = data.agy_today ?? {};
+      const all = data.agy_all ?? {};
+      return {
+        ...fallback,
+        available: status === "Ready" || accounts.length > 0,
+        quota: accounts.length > 0 ? `${accounts.length} 个账号额度已同步` : "未发现 AGY 账号额度",
+        note: accounts.length > 0
+          ? "额度来自本机 TokenBar；执行状态来自 Antigravity CLI"
+          : "TokenBar 已连接，但没有返回 AGY 账号额度",
+        refreshedAt: typeof data.refreshed_at === "string" ? data.refreshed_at : null,
+        accounts,
+        usage: {
+          todayTokens: this.asFiniteNumber(today.totalInput) + this.asFiniteNumber(today.totalOutput),
+          allTokens: this.asFiniteNumber(all.totalInput) + this.asFiniteNumber(all.totalOutput),
+          todayMessages: this.asFiniteNumber(today.totalMessages),
+          allMessages: this.asFiniteNumber(all.totalMessages),
+          todayCost: this.asFiniteNumber(today.totalCost),
+          allCost: this.asFiniteNumber(all.totalCost),
+        },
+      };
+    } catch (err) {
+      return {
+        ...fallback,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async getMonitoringPayload(): Promise<MonitoringPayload> {
-    const [system, codex] = await Promise.all([
+    const [system, codex, antigravity] = await Promise.all([
       this.collectSystemMetrics(),
       this.collectCodexMetrics(),
+      this.collectAntigravityMetrics(),
     ]);
     const bridge = this.collectBridgeMetrics();
-    const antigravity = this.collectAntigravityMetrics();
 
     return {
       timestamp: new Date().toISOString(),
