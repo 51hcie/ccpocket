@@ -396,28 +396,87 @@ class AntigravityAccountQuotaModel {
 class AntigravityUsageModel {
   final int todayTokens;
   final int allTokens;
+  final int todayInputTokens;
+  final int todayOutputTokens;
+  final int allInputTokens;
+  final int allOutputTokens;
+  final int allCacheReadTokens;
+  final int allReasoningTokens;
   final int todayMessages;
   final int allMessages;
   final double todayCost;
   final double allCost;
+  final List<AntigravityModelUsageModel> models;
 
   const AntigravityUsageModel({
     required this.todayTokens,
     required this.allTokens,
+    required this.todayInputTokens,
+    required this.todayOutputTokens,
+    required this.allInputTokens,
+    required this.allOutputTokens,
+    required this.allCacheReadTokens,
+    required this.allReasoningTokens,
     required this.todayMessages,
     required this.allMessages,
     required this.todayCost,
     required this.allCost,
+    required this.models,
   });
 
   factory AntigravityUsageModel.fromJson(Map<String, dynamic> json) {
     return AntigravityUsageModel(
       todayTokens: (json['todayTokens'] as num?)?.toInt() ?? 0,
       allTokens: (json['allTokens'] as num?)?.toInt() ?? 0,
+      todayInputTokens: (json['todayInputTokens'] as num?)?.toInt() ?? 0,
+      todayOutputTokens: (json['todayOutputTokens'] as num?)?.toInt() ?? 0,
+      allInputTokens: (json['allInputTokens'] as num?)?.toInt() ?? 0,
+      allOutputTokens: (json['allOutputTokens'] as num?)?.toInt() ?? 0,
+      allCacheReadTokens: (json['allCacheReadTokens'] as num?)?.toInt() ?? 0,
+      allReasoningTokens: (json['allReasoningTokens'] as num?)?.toInt() ?? 0,
       todayMessages: (json['todayMessages'] as num?)?.toInt() ?? 0,
       allMessages: (json['allMessages'] as num?)?.toInt() ?? 0,
       todayCost: (json['todayCost'] as num?)?.toDouble() ?? 0,
       allCost: (json['allCost'] as num?)?.toDouble() ?? 0,
+      models: (json['models'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(AntigravityModelUsageModel.fromJson)
+          .toList(growable: false),
+    );
+  }
+}
+
+class AntigravityModelUsageModel {
+  final String model;
+  final String provider;
+  final int inputTokens;
+  final int outputTokens;
+  final int cacheReadTokens;
+  final int reasoningTokens;
+  final int totalTokens;
+  final int messages;
+
+  const AntigravityModelUsageModel({
+    required this.model,
+    required this.provider,
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.cacheReadTokens,
+    required this.reasoningTokens,
+    required this.totalTokens,
+    required this.messages,
+  });
+
+  factory AntigravityModelUsageModel.fromJson(Map<String, dynamic> json) {
+    return AntigravityModelUsageModel(
+      model: json['model'] as String? ?? 'unknown',
+      provider: json['provider'] as String? ?? 'unknown',
+      inputTokens: (json['inputTokens'] as num?)?.toInt() ?? 0,
+      outputTokens: (json['outputTokens'] as num?)?.toInt() ?? 0,
+      cacheReadTokens: (json['cacheReadTokens'] as num?)?.toInt() ?? 0,
+      reasoningTokens: (json['reasoningTokens'] as num?)?.toInt() ?? 0,
+      totalTokens: (json['totalTokens'] as num?)?.toInt() ?? 0,
+      messages: (json['messages'] as num?)?.toInt() ?? 0,
     );
   }
 }

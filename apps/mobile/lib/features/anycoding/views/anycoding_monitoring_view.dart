@@ -511,24 +511,7 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
         ),
         if (a.usage != null) ...[
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: BrandConfig.antigravityAccent.withValues(alpha: .08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: metric(c, '今日 Tokens', compact(a.usage!.todayTokens)),
-                ),
-                Expanded(
-                  child: metric(c, '累计 Tokens', compact(a.usage!.allTokens)),
-                ),
-                Expanded(child: metric(c, '今日消息', '${a.usage!.todayMessages}')),
-              ],
-            ),
-          ),
+          usagePanel(c, a.usage!),
         ],
         const SizedBox(height: 14),
         if (a.accounts.isEmpty)
@@ -571,6 +554,152 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
       ],
     ),
   );
+
+  Widget usagePanel(BuildContext c, AntigravityUsageModel usage) {
+    final accent = BrandConfig.antigravityAccent;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.data_usage_rounded,
+                size: 18,
+                color: Color(0xFFF97316),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text('Token 用量', style: AppTypography.titleSmall(c)),
+              ),
+              Text(
+                '今日 ${compact(usage.todayTokens)}',
+                style: AppTypography.labelSmall(c, color: accent),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 2.1,
+            children: [
+              tokenMetric(c, '累计输入', usage.allInputTokens, Icons.login_rounded),
+              tokenMetric(
+                c,
+                '累计输出',
+                usage.allOutputTokens,
+                Icons.logout_rounded,
+              ),
+              tokenMetric(
+                c,
+                '缓存读取',
+                usage.allCacheReadTokens,
+                Icons.bolt_rounded,
+              ),
+              tokenMetric(
+                c,
+                '推理 Tokens',
+                usage.allReasoningTokens,
+                Icons.psychology_alt_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: metric(c, '累计 Tokens', compact(usage.allTokens))),
+              Expanded(child: metric(c, '累计消息', '${usage.allMessages}')),
+              Expanded(child: metric(c, '今日消息', '${usage.todayMessages}')),
+            ],
+          ),
+          if (usage.models.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text('模型用量排行', style: AppTypography.labelSmall(c)),
+            const SizedBox(height: 7),
+            ...usage.models.take(4).map((model) => modelUsageRow(c, model)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget tokenMetric(BuildContext c, String label, int value, IconData icon) {
+    final cs = Theme.of(c).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: .7),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: BrandConfig.antigravityAccent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption(c),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(compact(value), style: AppTypography.titleSmall(c)),
+        ],
+      ),
+    );
+  }
+
+  Widget modelUsageRow(BuildContext c, AntigravityModelUsageModel model) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  model.model,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodySmall(c),
+                ),
+                Text(
+                  '输入 ${compact(model.inputTokens)} · 输出 ${compact(model.outputTokens)} · ${model.messages} 条',
+                  style: AppTypography.caption(c),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            compact(model.totalTokens),
+            style: AppTypography.titleSmall(
+              c,
+              color: BrandConfig.antigravityAccent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget account(BuildContext c, AntigravityAccountQuotaModel a) {
     final cs = Theme.of(c).colorScheme;
     return Container(

@@ -83,6 +83,30 @@ void main() {
           'note': '额度来自本机 TokenBar',
           'source': 'TokenBar Local API',
           'refreshedAt': '2026-08-30T01:00:00Z',
+          'usage': {
+            'todayTokens': 1200,
+            'todayInputTokens': 1000,
+            'todayOutputTokens': 200,
+            'todayMessages': 3,
+            'allTokens': 42000,
+            'allInputTokens': 40000,
+            'allOutputTokens': 2000,
+            'allCacheReadTokens': 90000,
+            'allReasoningTokens': 500,
+            'allMessages': 91,
+            'models': [
+              {
+                'model': 'gemini-3.7-flash',
+                'provider': 'google',
+                'inputTokens': 30000,
+                'outputTokens': 1500,
+                'cacheReadTokens': 80000,
+                'reasoningTokens': 500,
+                'totalTokens': 31500,
+                'messages': 70,
+              },
+            ],
+          },
           'accounts': [
             {
               'account': 'per***n@example.com',
@@ -119,6 +143,11 @@ void main() {
       expect(data.antigravity.quota, '1 个账号额度已同步');
       expect(data.antigravity.source, 'TokenBar Local API');
       expect(data.antigravity.accounts.single.account, 'per***n@example.com');
+      expect(data.antigravity.usage?.allInputTokens, 40000);
+      expect(data.antigravity.usage?.allCacheReadTokens, 90000);
+      expect(data.antigravity.usage?.allReasoningTokens, 500);
+      expect(data.antigravity.usage?.models.single.model, 'gemini-3.7-flash');
+      expect(data.antigravity.usage?.models.single.totalTokens, 31500);
       expect(
         data
             .antigravity
@@ -232,6 +261,30 @@ void main() {
                   'quota': '当前版本暂不可获取',
                   'note': 'Antigravity CLI 本地接口当前不提供实时配额查询，按实际执行计费',
                   'source': 'Antigravity CLI (Local)',
+                  'usage': {
+                    'todayTokens': 36000,
+                    'todayInputTokens': 30000,
+                    'todayOutputTokens': 6000,
+                    'todayMessages': 8,
+                    'allTokens': 167500000,
+                    'allInputTokens': 160000000,
+                    'allOutputTokens': 7500000,
+                    'allCacheReadTokens': 240000000,
+                    'allReasoningTokens': 120000,
+                    'allMessages': 900,
+                    'models': [
+                      {
+                        'model': 'gemini-3.7-flash-medium',
+                        'provider': 'google',
+                        'inputTokens': 120000000,
+                        'outputTokens': 5000000,
+                        'cacheReadTokens': 200000000,
+                        'reasoningTokens': 100000,
+                        'totalTokens': 125000000,
+                        'messages': 700,
+                      },
+                    ],
+                  },
                 },
               }),
               200,
@@ -261,6 +314,14 @@ void main() {
         );
         expect(find.text('Antigravity'), findsOneWidget);
         expect(find.textContaining('当前版本暂不可获取'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('模型用量排行'),
+          300,
+          scrollable: find.byType(Scrollable).last,
+        );
+        expect(find.text('Token 用量'), findsOneWidget);
+        expect(find.text('模型用量排行'), findsOneWidget);
+        expect(find.text('gemini-3.7-flash-medium'), findsOneWidget);
       },
     );
 
@@ -334,6 +395,30 @@ void main() {
                 'quota': '当前版本暂不可获取',
                 'note': 'Antigravity CLI 本地接口当前不提供实时配额查询，按实际执行计费',
                 'source': 'Antigravity CLI (Local)',
+                'usage': {
+                  'todayTokens': 36000,
+                  'todayInputTokens': 30000,
+                  'todayOutputTokens': 6000,
+                  'todayMessages': 8,
+                  'allTokens': 167500000,
+                  'allInputTokens': 160000000,
+                  'allOutputTokens': 7500000,
+                  'allCacheReadTokens': 240000000,
+                  'allReasoningTokens': 120000,
+                  'allMessages': 900,
+                  'models': [
+                    {
+                      'model': 'gemini-3.7-flash-medium',
+                      'provider': 'google',
+                      'inputTokens': 120000000,
+                      'outputTokens': 5000000,
+                      'cacheReadTokens': 200000000,
+                      'reasoningTokens': 100000,
+                      'totalTokens': 125000000,
+                      'messages': 700,
+                    },
+                  ],
+                },
               },
             }),
             200,
@@ -364,6 +449,14 @@ void main() {
         );
         expect(find.text('Antigravity'), findsOneWidget);
         expect(find.textContaining('当前版本暂不可获取'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('模型用量排行'),
+          300,
+          scrollable: find.byType(Scrollable).last,
+        );
+        expect(tester.takeException(), isNull);
+        expect(find.text('Token 用量'), findsOneWidget);
+        expect(find.text('模型用量排行'), findsOneWidget);
       },
     );
   });

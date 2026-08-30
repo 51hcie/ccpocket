@@ -66,7 +66,33 @@ describe("MonitoringService", () => {
       fetcher: async () => new Response(JSON.stringify({
         refreshed_at: "2026-08-30T01:00:00Z",
         agy_today: { totalInput: 1000, totalOutput: 200, totalMessages: 3, totalCost: 0.25 },
-        agy_all: { totalInput: 40000, totalOutput: 2000, totalMessages: 91, totalCost: 8.5 },
+        agy_all: {
+          totalInput: 40000,
+          totalOutput: 2000,
+          totalCacheRead: 90000,
+          totalMessages: 91,
+          totalCost: 8.5,
+          entries: [
+            {
+              model: "gemini-3.7-flash",
+              provider: "google",
+              input: 30000,
+              output: 1500,
+              cacheRead: 80000,
+              reasoning: 500,
+              messageCount: 70,
+            },
+            {
+              model: "claude-sonnet-4.6",
+              provider: "anthropic",
+              input: 10000,
+              output: 500,
+              cacheRead: 10000,
+              reasoning: 0,
+              messageCount: 21,
+            },
+          ],
+        },
         cockpit_quota: [{
           email: "person@example.com",
           updatedAt: 1788051600000,
@@ -92,6 +118,16 @@ describe("MonitoringService", () => {
     expect(agy.accounts[0].account).not.toContain("person@");
     expect(agy.accounts[0].groups[0].buckets[0].remainingPercent).toBe(88);
     expect(agy.usage?.todayTokens).toBe(1200);
+    expect(agy.usage?.allInputTokens).toBe(40000);
+    expect(agy.usage?.allOutputTokens).toBe(2000);
+    expect(agy.usage?.allCacheReadTokens).toBe(90000);
+    expect(agy.usage?.allReasoningTokens).toBe(500);
+    expect(agy.usage?.models).toHaveLength(2);
+    expect(agy.usage?.models[0]).toMatchObject({
+      model: "gemini-3.7-flash",
+      totalTokens: 31500,
+      messages: 70,
+    });
     expect(agy.source).toBe("TokenBar Local API");
   });
 

@@ -98,10 +98,26 @@ export interface AntigravityProviderMetrics {
   usage: {
     todayTokens: number;
     allTokens: number;
+    todayInputTokens: number;
+    todayOutputTokens: number;
+    allInputTokens: number;
+    allOutputTokens: number;
+    allCacheReadTokens: number;
+    allReasoningTokens: number;
     todayMessages: number;
     allMessages: number;
     todayCost: number;
     allCost: number;
+    models: Array<{
+      model: string;
+      provider: string;
+      inputTokens: number;
+      outputTokens: number;
+      cacheReadTokens: number;
+      reasoningTokens: number;
+      totalTokens: number;
+      messages: number;
+    }>;
   } | null;
   error?: string;
 }
@@ -461,10 +477,36 @@ export class MonitoringService {
         usage: {
           todayTokens: this.asFiniteNumber(today.totalInput) + this.asFiniteNumber(today.totalOutput),
           allTokens: this.asFiniteNumber(all.totalInput) + this.asFiniteNumber(all.totalOutput),
+          todayInputTokens: this.asFiniteNumber(today.totalInput),
+          todayOutputTokens: this.asFiniteNumber(today.totalOutput),
+          allInputTokens: this.asFiniteNumber(all.totalInput),
+          allOutputTokens: this.asFiniteNumber(all.totalOutput),
+          allCacheReadTokens: this.asFiniteNumber(all.totalCacheRead),
+          allReasoningTokens: Array.isArray(all.entries)
+            ? all.entries.reduce((sum: number, item: any) => sum + this.asFiniteNumber(item?.reasoning), 0)
+            : 0,
           todayMessages: this.asFiniteNumber(today.totalMessages),
           allMessages: this.asFiniteNumber(all.totalMessages),
           todayCost: this.asFiniteNumber(today.totalCost),
           allCost: this.asFiniteNumber(all.totalCost),
+          models: Array.isArray(all.entries)
+            ? all.entries
+                .map((item: any) => {
+                  const inputTokens = this.asFiniteNumber(item?.input);
+                  const outputTokens = this.asFiniteNumber(item?.output);
+                  return {
+                    model: typeof item?.model === "string" ? item.model : "unknown",
+                    provider: typeof item?.provider === "string" ? item.provider : "unknown",
+                    inputTokens,
+                    outputTokens,
+                    cacheReadTokens: this.asFiniteNumber(item?.cacheRead),
+                    reasoningTokens: this.asFiniteNumber(item?.reasoning),
+                    totalTokens: inputTokens + outputTokens,
+                    messages: this.asFiniteNumber(item?.messageCount),
+                  };
+                })
+                .sort((a: any, b: any) => b.totalTokens - a.totalTokens)
+            : [],
         },
       };
     } catch (err) {
