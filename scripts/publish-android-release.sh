@@ -13,7 +13,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 RELEASE_DIR="${BRIDGE_RELEASE_DIR:-$HOME/.anycoding/releases}"
 EXPECTED_CERT_SHA256="59186b6981215494ee6e21e8a988dc7a434eb7ffa40bfc226e9dbdbc585cb2d2"
-RELEASE_CHANGELOG="${RELEASE_CHANGELOG:-AnyCoding Build 228: detailed Antigravity token usage, including input, output, cache reads, reasoning tokens, messages, and per-model rankings.}"
+RELEASE_CHANGELOG="${RELEASE_CHANGELOG:-AnyCoding Android update. See the release notes for changes.}"
 
 APK_INPUT="${1:-}"
 SUPPLIED_VERSION_CODE="${2:-${EXPECTED_VERSION_CODE:-}}"
