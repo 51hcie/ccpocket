@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
 import { homedir } from "node:os";
+import { join } from "node:path";
+import { createNetworkDiscovery, loadNetworkIdentity } from "./network-discovery.js";
 import { fileURLToPath } from "node:url";
 import { setupProxy } from "./proxy.js";
 import { BridgeWebSocketServer } from "./websocket.js";
@@ -173,6 +175,9 @@ export async function startServer() {
   });
 
   const startedAt = Date.now();
+  const networkDiscovery = createNetworkDiscovery(
+    loadNetworkIdentity(join(homedir(), ".ccpocket", `network-${PORT}.id`)), PORT, HOST,
+  );
   const updateService = new UpdateService();
   const monitoringService = new MonitoringService(
     startedAt,
@@ -197,6 +202,7 @@ export async function startServer() {
     if (req.url === "/health" && req.method === "GET") {
       const body = JSON.stringify({
         status: "ok",
+        network: networkDiscovery(),
         uptime: Math.floor((Date.now() - startedAt) / 1000),
         sessions: wsServer?.sessionCount ?? 0,
         clients: wsServer?.clientCount ?? 0,

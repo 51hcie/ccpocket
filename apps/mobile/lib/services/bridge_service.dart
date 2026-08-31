@@ -14,6 +14,7 @@ import '../models/offline_pending_action.dart';
 import '../utils/codex_plan_update.dart';
 import '../utils/network_endpoint.dart';
 import 'bridge_service_base.dart';
+import 'bridge_route_selector.dart';
 import 'session_runtime_store.dart';
 
 enum SessionLinkResolveSupport { resolved, unsupported, unavailable }
@@ -62,8 +63,59 @@ class BridgeConnectionDiagnostics {
   bool get hasError => type != BridgeDiagnosticType.none;
 }
 
-
 class BridgeService implements BridgeServiceBase {
+  final BridgeRouteSelector routes;
+  final _routesController = StreamController<void>.broadcast();
+  Stream<void> get routeChanges => _routesController.stream;
+  Timer? _routeTimer;
+  bool _routeProbeBusy = false;
+
+  Future<void> refreshRoutes() async {
+    final url = _lastUrl;
+    if (url == null || _intentionalDisconnect || _routeProbeBusy) return;
+    _routeProbeBusy = true;
+    final epoch = _connectionEpoch;
+    try {
+      await routes.configure(url);
+      final selected = await routes.select(
+        url,
+        connected: isConnected,
+        busy: _sessions.any(
+          (s) => s.status == 'running' || s.status == 'waiting_approval',
+        ),
+      );
+      if (_intentionalDisconnect || epoch != _connectionEpoch) return;
+      // Re-check after asynchronous probes: the user may have sent a command.
+      if (selected != url &&
+          isConnected &&
+          routes.latency[BridgeRouteSelector.origin(url)] != null &&
+          (_inFlightInputMessages.isNotEmpty ||
+              _inFlightPendingMessages.isNotEmpty ||
+              _messageQueue.isNotEmpty ||
+              _sessions.any(
+                (s) => s.status == 'running' || s.status == 'waiting_approval',
+              ))) {
+        routes.reason = '任务或指令确认中，暂缓切换通道';
+        _routesController.add(null);
+        return;
+      }
+      _routesController.add(null);
+      if (selected != url) {
+        _requeueInFlightInputMessages();
+        _requeueInFlightPendingMessages();
+        connect(selected);
+      }
+    } catch (error, stackTrace) {
+      logger.warning(
+        'Route discovery unavailable; preserving connection',
+        error,
+        stackTrace,
+      );
+    } finally {
+      _routeProbeBusy = false;
+    }
+  }
+
   void Function(ClientMessage message)? onOutgoingMessage;
   FutureOr<void> Function()? onDisconnect;
 
@@ -324,7 +376,8 @@ class BridgeService implements BridgeServiceBase {
   Stream<BridgeConnectionDiagnostics> get connectionDiagnosticsStream =>
       _diagnosticsController.stream;
 
-  BridgeService() {
+  BridgeService({BridgeRouteSelector? routeSelector})
+    : routes = routeSelector ?? BridgeRouteSelector() {
     unawaited(_ensureOfflineQueueRestored());
   }
 
@@ -453,6 +506,10 @@ class BridgeService implements BridgeServiceBase {
       _clearBridgeScopedState(clearOfflineQueue: true);
     }
     _lastUrl = url;
+    _routesController.add(null);
+    _routeTimer ??= Timer.periodic(const Duration(seconds: 20), (_) {
+      unawaited(refreshRoutes());
+    });
 
     _setBridgeConnectionState(BridgeConnectionState.connecting);
     try {
@@ -788,6 +845,7 @@ class BridgeService implements BridgeServiceBase {
               send(ClientMessage.clientCapabilities());
               requestProjectHistory();
               _flushMessageQueue();
+              unawaited(refreshRoutes());
             })
             .catchError((Object error, StackTrace stackTrace) {
               if (epoch != _connectionEpoch || _intentionalDisconnect) return;
@@ -856,15 +914,11 @@ class BridgeService implements BridgeServiceBase {
             ? '当前网络无 IPv6 路由 / 目标不可达 (正在重试第 $retryAttempt 次)'
             : '当前网络无 IPv6 路由 / 目标不可达';
       case BridgeDiagnosticType.timeout:
-        return retryAttempt > 0
-            ? '连接超时 (正在重试第 $retryAttempt 次)'
-            : '连接超时';
+        return retryAttempt > 0 ? '连接超时 (正在重试第 $retryAttempt 次)' : '连接超时';
       case BridgeDiagnosticType.handshakeFailed:
         return 'WebSocket 握手失败';
       case BridgeDiagnosticType.unknownError:
-        return retryAttempt > 0
-            ? '连接断开 (正在重试第 $retryAttempt 次)'
-            : '连接失败';
+        return retryAttempt > 0 ? '连接断开 (正在重试第 $retryAttempt 次)' : '连接失败';
     }
   }
 
@@ -882,8 +936,8 @@ class BridgeService implements BridgeServiceBase {
     _diagnosticsController.add(_diagnostics);
   }
 
-
   bool _sameBridgeTarget(String left, String right) {
+    if (routes.sameServer(left, right)) return true;
     final leftUri = Uri.tryParse(left);
     final rightUri = Uri.tryParse(right);
     if (leftUri == null || rightUri == null) return left == right;
@@ -1065,7 +1119,10 @@ class BridgeService implements BridgeServiceBase {
     );
     _diagnosticsController.add(_diagnostics);
 
-    _reconnectTimer = Timer(Duration(seconds: delay), () {
+    _reconnectTimer = Timer(Duration(seconds: delay), () async {
+      final epoch = _connectionEpoch;
+      await refreshRoutes();
+      if (epoch != _connectionEpoch) return;
       if (_lastUrl != null && !_intentionalDisconnect) {
         connect(_lastUrl!);
       }
@@ -2668,6 +2725,9 @@ class BridgeService implements BridgeServiceBase {
   }
 
   void disconnect() {
+    routes.invalidate();
+    _routeTimer?.cancel();
+    _routeTimer = null;
     _connectionEpoch++;
     _intentionalDisconnect = true;
     _reconnectTimer?.cancel();
@@ -2708,6 +2768,9 @@ class BridgeService implements BridgeServiceBase {
   void clearDiffImageCache() => _diffImageCache.clear();
 
   void dispose() {
+    routes.invalidate();
+    _routeTimer?.cancel();
+    _routesController.close();
     _intentionalDisconnect = true;
     _completePendingSessionLinkResolutionsAsUnsupported();
     _reconnectTimer?.cancel();
@@ -2778,13 +2841,15 @@ class BridgeService implements BridgeServiceBase {
     String? queuedCommand,
     Map<String, dynamic>? options,
   }) {
-    send(ClientMessage.enqueueCodexTakeover(
-      threadId: threadId,
-      projectPath: projectPath,
-      clientId: clientId,
-      queuedCommand: queuedCommand,
-      options: options,
-    ));
+    send(
+      ClientMessage.enqueueCodexTakeover(
+        threadId: threadId,
+        projectPath: projectPath,
+        clientId: clientId,
+        queuedCommand: queuedCommand,
+        options: options,
+      ),
+    );
   }
 
   void cancelCodexTakeover(
@@ -2792,11 +2857,13 @@ class BridgeService implements BridgeServiceBase {
     String? queueId,
     String? clientId,
   }) {
-    send(ClientMessage.cancelCodexTakeover(
-      threadId: threadId,
-      queueId: queueId,
-      clientId: clientId,
-    ));
+    send(
+      ClientMessage.cancelCodexTakeover(
+        threadId: threadId,
+        queueId: queueId,
+        clientId: clientId,
+      ),
+    );
   }
 
   void getCodexTakeoverQueue(
@@ -2804,11 +2871,13 @@ class BridgeService implements BridgeServiceBase {
     String? queueId,
     String? clientId,
   }) {
-    send(ClientMessage.getCodexTakeoverQueue(
-      threadId: threadId,
-      queueId: queueId,
-      clientId: clientId,
-    ));
+    send(
+      ClientMessage.getCodexTakeoverQueue(
+        threadId: threadId,
+        queueId: queueId,
+        clientId: clientId,
+      ),
+    );
   }
 
   @visibleForTesting
@@ -2848,17 +2917,11 @@ class BridgeService implements BridgeServiceBase {
             msg.projectPath != null &&
             msg.projectPath!.isNotEmpty;
         if (isProjectMerge) {
-          _recentSessions = _mergeRecentSessions(
-            _recentSessions,
-            sessions,
-          );
+          _recentSessions = _mergeRecentSessions(_recentSessions, sessions);
         } else {
           _recentSessionsHasMore = hasMore;
           if (_appendMode) {
-            _recentSessions = _mergeRecentSessions(
-              _recentSessions,
-              sessions,
-            );
+            _recentSessions = _mergeRecentSessions(_recentSessions, sessions);
           } else {
             _recentSessions = sessions;
           }

@@ -14,6 +14,7 @@ import '../../settings/widgets/app_locale_bottom_sheet.dart';
 import '../../settings/widgets/speech_locale_bottom_sheet.dart';
 import '../../settings/widgets/theme_bottom_sheet.dart';
 import '../widgets/anycoding_update_sheet.dart';
+import '../widgets/anycoding_routes_card.dart';
 import 'anycoding_monitoring_view.dart';
 
 
@@ -152,6 +153,7 @@ class AnyCodingSettingsView extends StatelessWidget {
 
           // 2. Section: Bridge 主机状态 & 监控
           const _SettingsSectionHeader(title: 'BRIDGE 主机连接与监控'),
+          AnyCodingRoutesCard(bridge: bridge),
           Material(
             color: cardBgColor,
             shape: RoundedRectangleBorder(
@@ -693,4 +695,3 @@ void _showCustomEndpointDialog(BuildContext context, BridgeService bridge) {
     },
   );
 }
-
