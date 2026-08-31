@@ -39,12 +39,19 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
   bool loading = true;
   String? error;
   Timer? timer;
+  StreamSubscription<void>? routeSubscription;
+  int requestGeneration = 0;
+  String? pendingUrl;
+  String? observedUrl;
 
   @override
   void initState() {
     super.initState();
     service = widget.monitoringService ?? BridgeMonitoringService();
     load();
+    routeSubscription = widget.bridge.routeChanges.listen((_) {
+      if (widget.bridge.lastUrl != observedUrl) load(background: true);
+    });
     timer = Timer.periodic(
       const Duration(seconds: 8),
       (_) => load(background: true),
@@ -54,18 +61,27 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
   @override
   void dispose() {
     timer?.cancel();
+    routeSubscription?.cancel();
+    requestGeneration++;
     super.dispose();
   }
 
   Future<void> load({bool background = false}) async {
+    final url = widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
+    if (pendingUrl == url) return;
+    observedUrl = widget.bridge.lastUrl;
+    pendingUrl = url;
+    final generation = ++requestGeneration;
     if (!background && mounted) {
       setState(() => loading = true);
     }
     try {
-      final result = await service.fetchMonitoringData(
-        widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl,
-      );
-      if (mounted) {
+      final result = await service.fetchMonitoringData(url);
+      if (mounted &&
+          generation == requestGeneration &&
+          url ==
+              (widget.bridge.lastUrl ??
+                  BrandConfig.defaultAnyCodingBridgeUrl)) {
         setState(() {
           data = result;
           loading = false;
@@ -73,7 +89,11 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted &&
+          generation == requestGeneration &&
+          url ==
+              (widget.bridge.lastUrl ??
+                  BrandConfig.defaultAnyCodingBridgeUrl)) {
         setState(() {
           loading = false;
           if (data == null) {
@@ -81,6 +101,8 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
           }
         });
       }
+    } finally {
+      if (generation == requestGeneration) pendingUrl = null;
     }
   }
 

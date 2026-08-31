@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-
-import '../utils/network_endpoint.dart';
 
 /// Manifest served by Bridge release endpoint.
 class BridgeReleaseManifest {
@@ -75,11 +74,16 @@ class AndroidBridgeUpdateService {
 
   final http.Client _client;
   final Future<PackageInfo> Function() _packageInfoLoader;
+  final Future<Directory> Function() _temporaryDirectory;
+  final Duration downloadTimeout;
 
   AndroidBridgeUpdateService({
     http.Client? client,
     Future<PackageInfo> Function()? packageInfoLoader,
+    Future<Directory> Function()? temporaryDirectory,
+    this.downloadTimeout = const Duration(seconds: 20),
   }) : _client = client ?? http.Client(),
+       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
        _packageInfoLoader = packageInfoLoader ?? PackageInfo.fromPlatform;
 
   /// Derive HTTP base URL from Bridge WebSocket URL.
@@ -99,7 +103,8 @@ class AndroidBridgeUpdateService {
     } else if (trimmed.startsWith('ws://')) {
       scheme = 'http';
       authority = trimmed.substring(5);
-    } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    } else if (trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://')) {
       return trimmed.replaceAll(RegExp(r'/+$'), '');
     }
 
@@ -125,17 +130,18 @@ class AndroidBridgeUpdateService {
   /// Construct download URL given Bridge base or WebSocket URL and download path.
   static Uri buildDownloadUri(String bridgeUrl, String downloadPath) {
     final baseUrl = deriveHttpBaseUrl(bridgeUrl);
-    final cleanPath = downloadPath.startsWith('/') ? downloadPath : '/$downloadPath';
+    final cleanPath = downloadPath.startsWith('/')
+        ? downloadPath
+        : '/$downloadPath';
     return Uri.parse('$baseUrl$cleanPath');
   }
 
   /// Fetch release manifest from Bridge.
   Future<BridgeReleaseManifest> fetchManifest(String bridgeUrl) async {
     final uri = buildManifestUri(bridgeUrl);
-    final response = await _client.get(
-      uri,
-      headers: {'Accept': 'application/json'},
-    ).timeout(const Duration(seconds: 10));
+    final response = await _client
+        .get(uri, headers: {'Accept': 'application/json'})
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
       throw HttpException(
@@ -153,11 +159,11 @@ class AndroidBridgeUpdateService {
     BridgeReleaseManifest manifest, {
     int? currentVersionCode,
   }) async {
-    final appCode = currentVersionCode ?? await _getCurrentVersionCode();
+    final appCode = currentVersionCode ?? await getCurrentVersionCode();
     return manifest.versionCode > appCode;
   }
 
-  Future<int> _getCurrentVersionCode() async {
+  Future<int> getCurrentVersionCode() async {
     try {
       final info = await _packageInfoLoader();
       return int.tryParse(info.buildNumber) ?? 0;
@@ -180,49 +186,99 @@ class AndroidBridgeUpdateService {
     required String bridgeUrl,
     required BridgeReleaseManifest manifest,
     void Function(int receivedBytes, int totalBytes)? onProgress,
+    Future<String> Function()? retryBridgeUrl,
   }) async {
+    var url = bridgeUrl;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await _downloadAttempt(url, manifest, onProgress);
+      } catch (error) {
+        final transient =
+            error is TimeoutException ||
+            error is SocketException ||
+            error is http.ClientException;
+        if (!transient || attempt == 2) rethrow;
+        if (retryBridgeUrl != null) url = await retryBridgeUrl();
+      }
+    }
+    throw StateError('Download attempts exhausted');
+  }
+
+  Future<String> _downloadAttempt(
+    String bridgeUrl,
+    BridgeReleaseManifest manifest,
+    void Function(int, int)? onProgress,
+  ) async {
     final downloadUri = buildDownloadUri(bridgeUrl, manifest.downloadPath);
-    final request = http.Request('GET', downloadUri);
-    final streamedResponse = await _client.send(request);
-
-    if (streamedResponse.statusCode != 200 && streamedResponse.statusCode != 206) {
-      throw HttpException(
-        'Download failed with status ${streamedResponse.statusCode}',
-        uri: downloadUri,
+    final abort = Completer<void>();
+    Directory? directory;
+    RandomAccessFile? output;
+    var verified = false;
+    try {
+      final request = http.AbortableRequest(
+        'GET',
+        downloadUri,
+        abortTrigger: abort.future,
       );
-    }
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(downloadTimeout);
+      // No Range request is sent: a partial response is not a complete APK.
+      if (streamedResponse.statusCode != 200) {
+        throw HttpException(
+          'Download failed with status ${streamedResponse.statusCode}',
+          uri: downloadUri,
+        );
+      }
 
-    final tempDir = await getTemporaryDirectory();
-    final apkFile = File('${tempDir.path}/anycoding-update-${manifest.versionCode}.apk');
-    if (await apkFile.exists()) {
-      await apkFile.delete();
-    }
-
-    final sink = apkFile.openWrite();
-    int received = 0;
-    final total = streamedResponse.contentLength ?? manifest.size;
-
-    await for (final chunk in streamedResponse.stream) {
-      sink.add(chunk);
-      received += chunk.length;
-      onProgress?.call(received, total);
-    }
-
-    await sink.flush();
-    await sink.close();
-
-    // Verify SHA-256
-    final downloadedBytes = await apkFile.readAsBytes();
-    final digest = sha256.convert(downloadedBytes).toString();
-
-    if (digest.toLowerCase() != manifest.sha256.toLowerCase()) {
-      await apkFile.delete();
-      throw Exception(
-        'APK SHA-256 verification failed! Expected ${manifest.sha256}, got $digest',
+      final temp = await _temporaryDirectory();
+      directory = await temp.createTemp('anycoding-update-');
+      final apkFile = File(
+        '${directory.path}/anycoding-${manifest.versionCode}.apk',
       );
-    }
+      output = await apkFile.open(mode: FileMode.write);
+      int received = 0;
+      onProgress?.call(0, manifest.size);
+      await for (final chunk in streamedResponse.stream.timeout(
+        downloadTimeout,
+      )) {
+        await output.writeFrom(chunk);
+        received += chunk.length;
+        if (received > manifest.size) {
+          throw const FormatException('APK size mismatch');
+        }
+        onProgress?.call(received, manifest.size);
+      }
+      await output.close();
+      output = null;
+      if (received != manifest.size) {
+        throw const FormatException('APK size mismatch');
+      }
 
-    return apkFile.path;
+      // Verify SHA-256
+      final digest = (await sha256.bind(apkFile.openRead()).first).toString();
+
+      if (digest.toLowerCase() != manifest.sha256.toLowerCase()) {
+        throw Exception(
+          'APK SHA-256 verification failed! Expected ${manifest.sha256}, got $digest',
+        );
+      }
+
+      // Reuse the verified package for this version rather than accumulating
+      // a new 200 MB copy every time the update sheet is opened.
+      final installedFile = await apkFile.rename(
+        '${temp.path}/anycoding-update-${manifest.versionCode}.apk',
+      );
+      await directory.delete();
+      verified = true;
+      return installedFile.path;
+    } finally {
+      abort.complete();
+      await output?.close();
+      if (!verified && directory != null && await directory.exists()) {
+        await directory.delete(recursive: true);
+      }
+    }
   }
 
   /// Launch Android system package installer for downloaded APK.
@@ -231,10 +287,9 @@ class AndroidBridgeUpdateService {
       throw UnsupportedError('Package installer is only supported on Android');
     }
 
-    final result = await _installerChannel.invokeMethod<bool>(
-      'installApk',
-      {'filePath': apkFilePath},
-    );
+    final result = await _installerChannel.invokeMethod<bool>('installApk', {
+      'filePath': apkFilePath,
+    });
     return result ?? false;
   }
 }

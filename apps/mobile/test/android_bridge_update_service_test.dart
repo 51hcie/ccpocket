@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:crypto/crypto.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -10,18 +9,21 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ccpocket/services/android_bridge_update_service.dart';
 import 'package:ccpocket/features/anycoding/widgets/anycoding_update_sheet.dart';
 import 'package:ccpocket/services/bridge_service.dart';
-import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/theme/app_theme.dart';
 
 void main() {
   group('AndroidBridgeUpdateService URL Derivation Tests', () {
     test('derives http url from ws localhost url', () {
-      final url = AndroidBridgeUpdateService.deriveHttpBaseUrl('ws://127.0.0.1:8766');
+      final url = AndroidBridgeUpdateService.deriveHttpBaseUrl(
+        'ws://127.0.0.1:8766',
+      );
       expect(url, 'http://127.0.0.1:8766');
     });
 
     test('derives http url from wss domain url', () {
-      final url = AndroidBridgeUpdateService.deriveHttpBaseUrl('wss://mac.local:8765');
+      final url = AndroidBridgeUpdateService.deriveHttpBaseUrl(
+        'wss://mac.local:8765',
+      );
       expect(url, 'https://mac.local:8765');
     });
 
@@ -59,7 +61,8 @@ void main() {
       final json = {
         'versionCode': 218,
         'versionName': '1.115.3',
-        'sha256': '59186b6981215494ee6e21e8a988dc7a434eb7ffa40bfc226e9dbdbc585cb2d2',
+        'sha256':
+            '59186b6981215494ee6e21e8a988dc7a434eb7ffa40bfc226e9dbdbc585cb2d2',
         'size': 1048576,
         'buildTime': '2026-08-25T12:00:00Z',
         'downloadPath': '/api/update/download',
@@ -73,55 +76,100 @@ void main() {
       expect(manifest.changelog, 'Batch 2 Usability Release');
     });
 
-    test('detects update available when manifest versionCode is greater', () async {
-      final service = AndroidBridgeUpdateService(
-        packageInfoLoader: () async => PackageInfo(
-          appName: 'AnyCoding',
-          packageName: 'com.k9i.ccpocket',
-          version: '1.115.2',
-          buildNumber: '217',
-        ),
-      );
+    test(
+      'detects update available when manifest versionCode is greater',
+      () async {
+        final service = AndroidBridgeUpdateService(
+          packageInfoLoader: () async => PackageInfo(
+            appName: 'AnyCoding',
+            packageName: 'com.k9i.ccpocket',
+            version: '1.115.2',
+            buildNumber: '217',
+          ),
+        );
 
-      const newerManifest = BridgeReleaseManifest(
-        versionCode: 218,
-        versionName: '1.115.3',
-        sha256: 'abc',
-        size: 100,
-        buildTime: '2026-08-25',
-        downloadPath: '/api/update/download',
-      );
+        const newerManifest = BridgeReleaseManifest(
+          versionCode: 218,
+          versionName: '1.115.3',
+          sha256: 'abc',
+          size: 100,
+          buildTime: '2026-08-25',
+          downloadPath: '/api/update/download',
+        );
 
-      final hasUpdate = await service.isUpdateAvailable(newerManifest);
-      expect(hasUpdate, true);
-    });
+        final hasUpdate = await service.isUpdateAvailable(newerManifest);
+        expect(hasUpdate, true);
+      },
+    );
 
-    test('detects up to date when manifest versionCode is equal or lower', () async {
-      final service = AndroidBridgeUpdateService(
-        packageInfoLoader: () async => PackageInfo(
-          appName: 'AnyCoding',
-          packageName: 'com.k9i.ccpocket',
-          version: '1.115.2',
-          buildNumber: '217',
-        ),
-      );
+    test(
+      'detects up to date when manifest versionCode is equal or lower',
+      () async {
+        final service = AndroidBridgeUpdateService(
+          packageInfoLoader: () async => PackageInfo(
+            appName: 'AnyCoding',
+            packageName: 'com.k9i.ccpocket',
+            version: '1.115.2',
+            buildNumber: '217',
+          ),
+        );
 
-      const sameManifest = BridgeReleaseManifest(
-        versionCode: 217,
-        versionName: '1.115.2',
-        sha256: 'abc',
-        size: 100,
-        buildTime: '2026-08-25',
-        downloadPath: '/api/update/download',
-      );
+        const sameManifest = BridgeReleaseManifest(
+          versionCode: 217,
+          versionName: '1.115.2',
+          sha256: 'abc',
+          size: 100,
+          buildTime: '2026-08-25',
+          downloadPath: '/api/update/download',
+        );
 
-      final hasUpdate = await service.isUpdateAvailable(sameManifest);
-      expect(hasUpdate, false);
-    });
+        final hasUpdate = await service.isUpdateAvailable(sameManifest);
+        expect(hasUpdate, false);
+      },
+    );
   });
 
   group('AnyCodingUpdateSheet Widget Tests', () {
-    testWidgets('renders update sheet with update available state', (tester) async {
+    testWidgets('older server cannot mislabel or offer downgrade', (
+      tester,
+    ) async {
+      final bridge = BridgeService();
+      final service = AndroidBridgeUpdateService(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'versionCode': 229,
+              'versionName': '1.115.14',
+              'size': 4,
+              'sha256': 'test',
+            }),
+            200,
+          ),
+        ),
+        packageInfoLoader: () async => PackageInfo(
+          appName: 'AnyCoding',
+          packageName: 'com.k9i.ccpocket',
+          version: '1.115.15',
+          buildNumber: '230',
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AnyCodingUpdateSheet(bridge: bridge, updateService: service),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('当前版本: v1.115.15 (Build 230)'), findsOneWidget);
+      expect(find.text('重新下载当前版本 APK'), findsNothing);
+      expect(find.text('服务器版本较旧，已保留手机上的新版'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      bridge.dispose();
+    });
+    testWidgets('renders update sheet with update available state', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);

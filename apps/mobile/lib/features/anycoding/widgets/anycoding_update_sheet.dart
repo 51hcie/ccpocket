@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../constants/brand_config.dart';
 import '../../../services/android_bridge_update_service.dart';
 import '../../../services/bridge_service.dart';
@@ -13,10 +14,8 @@ Future<void> showAnyCodingUpdateSheet({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => AnyCodingUpdateSheet(
-      bridge: bridge,
-      updateService: updateService,
-    ),
+    builder: (ctx) =>
+        AnyCodingUpdateSheet(bridge: bridge, updateService: updateService),
   );
 }
 
@@ -60,9 +59,14 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
 
     try {
       _currentVersionName = await _service.getCurrentVersionName();
-      final bridgeUrl = widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
+      _currentVersionCode = await _service.getCurrentVersionCode();
+      final bridgeUrl =
+          widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
       final manifest = await _service.fetchManifest(bridgeUrl);
-      final hasUpdate = await _service.isUpdateAvailable(manifest);
+      final hasUpdate = await _service.isUpdateAvailable(
+        manifest,
+        currentVersionCode: _currentVersionCode,
+      );
 
       if (mounted) {
         setState(() {
@@ -83,7 +87,9 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
   }
 
   Future<void> _startDownload() async {
-    if (_manifest == null) return;
+    if (_manifest == null ||
+        _manifest!.versionCode < (_currentVersionCode ?? 0))
+      return;
     setState(() {
       _status = UpdateCheckStatus.downloading;
       _downloadReceived = 0;
@@ -92,10 +98,16 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
     });
 
     try {
-      final bridgeUrl = widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
+      final bridgeUrl =
+          widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl;
       final apkPath = await _service.downloadAndVerifyApk(
         bridgeUrl: bridgeUrl,
         manifest: _manifest!,
+        retryBridgeUrl: () async {
+          if (!mounted) throw StateError('Update screen closed');
+          await widget.bridge.refreshRoutes();
+          return widget.bridge.lastUrl ?? bridgeUrl;
+        },
         onProgress: (received, total) {
           if (mounted) {
             setState(() {
@@ -128,9 +140,8 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
       await _service.launchInstaller(_downloadedApkPath!);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('调起安装程序失败: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('调起安装程序失败: $e')));
       }
     }
   }
@@ -144,9 +155,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
     final bgColor = isDark
         ? BrandConfig.anyCodingSurfaceDark
         : cs.surfaceContainerLowest;
-    final cardBgColor = isDark
-        ? BrandConfig.anyCodingCardDark
-        : cs.surface;
+    final cardBgColor = isDark ? BrandConfig.anyCodingCardDark : cs.surface;
     final borderColor = isDark
         ? BrandConfig.anyCodingBorderDark
         : cs.outlineVariant.withValues(alpha: 0.35);
@@ -188,7 +197,10 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text('检查 AnyCoding 更新', style: AppTypography.titleLarge(context)),
+                      Text(
+                        '检查 AnyCoding 更新',
+                        style: AppTypography.titleLarge(context),
+                      ),
                     ],
                   ),
                   IconButton(
@@ -213,7 +225,8 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.bridge.lastUrl ?? BrandConfig.defaultAnyCodingBridgeUrl,
+                        widget.bridge.lastUrl ??
+                            BrandConfig.defaultAnyCodingBridgeUrl,
                         style: AppTypography.caption(context),
                       ),
                     ],
@@ -232,11 +245,18 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.error_outline_rounded, color: cs.error, size: 20),
+                          Icon(
+                            Icons.error_outline_rounded,
+                            color: cs.error,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             '更新检查失败',
-                            style: AppTypography.titleSmall(context, color: cs.error),
+                            style: AppTypography.titleSmall(
+                              context,
+                              color: cs.error,
+                            ),
                           ),
                         ],
                       ),
@@ -285,7 +305,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '当前版本: v${_currentVersionName ?? '1.115.2'} (Build ${_manifest?.versionCode ?? 217})',
+                              '当前版本: v${_currentVersionName ?? '未知'} (Build ${_currentVersionCode ?? 0})',
                               style: AppTypography.caption(context),
                             ),
                           ],
@@ -295,11 +315,14 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.download_rounded, size: 18),
-                  label: const Text('重新下载当前版本 APK'),
-                  onPressed: _startDownload,
-                ),
+                if (_manifest?.versionCode == _currentVersionCode)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('重新下载当前版本 APK'),
+                    onPressed: _startDownload,
+                  )
+                else
+                  const Text('服务器版本较旧，已保留手机上的新版'),
               ] else if (_status == UpdateCheckStatus.updateAvailable ||
                   _status == UpdateCheckStatus.downloading ||
                   _status == UpdateCheckStatus.readyToInstall) ...[
@@ -317,7 +340,10 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('发现新版本', style: AppTypography.titleMedium(context)),
+                          Text(
+                            '发现新版本',
+                            style: AppTypography.titleMedium(context),
+                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -339,10 +365,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                       ),
                       const SizedBox(height: 12),
                       if (_manifest?.changelog.isNotEmpty ?? false) ...[
-                        Text(
-                          '更新说明',
-                          style: AppTypography.labelSmall(context),
-                        ),
+                        Text('更新说明', style: AppTypography.labelSmall(context)),
                         const SizedBox(height: 4),
                         Text(
                           _manifest!.changelog,

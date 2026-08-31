@@ -22,3 +22,17 @@ results, identity mismatch, custom endpoint isolation, anti-flapping and fallbac
 session preservation and no new input on route switch; emulator-5556 fresh start,
 settings/copy/refresh, LAN and IPv6 tests. Mac-local IPv6 tests do not prove
 mobile-carrier ingress. Do not operate emulator-5554 or stop production 8766.
+
+## HTTP recovery (Build 230)
+
+APK transfers have a 20-second header/inactivity deadline and at most three
+attempts. Abort timed-out HTTP requests, discard partial files, and re-evaluate
+the current Bridge route before retrying transient network errors. Each attempt
+starts from byte zero; do not treat a 206 response as a complete APK. Require
+manifest size and streaming SHA-256 verification before enabling installation.
+Integrity/status errors are terminal, not automatic retries.
+
+Monitoring permits only one pending request per current route. A route change
+starts a new generation; older results/errors cannot overwrite the new route's
+display. Route discovery events without an actual URL change do not trigger
+additional requests. Dispose invalidates outstanding generations.
