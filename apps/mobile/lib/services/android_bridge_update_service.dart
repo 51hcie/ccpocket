@@ -67,6 +67,25 @@ enum UpdateCheckStatus {
   error,
 }
 
+class UpdateDownloadCancelled implements Exception {
+  const UpdateDownloadCancelled();
+  @override
+  String toString() => '下载已取消';
+}
+
+class UpdateDownloadCancellation {
+  final _signal = Completer<void>();
+  Future<void> get signal => _signal.future;
+  bool get isCancelled => _signal.isCompleted;
+  void cancel() {
+    if (!isCancelled) _signal.complete();
+  }
+
+  void check() {
+    if (isCancelled) throw const UpdateDownloadCancelled();
+  }
+}
+
 class AndroidBridgeUpdateService {
   static const MethodChannel _installerChannel = MethodChannel(
     'ccpocket/android_installer',
@@ -187,17 +206,29 @@ class AndroidBridgeUpdateService {
     required BridgeReleaseManifest manifest,
     void Function(int receivedBytes, int totalBytes)? onProgress,
     Future<String> Function()? retryBridgeUrl,
+    UpdateDownloadCancellation? cancellation,
+    void Function(int attempt)? onRetry,
+    void Function()? onVerifying,
   }) async {
     var url = bridgeUrl;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
-        return await _downloadAttempt(url, manifest, onProgress);
+        cancellation?.check();
+        return await _downloadAttempt(
+          url,
+          manifest,
+          onProgress,
+          cancellation,
+          onVerifying,
+        );
       } catch (error) {
+        cancellation?.check();
         final transient =
             error is TimeoutException ||
             error is SocketException ||
             error is http.ClientException;
         if (!transient || attempt == 2) rethrow;
+        onRetry?.call(attempt + 2);
         if (retryBridgeUrl != null) url = await retryBridgeUrl();
       }
     }
@@ -208,6 +239,8 @@ class AndroidBridgeUpdateService {
     String bridgeUrl,
     BridgeReleaseManifest manifest,
     void Function(int, int)? onProgress,
+    UpdateDownloadCancellation? cancellation,
+    void Function()? onVerifying,
   ) async {
     final downloadUri = buildDownloadUri(bridgeUrl, manifest.downloadPath);
     final abort = Completer<void>();
@@ -218,11 +251,18 @@ class AndroidBridgeUpdateService {
       final request = http.AbortableRequest(
         'GET',
         downloadUri,
-        abortTrigger: abort.future,
+        abortTrigger: cancellation == null
+            ? abort.future
+            : Future.any([abort.future, cancellation.signal]),
       );
-      final streamedResponse = await _client
-          .send(request)
-          .timeout(downloadTimeout);
+      final streamedResponse = await Future.any<http.StreamedResponse>([
+        _client.send(request),
+        if (cancellation != null)
+          cancellation.signal.then(
+            (_) => throw const UpdateDownloadCancelled(),
+          ),
+      ]).timeout(downloadTimeout);
+      cancellation?.check();
       // No Range request is sent: a partial response is not a complete APK.
       if (streamedResponse.statusCode != 200) {
         throw HttpException(
@@ -242,6 +282,7 @@ class AndroidBridgeUpdateService {
       await for (final chunk in streamedResponse.stream.timeout(
         downloadTimeout,
       )) {
+        cancellation?.check();
         await output.writeFrom(chunk);
         received += chunk.length;
         if (received > manifest.size) {
@@ -256,7 +297,10 @@ class AndroidBridgeUpdateService {
       }
 
       // Verify SHA-256
+      cancellation?.check();
+      onVerifying?.call();
       final digest = (await sha256.bind(apkFile.openRead()).first).toString();
+      cancellation?.check();
 
       if (digest.toLowerCase() != manifest.sha256.toLowerCase()) {
         throw Exception(

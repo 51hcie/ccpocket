@@ -36,6 +36,40 @@ class DeferredMonitor extends BridgeMonitoringService {
 }
 
 void main() {
+  testWidgets('failed refresh labels cached data and recovery clears notice', (
+    tester,
+  ) async {
+    final bridge = RouteBridge();
+    final monitor = DeferredMonitor();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AnyCodingMonitoringSheet(
+            bridge: bridge,
+            monitoringService: monitor,
+          ),
+        ),
+      ),
+    );
+    monitor.requests[0].complete(MonitoringDataModel.fromJson({}));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    monitor.requests[1].completeError(Exception('offline'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('monitor_stale_data_notice')),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(seconds: 8));
+    monitor.requests[2].complete(MonitoringDataModel.fromJson({}));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('monitor_stale_data_notice')),
+      findsNothing,
+    );
+    await tester.pumpWidget(const SizedBox());
+    bridge.dispose();
+  });
   for (final oldFails in [false, true]) {
     testWidgets(
       'old route ${oldFails ? "error" : "response"} cannot overwrite new route',

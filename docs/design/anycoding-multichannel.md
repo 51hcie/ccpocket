@@ -36,3 +36,10 @@ Monitoring permits only one pending request per current route. A route change
 starts a new generation; older results/errors cannot overwrite the new route's
 display. Route discovery events without an actual URL change do not trigger
 additional requests. Dispose invalidates outstanding generations.
+
+Build 231 adds explicit cancellation (also on sheet disposal), retry attempt and
+verification feedback, and progress rendering throttled to 150 ms except for
+initial/final progress. Cancellation never retries and removes partial files.
+The checksum label describes integrity only; Android verifies installation
+signatures. Failed monitor refreshes retain data with a visible stale-data notice
+that clears after a successful refresh.

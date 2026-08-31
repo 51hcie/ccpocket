@@ -96,9 +96,7 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
                   BrandConfig.defaultAnyCodingBridgeUrl)) {
         setState(() {
           loading = false;
-          if (data == null) {
-            error = e.toString().replaceFirst('Exception: ', '');
-          }
+          error = e.toString().replaceFirst('Exception: ', '');
         });
       }
     } finally {
@@ -154,6 +152,15 @@ class _MonitoringState extends State<AnyCodingMonitoringSheet> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
           children: [
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  '刷新失败，当前显示上次成功获取的数据',
+                  key: const ValueKey('monitor_stale_data_notice'),
+                  style: TextStyle(color: cs.error),
+                ),
+              ),
             hero(context, data!),
             const SizedBox(height: 14),
             resources(context, data!.system),

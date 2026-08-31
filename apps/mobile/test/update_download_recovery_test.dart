@@ -153,6 +153,67 @@ void main() {
     },
   );
 
+  test(
+    'cancel during real stalled body aborts without retry or residue',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final client = http.Client();
+      final cancellation = UpdateDownloadCancellation();
+      var requests = 0;
+      server.listen((request) async {
+        requests++;
+        request.response.bufferOutput = false;
+        request.response.contentLength = 4;
+        request.response.add([1]);
+        await request.response.flush();
+      });
+      try {
+        final service = AndroidBridgeUpdateService(
+          client: client,
+          temporaryDirectory: () async => temp,
+        );
+        await expectLater(
+          service
+              .downloadAndVerifyApk(
+                bridgeUrl: 'ws://127.0.0.1:${server.port}',
+                manifest: manifest(),
+                cancellation: cancellation,
+                onProgress: (received, _) {
+                  if (received > 0) cancellation.cancel();
+                },
+              )
+              .timeout(const Duration(seconds: 3)),
+          throwsA(isA<UpdateDownloadCancelled>()),
+        );
+        expect(requests, 1);
+        expect(await temp.list().toList(), isEmpty);
+      } finally {
+        client.close();
+        await server.close(force: true);
+      }
+    },
+  );
+
+  test('cancel before start sends nothing', () async {
+    final token = UpdateDownloadCancellation()..cancel();
+    var requests = 0;
+    final service = AndroidBridgeUpdateService(
+      client: MockClient((_) async {
+        requests++;
+        return http.Response('', 200);
+      }),
+    );
+    await expectLater(
+      service.downloadAndVerifyApk(
+        bridgeUrl: 'ws://route:8766',
+        manifest: manifest(),
+        cancellation: token,
+      ),
+      throwsA(isA<UpdateDownloadCancelled>()),
+    );
+    expect(requests, 0);
+  });
+
   for (final failure in ['hash', 'size', 'status']) {
     test('$failure failure is not retried or retained', () async {
       var attempts = 0;

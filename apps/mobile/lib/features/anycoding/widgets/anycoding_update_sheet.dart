@@ -43,6 +43,15 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
   String? _errorMessage;
   int _downloadReceived = 0;
   int _downloadTotal = 0;
+  UpdateDownloadCancellation? _downloadCancellation;
+  String _transferMessage = '正在从 Bridge 下载 APK...';
+  final _progressClock = Stopwatch();
+
+  @override
+  void dispose() {
+    _downloadCancellation?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -92,6 +101,10 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
       return;
     setState(() {
       _status = UpdateCheckStatus.downloading;
+      _downloadCancellation = UpdateDownloadCancellation();
+      _transferMessage = '正在从 Bridge 下载 APK...';
+      _progressClock.reset();
+      _progressClock.start();
       _downloadReceived = 0;
       _downloadTotal = _manifest!.size;
       _errorMessage = null;
@@ -103,13 +116,25 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
       final apkPath = await _service.downloadAndVerifyApk(
         bridgeUrl: bridgeUrl,
         manifest: _manifest!,
+        cancellation: _downloadCancellation,
+        onRetry: (attempt) {
+          if (mounted)
+            setState(() => _transferMessage = '连接中断，正在重试（$attempt/3）');
+        },
+        onVerifying: () {
+          if (mounted) setState(() => _status = UpdateCheckStatus.verifying);
+        },
         retryBridgeUrl: () async {
           if (!mounted) throw StateError('Update screen closed');
           await widget.bridge.refreshRoutes();
           return widget.bridge.lastUrl ?? bridgeUrl;
         },
         onProgress: (received, total) {
-          if (mounted) {
+          if (mounted &&
+              (received == 0 ||
+                  received >= total ||
+                  _progressClock.elapsedMilliseconds >= 150)) {
+            _progressClock.reset();
             setState(() {
               _downloadReceived = received;
               _downloadTotal = total > 0 ? total : _manifest!.size;
@@ -127,7 +152,9 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _status = UpdateCheckStatus.error;
+          _status = e is UpdateDownloadCancelled
+              ? UpdateCheckStatus.updateAvailable
+              : UpdateCheckStatus.error;
           _errorMessage = e.toString().replaceFirst('Exception: ', '');
         });
       }
@@ -325,6 +352,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                   const Text('服务器版本较旧，已保留手机上的新版'),
               ] else if (_status == UpdateCheckStatus.updateAvailable ||
                   _status == UpdateCheckStatus.downloading ||
+                  _status == UpdateCheckStatus.verifying ||
                   _status == UpdateCheckStatus.readyToInstall) ...[
                 // Version Info Card
                 Container(
@@ -392,19 +420,25 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                 const SizedBox(height: 16),
 
                 // Download Progress
-                if (_status == UpdateCheckStatus.downloading) ...[
+                if (_status == UpdateCheckStatus.downloading ||
+                    _status == UpdateCheckStatus.verifying) ...[
                   LinearProgressIndicator(
-                    value: _downloadTotal > 0
+                    value:
+                        _status != UpdateCheckStatus.verifying &&
+                            _downloadTotal > 0
                         ? _downloadReceived / _downloadTotal
                         : null,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 12,
                     children: [
                       Text(
-                        '正在从 Bridge 下载 APK...',
+                        _status == UpdateCheckStatus.verifying
+                            ? '下载完成，正在校验完整性...'
+                            : _transferMessage,
                         style: AppTypography.caption(context),
                       ),
                       Text(
@@ -412,6 +446,15 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                         style: AppTypography.mono(context, fontSize: 11),
                       ),
                     ],
+                  ),
+                  TextButton.icon(
+                    key: const ValueKey('cancel_update_download_button'),
+                    onPressed: () {
+                      _downloadCancellation?.cancel();
+                      setState(() => _transferMessage = '正在取消下载...');
+                    },
+                    icon: const Icon(Icons.close),
+                    label: const Text('取消下载'),
                   ),
                   const SizedBox(height: 16),
                 ] else if (_status == UpdateCheckStatus.readyToInstall) ...[
@@ -434,7 +477,7 @@ class _AnyCodingUpdateSheetState extends State<AnyCodingUpdateSheet> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'SHA-256 哈希校验通过 · 证书指纹一致',
+                            'SHA-256 完整性校验通过 · 安装签名由系统验证',
                             style: AppTypography.bodySmall(
                               context,
                               color: const Color(0xFF10B981),
